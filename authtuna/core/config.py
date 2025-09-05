@@ -3,6 +3,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr
 from typing import List, Optional
 logger = logging.getLogger(__name__)
+import os
+import dotenv
+dotenv.load_dotenv()
 
 class Settings(BaseSettings):
     """
@@ -39,7 +42,7 @@ class Settings(BaseSettings):
     DKIM_SELECTOR: Optional[str] = None
     DEFAULT_SENDER_EMAIL: str = "noreply@example.com"
     EMAIL_DOMAINS: List[str] = ["gmail.com"]
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8', extra='ignore')
+    model_config = SettingsConfigDict(env_file=os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8', extra='ignore')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
