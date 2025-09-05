@@ -1,6 +1,5 @@
 import logging
 from authlib.integrations.starlette_client import OAuth, OAuthError
-from typing import Optional
 
 from authtuna.core.config import settings
 
