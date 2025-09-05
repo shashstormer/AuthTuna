@@ -49,7 +49,7 @@ class Settings(BaseSettings):
         if self.EMAIL_ENABLED:
             assert self.SMTP_HOST, "SMTP_HOST must be set if email is enabled"
             assert self.SMTP_PORT, "SMTP_PORT must be set if email is enabled"
-            assert self.DEFAULT_SENDER_EMAIL, "DEFAULT_SENDER_EMAIL must be set if email is enabled"
+            assert self.DEFAULT_SENDER_EMAIL != "noreply@example.com", "DEFAULT_SENDER_EMAIL must be set if email is enabled"
             if self.DKIM_PRIVATE_KEY_PATH:
                 assert self.DKIM_DOMAIN, "DKIM_DOMAIN must be set if DKIM private key path is set"
                 assert self.DKIM_SELECTOR, "DKIM_SELECTOR must be set if DKIM private key path is set"
