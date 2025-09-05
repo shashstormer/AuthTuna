@@ -9,8 +9,8 @@ from authtuna.core.encryption import encryption_utils
 from sqlalchemy.orm import Session
 
 
-
-async def get_remote_address(request: Request, default_ip: str = "127.0.0.1", use_cf_connecting_ip: bool = True, other_ip_headers: list = None):
+async def get_remote_address(request: Request, default_ip: str = "127.0.0.1", use_cf_connecting_ip: bool = True,
+                             other_ip_headers: list = None):
     """
     THIS WORKS FOR FASTAPI AS I NEEDED THAT...
     Retrieves the remote address of the client making the request. By default, it
@@ -40,8 +40,10 @@ async def get_remote_address(request: Request, default_ip: str = "127.0.0.1", us
     return request.client.host
 
 
-async def get_device_region(request: Request, ip_city_header: str = "CF-IPCity", ip_country_header: str = "CF-IPCountry", default_unfound: str = "Unknown"):
-    return request.headers.get(ip_city_header, default_unfound) + ", " + request.headers.get(ip_country_header, default_unfound)
+async def get_device_region(request: Request, ip_city_header: str = "CF-IPCity",
+                            ip_country_header: str = "CF-IPCountry", default_unfound: str = "Unknown"):
+    return request.headers.get(ip_city_header, default_unfound) + ", " + request.headers.get(ip_country_header,
+                                                                                             default_unfound)
 
 
 async def get_device_data(request: Request, region_kwargs=None, ):
@@ -146,6 +148,7 @@ async def is_password_valid(password):
         return {"error": "Password must contain at least one uppercase letter"}
     return {}
 
+
 async def create_session_and_set_cookie(user: User, request: Request, response: Response, db: Session):
     """
     Helper function to create a new database session, save it, and set the session cookie.
@@ -170,6 +173,7 @@ async def create_session_and_set_cookie(user: User, request: Request, response: 
         httponly=True
     )
 
+
 def sanitize_username(username: str) -> str:
     """
     Sanitizes a string to contain only alphanumeric characters.
@@ -178,7 +182,7 @@ def sanitize_username(username: str) -> str:
     if not username:
         return ""
     # Remove spaces and then filter out non-alphanumeric characters
-    sanitized = "".join(char for char in username.replace(" ", "") if char.isalnum())
+    sanitized = "".join(char for char in username.title().replace(" ", "") if char.isalnum())
     return sanitized
 
 

@@ -58,26 +58,18 @@ async def social_callback(
         )
 
         if social_account:
-            # Existing user: update their access token and create a new session
             social_account.access_token = token.get('access_token')
             social_account.refresh_token = token.get('refresh_token')
             social_account.expires_at = token.get('expires_at')
             social_account.last_used_at = time.time()
             await run_in_threadpool(db.commit)
-
             user = social_account.user
         else:
             user_id = encryption_utils.gen_random_string(32)
             user_email = user_info.get('email')
-
-            # Sanitize username from provider info
             raw_username = user_info.get('name')
             sanitized_username = sanitize_username(raw_username)
-
-            # Use a random username if the sanitized name is empty
             user_name = sanitized_username if sanitized_username else generate_random_username()
-
-            # Check for email conflicts with existing local accounts
             existing_user_by_email = await run_in_threadpool(
                 db.query(User).filter(User.email == user_email).first
             )
@@ -86,7 +78,6 @@ async def social_callback(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="An account with this email already exists. Please log in with your password and link your social account later."
                 )
-
             user = User(
                 id=user_id,
                 username=user_name,
@@ -96,7 +87,6 @@ async def social_callback(
             )
             await run_in_threadpool(db.add, user)
             await run_in_threadpool(db.flush)
-
             social_account = SocialAccount(
                 user_id=user.id,
                 provider=provider_name,
