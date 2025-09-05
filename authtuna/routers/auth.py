@@ -38,7 +38,7 @@ async def signup_user(
         db: Session = Depends(db_manager.get_db)
 ):
     """Handles new user registration."""
-    # Check for existing user
+    # Need to implement email verification will do soon (after i finish mail utils)
     existing_user = await run_in_threadpool(
         db.query(User).filter(
             (User.email == user_data.email) | (User.username == user_data.username)
@@ -50,21 +50,16 @@ async def signup_user(
             detail="Username or email already registered."
         )
 
-    # Create a new user and set password
     new_user = User(
         id=encryption_utils.gen_random_string(32),
         username=user_data.username,
         email=user_data.email,
     )
     await run_in_threadpool(new_user.set_password, user_data.password)
-
     await run_in_threadpool(db.add, new_user)
     await run_in_threadpool(db.commit)
     await run_in_threadpool(db.refresh, new_user)
-
-    # Create and return a new session
     await create_session_and_set_cookie(new_user, request, response, db)
-
     return Response(status_code=status.HTTP_201_CREATED, content="User created successfully. Logged in.")
 
 
@@ -90,20 +85,12 @@ async def login_user(
             detail="Incorrect username/email or password."
         )
 
-    # Invalidate old sessions for this user (optional security measure)
-    old_sessions = await run_in_threadpool(
-        db.query(DBSession).filter(
-            DBSession.user_id == user.id,
-            DBSession.active == True
-        ).all
-    )
-    for s in old_sessions:
-        s.active = False
     await run_in_threadpool(db.commit)
-
-    # Create a new session
-    await _create_session_and_set_cookie(user, request, response, db)
-
+    if user is not None and isinstance(user, User):
+        await create_session_and_set_cookie(user, request, response, db)
+    else:
+        logger.error(user)
+        raise HTTPException(500)
     return {"message": "Login successful."}
 
 
@@ -136,6 +123,7 @@ async def forgot_password(email: str):
     # Logic to send an email with a unique token to the user
     # This is a core part of a production system but is omitted here for brevity
     # It would involve creating a `Token` record in the database
+    # Here also mail part req so after mail part is ready will get this done
     logger.info(f"Password reset requested for {email}.")
     return {"message": "If an account with that email exists, a password reset link has been sent."}
 
@@ -144,5 +132,6 @@ async def forgot_password(email: str):
 async def reset_password(token: str, new_password: str):
     """Placeholder for resetting a password using a token."""
     # Logic to validate the token and update the user's password
+    # I left it coz i need mail part ready bfr finishing this
     logger.info("Password reset successful.")
     return {"message": "Password has been reset successfully."}

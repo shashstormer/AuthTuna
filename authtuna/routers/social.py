@@ -1,15 +1,16 @@
 import logging
 import time
-from fastapi import APIRouter, Request, Response, HTTPException, status, Depends
-from starlette.responses import RedirectResponse
-from sqlalchemy.orm import Session
+
 from authlib.integrations.starlette_client import OAuthError
-from authtuna.core.database import db_manager, User, SocialAccount, Session as DBSession
+from fastapi import APIRouter, Request, Response, HTTPException, status, Depends
+from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
+from starlette.responses import RedirectResponse
+
+from authtuna.core.database import db_manager, User, SocialAccount
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.social import get_social_provider
-from authtuna.core.config import settings
-from authtuna.helpers import get_device_data, get_remote_address, create_session_and_set_cookie
-from starlette.concurrency import run_in_threadpool
+from authtuna.helpers import create_session_and_set_cookie
 
 logger = logging.getLogger(__name__)
 
