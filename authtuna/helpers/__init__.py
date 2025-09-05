@@ -5,6 +5,7 @@ from authtuna.core.config import settings
 
 async def get_remote_address(request: Request, default_ip: str = "127.0.0.1", use_cf_connecting_ip: bool = True, other_ip_headers: list = None):
     """
+    THIS WORKS FOR FASTAPI AS I NEEDED THAT...
     Retrieves the remote address of the client making the request. By default, it
     returns the IP address contained in the `CF-Connecting-IP` header if present.
     If the `CF-Connecting-IP` header is absent, it falls back to the client's
