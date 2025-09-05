@@ -24,8 +24,8 @@ async def get_remote_address(request: Request):
     return request.client.host
 
 
-async def get_device_region(request: Request):
-    return request.headers.get("cf-ipcity", "Unknown") + ", " + request.headers.get("cf-ipcountry", "Unknown")
+async def get_device_region(request: Request, ip_city_header: str = "CF-IPCity", ip_country_header: str = "CF-IPCountry", default_unfound: str = "Unknown"):
+    return request.headers.get(ip_city_header, default_unfound) + ", " + request.headers.get(ip_country_header, default_unfound)
 
 
 async def get_device_data(request: Request):
