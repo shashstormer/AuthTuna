@@ -3,7 +3,7 @@ from ua_parser import user_agent_parser
 from authtuna.core.config import settings
 
 
-async def get_remote_address(request: Request):
+async def get_remote_address(request: Request, default_ip: str = "127.0.0.1", use_cf_connecting_ip: bool = True, other_ip_headers: list = None):
     """
     Retrieves the remote address of the client making the request. By default, it
     returns the IP address contained in the `CF-Connecting-IP` header if present.
@@ -11,16 +11,24 @@ async def get_remote_address(request: Request):
     host IP. If neither a client nor its host IP can be determined, the address
     defaults to `127.0.0.1`.
 
+    :param other_ip_headers: Additional headers to check for the remote IP address ex ["X-Forwarded-For", ... or ur rev proxy hdrs].
+    :param use_cf_connecting_ip: Whether to use the `CF-Connecting-IP` header if present.
+    :param default_ip: Default IP address to use if the client's host IP cannot be determined.
     :param request: The incoming HTTP request object containing information
         about the client connection.
     :type request: Request
     :return: The remote IP address as a string.
     :rtype: str
     """
-    if request.headers.get("CF-Connecting-IP"):
-        return request.headers.get("CF-Connecting-IP")
+    if use_cf_connecting_ip:
+        if request.headers.get("CF-Connecting-IP"):
+            return request.headers.get("CF-Connecting-IP")
+    if other_ip_headers:
+        for header in other_ip_headers:
+            if request.headers.get(header):
+                return request.headers.get(header)
     if not request.client or not request.client.host:
-        return "127.0.0.1"
+        return default_ip
     return request.client.host
 
 
