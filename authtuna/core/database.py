@@ -6,7 +6,7 @@ from sqlalchemy.types import TypeDecorator, TEXT, String, Text, Boolean, Integer
 from sqlalchemy.engine import Engine
 from authtuna.core.encryption import encryption_utils
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
-
+from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin
 from authtuna.core.config import settings
 
 Base = declarative_base()
@@ -109,7 +109,7 @@ class User(Base):
 
     id = Column(String(64), primary_key=True, index=True)
     username = Column(CaseInsensitiveText(80, collation='NOCASE' if engine.dialect.name == 'sqlite' else None),
-                      unique=True, nullable=False)
+                      unique=True, nullable=False, index=True)
     email = Column(CaseInsensitiveText(120, collation='NOCASE' if engine.dialect.name == 'sqlite' else None),
                    unique=True, nullable=False, index=True)
     
@@ -139,6 +139,8 @@ class User(Base):
 
     def check_password(self, password):
         """Checks if the given password matches the user's password hash."""
+        if self.requires_password_reset:
+            return False
         if not self.email_verified:
             return None
         if self.password_hash:
@@ -277,18 +279,25 @@ class Token(Base):
         return f'<Token {self.id} for {self.purpose}>'
 
 
-class SocialAccount(Base):
+class SocialAccount(Base, OAuth2ClientMixin):
     """
     Represents a link between a user and an external OAuth provider.
+    Now integrates with Authlib for a seamless OAuth client experience.
     """
     __tablename__ = 'social_accounts'
     id = Column(Integer, primary_key=True)
     user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
+    extra_data = Column(JsonType, nullable=True)
+    created_at = Column(Float, nullable=False, default=time.time)
+    last_used_at = Column(Float, nullable=False, default=time.time)
 
-    provider = Column(String(50), nullable=False, index=True)  
-    provider_user_id = Column(String(255), nullable=False, index=True)  
-
-    extra_data = Column(JsonType, nullable=True)  
+    # Authlib Mixin required columns
+    provider = Column(String(50), nullable=False, index=True)
+    provider_user_id = Column(String(255), nullable=False, index=True)
+    token_type = Column(String(40), nullable=False, default="bearer")
+    access_token = Column(String(1200), nullable=False)
+    refresh_token = Column(String(1200))
+    expires_at = Column(Integer, nullable=False)
 
     user = relationship('User', back_populates='social_accounts')
 

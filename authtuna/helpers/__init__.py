@@ -24,6 +24,17 @@ async def get_remote_address(request: Request):
     return request.client.host
 
 
+async def get_device_region(request: Request):
+    return request.headers.get("cf-ipcity", "Unknown") + ", " + request.headers.get("cf-ipcountry", "Unknown")
+
+
+async def get_device_data(request: Request):
+    return {
+        "device": await user_agent_to_human_readable(request.headers.get("user-agent", "Unknown")),
+        "region": await get_device_region(request)
+    }
+
+
 async def is_username_valid(username):
     """
     Check if the provided username adheres to the defined validation rules.
