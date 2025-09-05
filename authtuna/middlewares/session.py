@@ -21,7 +21,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         if is_public:
             return await call_next(request)
         device_data = await get_device_data(request, region_kwargs=self.region_kwargs)
-        session_token = request.cookies.get("session_token")
+        session_token = request.cookies.get(settings.SESSION_TOKEN_NAME)
         try:
             if session_token:
                 session_data = encryption_utils.decode_jwt_token(session_token)
@@ -56,9 +56,8 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             else:
                 request.state.user_id = session_data.get("user_id")
                 request.state.session_id = session_data.get("session")
-
             response = await call_next(request)
-            response.set_cookie("session_token", session_cookie)
+            response.set_cookie(settings.SESSION_TOKEN_NAME, session_cookie, samesite=settings.SESSION_SAME_SITE, secure=settings.SESSION_SECURE, httponly=True)
         except Exception as e:
             logger.error(f"Authentication failed: {e}")
             raise HTTPException(401)

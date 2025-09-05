@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     SESSION_LIFETIME_FROM: str = "last_activity"  # "last_activity" or "creation"
     SESSION_SAME_SITE: str = "LAX"
     SESSION_SECURE: bool = True # obvio its gon be httponly coz it auth bruh
+    SESSION_TOKEN_NAME: str = "session_token"
 
     # Email settings (disabled by default)
     EMAIL_ENABLED: bool = False
