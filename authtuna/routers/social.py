@@ -10,29 +10,11 @@ from starlette.responses import RedirectResponse
 from authtuna.core.database import db_manager, User, SocialAccount
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.social import get_social_provider
-from authtuna.helpers import create_session_and_set_cookie
+from authtuna.helpers import create_session_and_set_cookie, generate_random_username, sanitize_username
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["social"])
-
-
-def _sanitize_username(username: str) -> str:
-    """
-    Sanitizes a string to contain only alphanumeric characters.
-    Removes spaces and other symbols.
-    """
-    if not username:
-        return ""
-    # Remove spaces and then filter out non-alphanumeric characters
-    sanitized = "".join(char for char in username.replace(" ", "") if char.isalnum())
-    return sanitized
-
-
-def _generate_random_username(prefix: str = "user") -> str:
-    """Generates a random username with an optional prefix."""
-    random_string = encryption_utils.gen_random_string(8)  # Generate a short, random string
-    return f"{prefix}_{random_string}"
 
 
 @router.get("/{provider_name}/login")
@@ -90,10 +72,10 @@ async def social_callback(
 
             # Sanitize username from provider info
             raw_username = user_info.get('name')
-            sanitized_username = _sanitize_username(raw_username)
+            sanitized_username = sanitize_username(raw_username)
 
             # Use a random username if the sanitized name is empty
-            user_name = sanitized_username if sanitized_username else _generate_random_username()
+            user_name = sanitized_username if sanitized_username else generate_random_username()
 
             # Check for email conflicts with existing local accounts
             existing_user_by_email = await run_in_threadpool(

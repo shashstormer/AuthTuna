@@ -1,3 +1,5 @@
+import string
+
 from fastapi import Request, Response
 from starlette.concurrency import run_in_threadpool
 from ua_parser import user_agent_parser
@@ -167,3 +169,20 @@ async def create_session_and_set_cookie(user: User, request: Request, response: 
         secure=settings.SESSION_SECURE,
         httponly=True
     )
+
+def sanitize_username(username: str) -> str:
+    """
+    Sanitizes a string to contain only alphanumeric characters.
+    Removes spaces and other symbols.
+    """
+    if not username:
+        return ""
+    # Remove spaces and then filter out non-alphanumeric characters
+    sanitized = "".join(char for char in username.replace(" ", "") if char.isalnum())
+    return sanitized
+
+
+def generate_random_username(prefix: str = "user") -> str:
+    """Generates a random username with an optional prefix."""
+    random_string = encryption_utils.gen_random_string(12, string.digits)  # Generate a short, random string
+    return f"{prefix}-{random_string}"
