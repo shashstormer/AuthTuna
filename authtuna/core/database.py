@@ -162,8 +162,8 @@ class Role(Base):
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(255))
     system = Column(Boolean, default=False, nullable=False)
-
-    users = relationship('User', secondary=user_roles_association, back_populates='roles')
+    users = relationship('User', secondary=user_roles_association, back_populates='roles',
+                         foreign_keys=[user_roles_association.c.role_id])
     permissions = relationship('Permission', secondary=role_permissions_association, back_populates='roles',
                                lazy='joined')
 
