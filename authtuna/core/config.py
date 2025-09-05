@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     # Session settings
     FINGERPRINT_HEADERS: List[str] = ["User-Agent", "Accept-Language"]
+    SESSION_DB_VERIFICATION_INTERVAL: int = 10  # Time before rechecking if the token is still active in db
     SESSION_LIFETIME_SECONDS: int = 604800
     SESSION_ABSOLUTE_LIFETIME_SECONDS: int = 31536000
     SESSION_LIFETIME_FROM: str = "last_activity"  # "last_activity" or "creation"
