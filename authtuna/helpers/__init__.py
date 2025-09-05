@@ -1,6 +1,11 @@
-from fastapi import Request
+from fastapi import Request, Response
+from starlette.concurrency import run_in_threadpool
 from ua_parser import user_agent_parser
 from authtuna.core.config import settings
+from authtuna.core.database import Session as DBSession, User
+from authtuna.core.encryption import encryption_utils
+from sqlalchemy.orm import Session
+
 
 
 async def get_remote_address(request: Request, default_ip: str = "127.0.0.1", use_cf_connecting_ip: bool = True, other_ip_headers: list = None):
@@ -138,3 +143,27 @@ async def is_password_valid(password):
     if any(i.isupper() for i in password):
         return {"error": "Password must contain at least one uppercase letter"}
     return {}
+
+async def create_session_and_set_cookie(user: User, request: Request, response: Response, db: Session):
+    """
+    Helper function to create a new database session, save it, and set the session cookie.
+    """
+    device_data = await get_device_data(request)
+    new_session = DBSession(
+        session_id=encryption_utils.gen_random_string(32),
+        user_id=user.id,
+        region=device_data["region"],
+        device=device_data["device"],
+        create_ip=await get_remote_address(request),
+        last_ip=await get_remote_address(request)
+    )
+    await run_in_threadpool(db.add, new_session)
+    await run_in_threadpool(db.commit)
+
+    response.set_cookie(
+        key=settings.SESSION_TOKEN_NAME,
+        value=new_session.get_cookie_string(),
+        samesite=settings.SESSION_SAME_SITE,
+        secure=settings.SESSION_SECURE,
+        httponly=True
+    )

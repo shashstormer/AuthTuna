@@ -6,8 +6,8 @@ from pydantic import BaseModel
 from authtuna.core.database import db_manager, User, Session as DBSession
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.config import settings
-from authtuna.helpers import get_device_data, get_remote_address
 from starlette.concurrency import run_in_threadpool
+from authtuna.helpers import create_session_and_set_cookie
 
 logger = logging.getLogger(__name__)
 
@@ -28,31 +28,6 @@ class UserLogin(BaseModel):
     """
     username_or_email: str
     password: str
-
-
-async def _create_session_and_set_cookie(user: User, request: Request, response: Response, db: Session):
-    """
-    Helper function to create a new database session, save it, and set the session cookie.
-    """
-    device_data = await get_device_data(request)
-    new_session = DBSession(
-        session_id=encryption_utils.gen_random_string(32),
-        user_id=user.id,
-        region=device_data["region"],
-        device=device_data["device"],
-        create_ip=await get_remote_address(request),
-        last_ip=await get_remote_address(request)
-    )
-    await run_in_threadpool(db.add, new_session)
-    await run_in_threadpool(db.commit)
-
-    response.set_cookie(
-        key=settings.SESSION_TOKEN_NAME,
-        value=new_session.get_cookie_string(),
-        samesite=settings.SESSION_SAME_SITE,
-        secure=settings.SESSION_SECURE,
-        httponly=True
-    )
 
 
 @router.post("/signup")
@@ -88,7 +63,7 @@ async def signup_user(
     await run_in_threadpool(db.refresh, new_user)
 
     # Create and return a new session
-    await _create_session_and_set_cookie(new_user, request, response, db)
+    await create_session_and_set_cookie(new_user, request, response, db)
 
     return Response(status_code=status.HTTP_201_CREATED, content="User created successfully. Logged in.")
 
