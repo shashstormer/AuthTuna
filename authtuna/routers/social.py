@@ -85,7 +85,6 @@ async def social_callback(
 
             user = social_account.user
         else:
-            # New user: create a new User and a new SocialAccount
             user_id = encryption_utils.gen_random_string(32)
             user_email = user_info.get('email')
 
