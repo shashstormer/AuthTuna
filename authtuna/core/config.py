@@ -2,10 +2,13 @@ import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr
 from typing import List, Optional
+
 logger = logging.getLogger(__name__)
 import os
 import dotenv
+
 dotenv.load_dotenv()
+
 
 class Settings(BaseSettings):
     """
@@ -14,7 +17,7 @@ class Settings(BaseSettings):
     """
     # Application settings
     APP_NAME: str = "AuthTuna"
-    ALGORITHM: str = "HS256" # JWT Encryption algorithm
+    ALGORITHM: str = "HS256"  # JWT Encryption algorithm
 
     # Security settings
     JWT_SECRET_KEY: SecretStr = SecretStr("dev-secret-key-change-in-production")
@@ -29,7 +32,7 @@ class Settings(BaseSettings):
     FINGERPRINT_HEADERS: List[str] = ["User-Agent", "Accept-Language"]
     SESSION_LIFETIME_SECONDS: int = 604800
     SESSION_ABSOLUTE_LIFETIME_SECONDS: int = 31536000
-    SESSION_LIFETIME_FROM: str = "last_activity" # "last_activity" or "creation"
+    SESSION_LIFETIME_FROM: str = "last_activity"  # "last_activity" or "creation"
 
     # Email settings (disabled by default)
     EMAIL_ENABLED: bool = False
@@ -42,7 +45,18 @@ class Settings(BaseSettings):
     DKIM_SELECTOR: Optional[str] = None
     DEFAULT_SENDER_EMAIL: str = "noreply@example.com"
     EMAIL_DOMAINS: List[str] = ["gmail.com"]
-    model_config = SettingsConfigDict(env_file=os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8', extra='ignore')
+
+    # OAuth settings
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[SecretStr] = None
+    GOOGLE_REDIRECT_URI: Optional[str] = None
+
+    GITHUB_CLIENT_ID: Optional[str] = None
+    GITHUB_CLIENT_SECRET: Optional[SecretStr] = None
+    GITHUB_REDIRECT_URI: Optional[str] = None
+
+    model_config = SettingsConfigDict(env_file=os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
+                                      extra='ignore')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -59,7 +73,6 @@ class Settings(BaseSettings):
             logger.warning("JWT_SECRET_KEY is set to default value. Change it in production.")
         if self.ENCRYPTION_PRIMARY_KEY.get_secret_value() == "dev-encryption-key-change-in-production":
             logger.warning("ENCRYPTION_PRIMARY_KEY is set to default value. Change it in production.")
-
 
 
 # Instantiate settings to be imported by other modules
