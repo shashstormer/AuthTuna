@@ -29,7 +29,7 @@ class EncryptionUtils:
             self.fernet_initialized = False
         if fernet_keys is None or not isinstance(fernet_keys, Sequence) or not fernet_keys:
             raise ValueError("A sequence of at least one Fernet key must be provided.")
-        self.fernet_keys = [Fernet(k.encode('utf-8')) for k in fernet_keys]
+        self.fernet_keys = [Fernet(k.get_secret_value().encode('utf-8')) for k in fernet_keys]
         self.multi_fernet = MultiFernet(self.fernet_keys)
         self.jwt_secret = settings.JWT_SECRET_KEY.get_secret_value()
         self.jwt_algorithm = settings.ALGORITHM

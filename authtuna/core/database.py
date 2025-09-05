@@ -13,9 +13,6 @@ Base = declarative_base()
 engine = create_engine(settings.DEFAULT_DATABASE_URI,
                        connect_args={'check_same_thread': False} if 'sqlite' in settings.DEFAULT_DATABASE_URI else {})
 
-
-
-
 if engine.dialect.name == 'sqlite':
     @event.listens_for(Engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -24,8 +21,6 @@ if engine.dialect.name == 'sqlite':
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.execute("PRAGMA case_sensitive_like=OFF")
         cursor.close()
-
-
 
 
 class CaseInsensitiveText(TypeDecorator):
@@ -76,28 +71,22 @@ class JsonType(TypeDecorator):
             return value
 
 
-
-
-
 user_roles_association = Table('user_roles', Base.metadata,
                                Column('user_id', String(64), ForeignKey('users.id'), primary_key=True),
                                Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
-                               
+
                                Column('given_by_id', String(64), ForeignKey('users.id'), nullable=False),
-                               
+
                                Column('given_at', Float, nullable=False, default=time.time)
                                )
-
 
 role_permissions_association = Table('role_permissions', Base.metadata,
                                      Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
                                      Column('permission_id', Integer, ForeignKey('permissions.id'), primary_key=True),
-                                     
+
                                      Column('added_by_id', String(64), ForeignKey('users.id'), nullable=True),
                                      Column('added_at', Float, nullable=False, default=time.time)
                                      )
-
-
 
 
 class User(Base):
@@ -112,19 +101,19 @@ class User(Base):
                       unique=True, nullable=False, index=True)
     email = Column(CaseInsensitiveText(120, collation='NOCASE' if engine.dialect.name == 'sqlite' else None),
                    unique=True, nullable=False, index=True)
-    
+
     password_hash = Column(String(256), nullable=True)
     email_verified = Column(Boolean, default=False, nullable=False)
     requires_password_reset = Column(Boolean, default=False,
-                                     nullable=False)  
-    mfa_enabled = Column(Boolean, default=False, nullable=False)  
-    
+                                     nullable=False)
+    mfa_enabled = Column(Boolean, default=False, nullable=False)
+
     created_at = Column(Float, nullable=False, default=time.time)
     last_login = Column(Float, nullable=False, default=time.time)
 
-    
-    roles = relationship('Role', secondary=user_roles_association, back_populates='users', lazy='joined')
-    
+    roles = relationship('Role', secondary=user_roles_association, back_populates='users', lazy='joined',
+                         foreign_keys=[user_roles_association.c.user_id])
+
     sessions = relationship('Session', back_populates='user', cascade="all, delete-orphan")
     tokens = relationship('Token', back_populates='user', cascade="all, delete-orphan", foreign_keys='Token.user_id')
     social_accounts = relationship('SocialAccount', back_populates='user', cascade="all, delete-orphan")
@@ -135,7 +124,6 @@ class User(Base):
     def set_password(self, password):
         """Sets the user's password hash."""
         self.password_hash = encryption_utils.hash_password(password)
-
 
     def check_password(self, password):
         """Checks if the given password matches the user's password hash."""
@@ -173,7 +161,7 @@ class Role(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(255))
-    system = Column(Boolean, default=False, nullable=False)  
+    system = Column(Boolean, default=False, nullable=False)
 
     users = relationship('User', secondary=user_roles_association, back_populates='roles')
     permissions = relationship('Permission', secondary=role_permissions_association, back_populates='roles',
@@ -189,9 +177,9 @@ class Permission(Base):
     """
     __tablename__ = 'permissions'
     id = Column(Integer, primary_key=True)
-    name = Column(String(80), unique=True, nullable=False)  
+    name = Column(String(80), unique=True, nullable=False)
     description = Column(String(255))
-    system = Column(Boolean, default=False, nullable=False)  
+    system = Column(Boolean, default=False, nullable=False)
 
     roles = relationship('Role', secondary=role_permissions_association, back_populates='permissions')
 
@@ -212,12 +200,15 @@ class Session(Base):
     active = Column(Boolean, default=True, nullable=False)
     ctime = Column(Float, nullable=False, default=time.time)
     mtime = Column(Float, nullable=False, default=time.time, onupdate=time.time)
-    etime = Column(Float, nullable=False, default=lambda: time.time()+settings.SESSION_LIFETIME_SECONDS, onupdate=lambda: time.time()+settings.SESSION_LIFETIME_SECONDS)
+    etime = Column(Float, nullable=False, default=lambda: time.time() + settings.SESSION_LIFETIME_SECONDS,
+                   onupdate=lambda: time.time() + settings.SESSION_LIFETIME_SECONDS)
     e_abs_time = Column(Float, nullable=False, default=lambda: time.time() + settings.SESSION_ABSOLUTE_LIFETIME_SECONDS)
-    create_ip = Column(String(45))  
-    last_ip = Column(String(45))  
+    create_ip = Column(String(45))
+    last_ip = Column(String(45))
     user = relationship('User', back_populates='sessions')
-    random_string = Column(String(255), nullable=False, default=encryption_utils.gen_random_string, onupdate=encryption_utils.gen_random_string)  # VV-IMP: This minimizes session hijack risks.
+    random_string = Column(String(255), nullable=False, default=encryption_utils.gen_random_string,
+                           onupdate=encryption_utils.gen_random_string)  # VV-IMP: This minimizes session hijack risks.
+
     def __repr__(self):
         return f'<Session {self.session_id} for User {self.user_id}>'
 
@@ -225,7 +216,7 @@ class Session(Base):
         return time.time() > self.etime or time.time() > self.e_abs_time
 
     def is_valid(self, region: str = "", device: str = "", random_string: str = ""):
-        return self.active and not self.is_expired() and self.region == region and  self.device == device and self.random_string == random_string
+        return self.active and not self.is_expired() and self.region == region and self.device == device and self.random_string == random_string
 
     def update_last_ip(self, ip: str):
         self.last_ip = ip
@@ -259,20 +250,19 @@ class Token(Base):
     """
     __tablename__ = 'tokens'
 
-    id = Column(String(64), primary_key=True)  
+    id = Column(String(64), primary_key=True)
     purpose = Column(String(50), nullable=False, index=True)
     user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
 
     ctime = Column(Float, nullable=False, default=time.time)
-    etime = Column(Float, nullable=False)  
+    etime = Column(Float, nullable=False)
 
     used = Column(Boolean, default=False, nullable=False)
 
-    
     new_gen_id = Column(String(64), ForeignKey('tokens.id'), nullable=True)
 
     user = relationship('User', back_populates='tokens', foreign_keys=[user_id])
-    
+
     new_generation = relationship('Token', remote_side=[id], backref='previous_generation', uselist=False)
 
     def __repr__(self):
@@ -313,8 +303,8 @@ class MFAMethod(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
 
-    method_type = Column(String(20), nullable=False)  
-    secret = Column(String(255), nullable=True)  
+    method_type = Column(String(20), nullable=False)
+    secret = Column(String(255), nullable=True)
     is_verified = Column(Boolean, default=False, nullable=False)
 
     user = relationship('User', back_populates='mfa_methods')
@@ -334,7 +324,7 @@ class MFARecoveryCode(Base):
     hashed_code = Column(String(256), nullable=False, unique=True)
     is_used = Column(Boolean, default=False, nullable=False)
     actived_at = Column(Float, nullable=True)
-    active = Column(Boolean, default = False, nullable = False)
+    active = Column(Boolean, default=False, nullable=False)
     user = relationship('User', back_populates='mfa_recovery_codes')
 
     def __repr__(self):
@@ -348,14 +338,12 @@ class DeletedUser(Base):
     __tablename__ = 'deleted_users'
 
     user_id = Column(String(64), primary_key=True)
-    email = Column(String(255), nullable=False)  
+    email = Column(String(255), nullable=False)
 
-    
     data = Column(JsonType, nullable=True)
 
     initiated_at = Column(Float, nullable=False, default=time.time)
 
-    
     cleanup_counter = Column(Integer, default=0, nullable=False)
 
     def __repr__(self):
@@ -369,15 +357,13 @@ class AuditEvent(Base):
     __tablename__ = 'audit_events'
 
     id = Column(Integer, primary_key=True)
-    
+
     user_id = Column(String(64), ForeignKey('users.id'), nullable=True, index=True)
 
     event_type = Column(String(100), nullable=False, index=True)
     timestamp = Column(Float, nullable=False, default=time.time)
     ip_address = Column(String(45), nullable=True)
 
-    
-    
     details = Column(JsonType, nullable=True)
 
     user = relationship('User', back_populates='audit_events')
@@ -404,7 +390,6 @@ class DatabaseManager:
             yield db
         finally:
             db.close()
-
 
 
 db_manager = DatabaseManager()
