@@ -1,6 +1,6 @@
 import logging
 import time
-from fastapi import Request, Response, HTTPException
+from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from authtuna.core.database import db_manager, Session
 from authtuna.core.encryption import encryption_utils
@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseSessionMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app):
+    def __init__(self, app, region_kwargs=None):
         super().__init__(app)
+        self.region_kwargs = region_kwargs or {}
 
     async def dispatch(self, request: Request, call_next):
         public_routes = ["/", "/login/", "/auth/callback/"]
@@ -34,7 +35,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                         Session.session_id == session_data["session"],
                         Session.user_id == session_data["user_id"]
                     ).first()
-                    device_data = await get_device_data(db_session)
+                    device_data = await get_device_data(request, region_kwargs=self.region_kwargs)
                     if not db_session or not db_session.is_valid(
                         region=device_data["region"],
                         device=device_data["device"],
@@ -47,6 +48,8 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                     db.commit()
                     request.state.user_id = db_session.user_id
                     request.state.session_id = db_session.session_id
+                    request.state.device_data = device_data
+
                     session_cookie = db_session.get_cookie_string()
             else:
                 request.state.user_id = session_data.get("user_id")

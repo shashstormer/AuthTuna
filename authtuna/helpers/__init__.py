@@ -37,10 +37,10 @@ async def get_device_region(request: Request, ip_city_header: str = "CF-IPCity",
     return request.headers.get(ip_city_header, default_unfound) + ", " + request.headers.get(ip_country_header, default_unfound)
 
 
-async def get_device_data(request: Request):
+async def get_device_data(request: Request, region_kwargs=None, ):
     return {
         "device": await user_agent_to_human_readable(request.headers.get("user-agent", "Unknown")),
-        "region": await get_device_region(request)
+        "region": await get_device_region(request, **(region_kwargs or {}))
     }
 
 
