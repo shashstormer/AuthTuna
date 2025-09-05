@@ -1,6 +1,6 @@
 import logging
 import time
-from fastapi import Request, HTTPException
+from fastapi import Request, Response, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from authtuna.core.database import db_manager, Session
 from authtuna.core.encryption import encryption_utils
@@ -56,9 +56,20 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             else:
                 request.state.user_id = session_data.get("user_id")
                 request.state.session_id = session_data.get("session")
-            response = await call_next(request)
-            response.set_cookie(settings.SESSION_TOKEN_NAME, session_cookie, samesite=settings.SESSION_SAME_SITE, secure=settings.SESSION_SECURE, httponly=True)
+            try:
+                response = await call_next(request)
+            except HTTPException as exc:
+                raise exc
+            except Exception as e:
+                logger.error(e)
+                response = Response(status_code=500, content="Internal Server Error")
         except Exception as e:
             logger.error(f"Authentication failed: {e}")
-            raise HTTPException(401)
+            response = Response(status_code=401, content="Authentication failed.")
+
+        if session_cookie is None:
+            response.delete_cookie(settings.SESSION_TOKEN_NAME)
+        else:
+            response.set_cookie(settings.SESSION_TOKEN_NAME, session_cookie, samesite=settings.SESSION_SAME_SITE,
+                                secure=settings.SESSION_SECURE, httponly=True)
         return response
