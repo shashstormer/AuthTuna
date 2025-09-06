@@ -114,7 +114,7 @@
         <form id="signup-form" class="space-y-6">
           <div>
             <label for="username" class="block text-sm font-medium text-white/80 mb-2">Username</label>
-            <input id="username" name="username" type="text" autocomplete="username" required placeholder="shashstormer"
+            <input id="username" name="username" type="text" autocomplete="username" required placeholder="Username"
                    class="form-input block w-full px-5 py-3 rounded-xl text-white">
           </div>
           <div>
@@ -170,11 +170,10 @@
                 body: JSON.stringify({ username, email, password })
             });
 
-            const data = await response.json();
+
 
             if (response.ok) {
                 if (response.status === 202) {
-                    // Verification email sent, update UI
                     cardContent.innerHTML = `
                         <div class="text-center">
                             <div class="w-20 h-20 mx-auto bg-gradient-to-br from-sky-400 to-cyan-400 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg mb-4">
@@ -189,14 +188,16 @@
                         </div>
                     `;
                 } else if (response.status === 201) {
-                    // Account created instantly
+                    const data = await response.json();
                     showMessage(data.content || 'Success! Redirecting...', 'text-green-300/90');
                     setTimeout(() => window.location.href = '/auth/login', 3000);
                 }
             } else {
+                const data = await response.json();
                 showMessage(data.detail || 'An error occurred.', 'text-red-300/90');
             }
         } catch (error) {
+            console.error('Error:', error);
             showMessage('Network error. Please try again.', 'text-red-300/90');
         }
     });
