@@ -10,7 +10,6 @@ from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin
 from authtuna.core.config import settings
 from contextlib import contextmanager
 
-
 Base = declarative_base()
 engine = create_engine(settings.DEFAULT_DATABASE_URI,
                        connect_args={'check_same_thread': False} if 'sqlite' in settings.DEFAULT_DATABASE_URI else {})
@@ -129,26 +128,33 @@ class User(Base):
     mfa_recovery_codes = relationship("MFARecoveryCode", back_populates="user", cascade="all, delete-orphan")
     audit_events = relationship("AuditEvent", back_populates="user", cascade="all, delete-orphan")
 
-    def set_password(self, password, ip: str):
+    def set_password(self, password, ip: str, db_manager_custom=None):
         """Sets the user's password hash."""
+        db_manager_to_use = db_manager_custom or db_manager
         old_hash = self.password_hash
         self.password_hash = encryption_utils.hash_password(password)
-        db_manager.log_audit_event(
+        db_manager_to_use.log_audit_event(
             self.id, "PASSWORD_CHANGED", ip,
             {"had_old_password": bool(old_hash)}
         )
 
-    def check_password(self, password, ip: str):
+    def check_password(self, password, ip: str, db_manager_custom=None):
         """Checks if the given password matches the user's password hash."""
+        db_manager_to_use = db_manager_custom or db_manager
         if self.requires_password_reset:
-            db_manager.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "password_reset_required"})
+            db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "password_reset_required"})
             return False
         if not self.email_verified:
-            db_manager.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "email_not_verified"})
+            db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "email_not_verified"})
             return None
         if self.password_hash:
-            db_manager.log_audit_event(self.id, "LOGIN_SUCCESS", ip)
-            return encryption_utils.verify_password(password, self.password_hash)
+            if encryption_utils.verify_password(password, self.password_hash):
+                db_manager_to_use.log_audit_event(self.id, "LOGIN_SUCCESS", ip)
+                return True
+            else:
+                db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "incorrect_password"})
+                return False
+        db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "no_password_set"})
         return False
 
     def is_email_verified(self):
@@ -236,11 +242,12 @@ class Session(Base):
     def is_valid(self, region: str = "", device: str = "", random_string: str = ""):
         return self.active and not self.is_expired() and self.region == region and self.device == device and self.random_string == random_string
 
-    def update_last_ip(self, ip: str):
+    def update_last_ip(self, ip: str, db_manager_custom=None):
+        db_manager_to_use = db_manager_custom or db_manager
         old_ip = self.last_ip
         self.last_ip = ip
         self.mtime = time.time()
-        db_manager.log_audit_event(
+        db_manager_to_use.log_audit_event(
             self.user_id, "SESSION_IP_UPDATED", ip,
             {"old_ip": old_ip, "new_ip": ip}
         )
@@ -256,9 +263,10 @@ class Session(Base):
         self.mtime = time.time()
         return self.random_string
 
-    def terminate(self, ip: str):
+    def terminate(self, ip: str, db_manager_custom=None):
+        db_manager_to_use = db_manager_custom or db_manager
         self.active = False
-        db_manager.log_audit_event(
+        db_manager_to_use.log_audit_event(
             self.user_id, "SESSION_TERMINATED", ip,
             {"session_id": self.session_id}
         )
@@ -290,13 +298,13 @@ class Token(Base):
     user = relationship("User", back_populates="tokens", foreign_keys=[user_id])
     new_generation = relationship("Token", remote_side=[id], backref="previous_generation", uselist=False)
 
-    def mark_used(self, ip: str):
+    def mark_used(self, ip: str, db_manager_custom=None):
+        db_manager_to_use = db_manager_custom or db_manager
         self.used = True
-        if db_manager:
-            db_manager.log_audit_event(
-                self.user_id, "TOKEN_USED", ip,
-                {"token_id": self.id, "purpose": self.purpose}
-            )
+        db_manager_to_use.log_audit_event(
+            self.user_id, "TOKEN_USED", ip,
+            {"token_id": self.id, "purpose": self.purpose}
+        )
 
     def __repr__(self):
         return f"<Token {self.id} for {self.purpose}>"
