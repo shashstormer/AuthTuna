@@ -268,7 +268,12 @@ async def login_user(
     await create_session_and_set_cookie(user, request, response, db)
 
     if settings.EMAIL_ENABLED:
-        await email_manager.send_new_login_email(user.email, background_tasks, {"username": user.username})
+        await email_manager.send_new_login_email(user.email, background_tasks, {
+            "username": user.username,
+            "region": request.state.device_data["region"],
+            "ip_address": await get_remote_address(request),
+            "device": request.state.device_data["device"],
+        })
 
     return {"message": "Login successful."}
 
