@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # Application settings
     APP_NAME: str = "AuthTuna"
     ALGORITHM: str = "HS256"  # JWT Encryption algorithm
-
+    API_BASE_URL: str
     # Security settings
     JWT_SECRET_KEY: SecretStr = SecretStr("dev-secret-key-change-in-production")
     ENCRYPTION_PRIMARY_KEY: SecretStr = SecretStr("dev-encryption-key-change-in-production")
@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     SESSION_ABSOLUTE_LIFETIME_SECONDS: int = 31536000
     SESSION_LIFETIME_FROM: str = "last_activity"  # "last_activity" or "creation"
     SESSION_SAME_SITE: str = "LAX"
-    SESSION_SECURE: bool = True # obvio its gon be httponly coz it auth bruh
+    SESSION_SECURE: bool = True  # obvio its gon be httponly coz it auth bruh
     SESSION_TOKEN_NAME: str = "session_token"
 
     # Email settings (disabled by default)
@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     DKIM_SELECTOR: Optional[str] = None
     DEFAULT_SENDER_EMAIL: str = "noreply@example.com"
     EMAIL_DOMAINS: List[str] = ["gmail.com"]
+
+    MAIL_STARTTLS: bool = True
+    MAIL_SSL_TLS: bool = False
+    USE_CREDENTIALS: bool = True
+    VALIDATE_CERTS: bool = True
+
+    EMAIL_TEMPLATE_DIR: str = "authtuna/templates/email/"
 
     # OAuth settings
     GOOGLE_CLIENT_ID: Optional[str] = None

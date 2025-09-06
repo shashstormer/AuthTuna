@@ -55,8 +55,9 @@ async def signup_user(
         username=user_data.username,
         email=user_data.email,
     )
-    await run_in_threadpool(new_user.set_password, user_data.password, await get_remote_address(request))
     await run_in_threadpool(db.add, new_user)
+    await run_in_threadpool(db.commit)
+    await run_in_threadpool(new_user.set_password, user_data.password, await get_remote_address(request))
     await run_in_threadpool(db.commit)
     await run_in_threadpool(db.refresh, new_user)
     await create_session_and_set_cookie(new_user, request, response, db)
