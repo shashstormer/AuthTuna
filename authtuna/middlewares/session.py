@@ -25,11 +25,12 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         try:
             if session_cookie:
                 session_data = encryption_utils.decode_jwt_token(session_cookie)
+                session_data = session_data if session_data else {}
                 last_db_check = session_data.get("database_checked", 0)
 
             else:
                 last_db_check = time.time()
-                session_data = None
+                session_data = {}
             if session_data and time.time() - last_db_check > settings.SESSION_DB_VERIFICATION_INTERVAL:
                 with db_manager.get_context_manager_db() as db:
                     db_session = db.query(Session).filter(
@@ -62,6 +63,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logger.error(f"Authentication failed: {e}")
             response = Response(status_code=401, content="Authentication failed.")
+            raise e
 
         if session_cookie is None:
             response.delete_cookie(settings.SESSION_TOKEN_NAME)

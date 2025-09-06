@@ -1,4 +1,5 @@
 import logging
+import os
 import smtplib
 import ssl
 from typing import Dict, Any
@@ -138,6 +139,56 @@ class EmailManager:
             email_to=email,
             template_name="password_reset.html",
             context=context,
+            background_tasks=background_tasks
+        )
+
+    async def send_new_login_email(self, email: str, background_tasks: BackgroundTasks, context: Dict[str, Any] = None):
+        """Sends an email confirming a new login."""
+        await self.send_email_async(
+            subject="New Login",
+            email_to=email,
+            template_name="new_login.html",
+            context=context if context is not None else {},
+            background_tasks=background_tasks
+        )
+
+    async def send_mfa_added_email(self, email: str, background_tasks: BackgroundTasks, context: Dict[str, Any] = None):
+        """Sends an email confirming a new login."""
+        await self.send_email_async(
+            subject="MFA Added",
+            email_to=email,
+            template_name="mfa_added.html",
+            context=context if context is not None else {},
+            background_tasks=background_tasks
+        )
+
+    async def send_mfa_removed_email(self, email: str, background_tasks: BackgroundTasks, context: Dict[str, Any] = None):
+        """Sends an email confirming a new login."""
+        await self.send_email_async(
+            subject="MFA Removed",
+            email_to=email,
+            template_name="mfa_removed.html",
+            context=context if context is not None else {},
+            background_tasks=background_tasks
+        )
+
+    async def send_mfa_failed_email(self, email: str, background_tasks: BackgroundTasks, context: Dict[str, Any] = None):
+        """Sends an email confirming a new login."""
+        await self.send_email_async(
+            subject="MFA Failed",
+            email_to=email,
+            template_name="mfa_failed.html",
+            context=context if context is not None else {},
+            background_tasks=background_tasks
+        )
+
+    async def send_new_social_account_connected_email(self, email: str, background_tasks: BackgroundTasks, context: Dict[str, Any] = None):
+        """Sends an email confirming a new login."""
+        await self.send_email_async(
+            subject="New Social Account Connected",
+            email_to=email,
+            template_name="new_social_account_connected.html",
+            context=context if context is not None else {},
             background_tasks=background_tasks
         )
 

@@ -247,10 +247,11 @@ class Session(Base):
         old_ip = self.last_ip
         self.last_ip = ip
         self.mtime = time.time()
-        db_manager_to_use.log_audit_event(
-            self.user_id, "SESSION_IP_UPDATED", ip,
-            {"old_ip": old_ip, "new_ip": ip}
-        )
+        if old_ip != ip:
+            db_manager_to_use.log_audit_event(
+                self.user_id, "SESSION_IP_UPDATED", ip,
+                {"old_ip": old_ip, "new_ip": ip}
+            )
 
     def get_random_string(self):
         return self.random_string

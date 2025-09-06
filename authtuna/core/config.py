@@ -8,6 +8,8 @@ import os
 import dotenv
 
 dotenv.load_dotenv()
+module_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+email_template_dir = os.path.join(module_path, "templates/email")
 
 
 class Settings(BaseSettings):
@@ -55,7 +57,7 @@ class Settings(BaseSettings):
     USE_CREDENTIALS: bool = True
     VALIDATE_CERTS: bool = True
 
-    EMAIL_TEMPLATE_DIR: str = "authtuna/templates/email/"
+    EMAIL_TEMPLATE_DIR: str = email_template_dir
 
     # OAuth settings
     GOOGLE_CLIENT_ID: Optional[str] = None
