@@ -240,7 +240,32 @@ class Session(Base):
         return time.time() > self.etime or time.time() > self.e_abs_time
 
     def is_valid(self, region: str = "", device: str = "", random_string: str = ""):
-        return self.active and not self.is_expired() and self.region == region and self.device == device and self.random_string == random_string
+        if self.active and not self.is_expired():
+            if self.region == region:
+                pass
+            else:
+                db_manager.log_audit_event(
+                    self.user_id, "SESSION_INVALIDATED", self.last_ip,
+                    {"reason": "region_mismatch"}
+                )
+                self.terminate(self.last_ip)
+                return False
+            if self.device == device:
+                pass
+            else:
+                db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip,
+                                           {"reason": "device_mismatch"})
+                self.terminate(self.last_ip)
+                return False
+            if self.random_string == random_string:
+                return True
+            else:
+                db_manager.log_audit_event(
+                    self.user_id, "SESSION_INVALIDATED", self.last_ip,
+                    {"reason": "random_string_mismatch"}
+                )
+                self.terminate(self.last_ip)
+        return False
 
     def update_last_ip(self, ip: str, db_manager_custom=None):
         db_manager_to_use = db_manager_custom or db_manager

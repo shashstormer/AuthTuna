@@ -63,6 +63,8 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                         request.state.session_id = db_session.session_id
                         request.state.device_data = device_data
                         session_cookie = db_session.get_cookie_string()
+                    else:
+                        db.commit()
             else:
                 request.state.user_id = session_data.get("user_id")
                 request.state.session_id = session_data.get("session")
@@ -76,8 +78,6 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logger.error(f"Authentication failed: {e}")
             response = Response(status_code=401, content="Authentication failed.")
-            raise e
-
         if session_cookie is None:
             response.delete_cookie(settings.SESSION_TOKEN_NAME)
         else:
