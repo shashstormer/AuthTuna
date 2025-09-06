@@ -141,6 +141,41 @@ class EmailManager:
             background_tasks=background_tasks
         )
 
+    async def send_password_change_email(self, email: str, background_tasks: BackgroundTasks, context=None):
+        """Sends a password reset email with a unique link."""
+        await self.send_email_async(
+            subject="Password Changed",
+            email_to=email,
+            template_name="password_change.html",
+            context=context,
+            background_tasks=background_tasks
+        )
+
+    async def send_authorize_confirm_email(self, email: str, authorize_token: str, background_tasks: BackgroundTasks, context=None):
+        """Sends a link which will set a boolean flag for a token linked to user's account which can be used to check if the user has confirmed that he wants to perform that action."""
+        authorize_link = f"{settings.API_BASE_URL}/auth/authorize?authorize_token={authorize_token}"
+        context = {"authorize_link": authorize_link}
+        await self.send_email_async(
+            subject="Authorize Confirmation",
+            email_to=email,
+            template_name="authorize_confirm.html",
+            context=context,
+        )
+
+    async def send_welcome_email(self, email: str, background_tasks: BackgroundTasks, context=None):
+        """Sends a welcome email to the user after successful registration."""
+        await self.send_email_async(
+            subject=f"Welcome to {settings.APP_NAME}!",
+            email_to=email,
+            template_name="welcome.html",
+            context=context,
+            background_tasks=background_tasks
+        )
+
+
+
+
+
 
 # Instantiate a single instance of the EmailManager for easy import
 email_manager = EmailManager()
