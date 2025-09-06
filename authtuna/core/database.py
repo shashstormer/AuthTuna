@@ -8,6 +8,8 @@ from authtuna.core.encryption import encryption_utils
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin
 from authtuna.core.config import settings
+from contextlib import contextmanager
+
 
 Base = declarative_base()
 engine = create_engine(settings.DEFAULT_DATABASE_URI,
@@ -30,6 +32,7 @@ class CaseInsensitiveText(TypeDecorator):
     """
     impl = TEXT
     cache_ok = True
+
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
             return dialect.type_descriptor(CITEXT())
@@ -126,17 +129,25 @@ class User(Base):
     mfa_recovery_codes = relationship("MFARecoveryCode", back_populates="user", cascade="all, delete-orphan")
     audit_events = relationship("AuditEvent", back_populates="user", cascade="all, delete-orphan")
 
-    def set_password(self, password):
+    def set_password(self, password, ip: str):
         """Sets the user's password hash."""
+        old_hash = self.password_hash
         self.password_hash = encryption_utils.hash_password(password)
+        db_manager.log_audit_event(
+            self.id, "PASSWORD_CHANGED", ip,
+            {"had_old_password": bool(old_hash)}
+        )
 
-    def check_password(self, password):
+    def check_password(self, password, ip: str):
         """Checks if the given password matches the user's password hash."""
         if self.requires_password_reset:
+            db_manager.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "password_reset_required"})
             return False
         if not self.email_verified:
+            db_manager.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "email_not_verified"})
             return None
         if self.password_hash:
+            db_manager.log_audit_event(self.id, "LOGIN_SUCCESS", ip)
             return encryption_utils.verify_password(password, self.password_hash)
         return False
 
@@ -173,7 +184,8 @@ class Role(Base):
         primaryjoin=lambda: Role.id == user_roles_association.c.role_id,
         secondaryjoin=lambda: User.id == user_roles_association.c.user_id,
     )
-    permissions = relationship("Permission", secondary=role_permissions_association, back_populates="roles", lazy="joined")
+    permissions = relationship("Permission", secondary=role_permissions_association, back_populates="roles",
+                               lazy="joined")
 
     def __repr__(self):
         return f"<Role {self.name}>"
@@ -225,8 +237,13 @@ class Session(Base):
         return self.active and not self.is_expired() and self.region == region and self.device == device and self.random_string == random_string
 
     def update_last_ip(self, ip: str):
+        old_ip = self.last_ip
         self.last_ip = ip
         self.mtime = time.time()
+        db_manager.log_audit_event(
+            self.user_id, "SESSION_IP_UPDATED", ip,
+            {"old_ip": old_ip, "new_ip": ip}
+        )
 
     def get_random_string(self):
         return self.random_string
@@ -238,6 +255,13 @@ class Session(Base):
         self.random_string = encryption_utils.gen_random_string()
         self.mtime = time.time()
         return self.random_string
+
+    def terminate(self, ip: str):
+        self.active = False
+        db_manager.log_audit_event(
+            self.user_id, "SESSION_TERMINATED", ip,
+            {"session_id": self.session_id}
+        )
 
     def get_cookie_string(self):
         cookie_data = {
@@ -265,6 +289,14 @@ class Token(Base):
 
     user = relationship("User", back_populates="tokens", foreign_keys=[user_id])
     new_generation = relationship("Token", remote_side=[id], backref="previous_generation", uselist=False)
+
+    def mark_used(self, ip: str):
+        self.used = True
+        if db_manager:
+            db_manager.log_audit_event(
+                self.user_id, "TOKEN_USED", ip,
+                {"token_id": self.id, "purpose": self.purpose}
+            )
 
     def __repr__(self):
         return f"<Token {self.id} for {self.purpose}>"
@@ -384,6 +416,7 @@ class DatabaseManager:
         super().__init__()
         Base.metadata.create_all(bind=engine)
 
+    @contextmanager
     def get_db(self):
         """Provides a database session as a context manager."""
         db = self.SessionLocal()
@@ -391,6 +424,19 @@ class DatabaseManager:
             yield db
         finally:
             db.close()
+
+    def log_audit_event(self, user_id: str, event_type: str, ip_address: str = None, details: dict = None):
+        """Logs an audit event in the database."""
+        with self.get_db() as db:
+            audit_event = AuditEvent(
+                user_id=user_id,
+                event_type=event_type,
+                ip_address=ip_address,
+                details=details or {}
+            )
+            db.add(audit_event)
+            db.commit()
+            return audit_event
 
 
 db_manager = DatabaseManager()

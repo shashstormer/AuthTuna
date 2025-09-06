@@ -8,11 +8,7 @@ from authtuna.helpers import get_device_data, get_remote_address
 from authtuna.core.config import settings
 
 logger = logging.getLogger(__name__)
-from contextlib import contextmanager
 
-@contextmanager
-def get_db_ctx():
-    return db_manager.get_db()
 
 class DatabaseSessionMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, region_kwargs=None):
@@ -20,10 +16,6 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         self.region_kwargs = region_kwargs or {}
 
     async def dispatch(self, request: Request, call_next):
-        public_routes = ["/login/", "/auth/callback/"]
-        is_public = any(request.url.path.startswith(route) for route in public_routes)
-        if is_public:
-            return await call_next(request)
         device_data = await get_device_data(request, region_kwargs=self.region_kwargs)
         session_cookie = request.cookies.get(settings.SESSION_TOKEN_NAME)
         request.state.user_id = None
@@ -38,7 +30,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                 last_db_check = time.time()
                 session_data = None
             if session_data and time.time() - last_db_check > settings.SESSION_DB_VERIFICATION_INTERVAL:
-                with get_db_ctx() as db:
+                with db_manager.get_db() as db:
                     db_session = db.query(Session).filter(
                         Session.session_id == session_data["session"],
                         Session.user_id == session_data["user_id"]
