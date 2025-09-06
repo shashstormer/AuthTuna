@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin
 from authtuna.core.config import settings
 from contextlib import contextmanager
-
+from requestez.helpers import log
 Base = declarative_base()
 engine = create_engine(settings.DEFAULT_DATABASE_URI,
                        connect_args={'check_same_thread': False} if 'sqlite' in settings.DEFAULT_DATABASE_URI else {})
@@ -425,6 +425,9 @@ class DatabaseManager:
         Base.metadata.create_all(bind=engine)
 
     @contextmanager
+    def get_context_manager_db(self):
+        return self.get_db()
+
     def get_db(self):
         """Provides a database session as a context manager."""
         db = self.SessionLocal()
@@ -433,18 +436,32 @@ class DatabaseManager:
         finally:
             db.close()
 
+
     def log_audit_event(self, user_id: str, event_type: str, ip_address: str = None, details: dict = None):
         """Logs an audit event in the database."""
-        with self.get_db() as db:
-            audit_event = AuditEvent(
-                user_id=user_id,
-                event_type=event_type,
-                ip_address=ip_address,
-                details=details or {}
-            )
-            db.add(audit_event)
-            db.commit()
-            return audit_event
+        try:
+            with self.get_db() as db:
+                audit_event = AuditEvent(
+                    user_id=user_id,
+                    event_type=event_type,
+                    ip_address=ip_address,
+                    details=details or {}
+                )
+                db.add(audit_event)
+                db.commit()
+                return audit_event
+        except TypeError:
+            with self.get_context_manager_db() as db:
+                audit_event = AuditEvent(
+                    user_id=user_id,
+                    event_type=event_type,
+                    ip_address=ip_address,
+                    details=details or {}
+                )
+                db.add(audit_event)
+                db.commit()
+                return audit_event
+
 
 
 db_manager = DatabaseManager()

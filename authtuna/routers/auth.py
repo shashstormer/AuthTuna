@@ -7,7 +7,7 @@ from authtuna.core.database import db_manager, User, Session as DBSession
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.config import settings
 from starlette.concurrency import run_in_threadpool
-from authtuna.helpers import create_session_and_set_cookie
+from authtuna.helpers import create_session_and_set_cookie, get_remote_address
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ async def signup_user(
         username=user_data.username,
         email=user_data.email,
     )
-    await run_in_threadpool(new_user.set_password, user_data.password)
+    await run_in_threadpool(new_user.set_password, user_data.password, await get_remote_address(request))
     await run_in_threadpool(db.add, new_user)
     await run_in_threadpool(db.commit)
     await run_in_threadpool(db.refresh, new_user)
@@ -84,7 +84,7 @@ async def login_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username/email or password."
         )
-    password_valid = await run_in_threadpool(user.check_password, login_data.password)
+    password_valid = await run_in_threadpool(user.check_password, login_data.password, await get_remote_address(request))
     if password_valid is None:
         raise HTTPException(status_code=status.HTTP_412_PRECONDITION_FAILED,
                              detail="Email Not Verified.")

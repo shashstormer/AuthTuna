@@ -1,11 +1,12 @@
 import logging
 import time
-from fastapi import Request, Response, HTTPException, Depends
-from starlette.middleware.base import BaseHTTPMiddleware
+
+from authtuna.core.config import settings
 from authtuna.core.database import db_manager, Session
 from authtuna.core.encryption import encryption_utils
 from authtuna.helpers import get_device_data, get_remote_address
-from authtuna.core.config import settings
+from fastapi import Request, Response, HTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +26,12 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             if session_cookie:
                 session_data = encryption_utils.decode_jwt_token(session_cookie)
                 last_db_check = session_data.get("database_checked", 0)
-                
+
             else:
                 last_db_check = time.time()
                 session_data = None
             if session_data and time.time() - last_db_check > settings.SESSION_DB_VERIFICATION_INTERVAL:
-                with db_manager.get_db() as db:
+                with db_manager.get_context_manager_db() as db:
                     db_session = db.query(Session).filter(
                         Session.session_id == session_data["session"],
                         Session.user_id == session_data["user_id"]
@@ -54,7 +55,6 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             try:
                 response = await call_next(request)
             except HTTPException as exc:
-                response = exc
                 raise exc
             except Exception as e:
                 logger.error(e)
@@ -62,7 +62,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logger.error(f"Authentication failed: {e}")
             response = Response(status_code=401, content="Authentication failed.")
-        
+
         if session_cookie is None:
             response.delete_cookie(settings.SESSION_TOKEN_NAME)
         else:
