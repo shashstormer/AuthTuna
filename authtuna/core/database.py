@@ -1,6 +1,7 @@
 import json
+import logging
 import time
-from sqlalchemy import create_engine, Column, event, Table, ForeignKey
+from sqlalchemy import create_engine, Column, event, Table, ForeignKey, text
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.types import TypeDecorator, TEXT, String, Text, Boolean, Integer, Float
 from sqlalchemy.engine import Engine
@@ -451,6 +452,13 @@ class DatabaseManager:
     def __init__(self):
         """Initializes the database and creates tables if they don't exist."""
         super().__init__()
+        if engine.dialect.name == 'postgresql':
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text('CREATE EXTENSION IF NOT EXISTS citext;'))
+                    conn.commit()
+            except Exception as e:
+                logging.debug(f"Error creating PostgreSQL extension citext: {e}")
         Base.metadata.create_all(bind=engine)
 
     @contextmanager
