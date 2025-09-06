@@ -29,7 +29,7 @@ class CaseInsensitiveText(TypeDecorator):
     a case-insensitive collation on SQLite, falling back to regular Text.
     """
     impl = TEXT
-
+    cache_ok = True
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
             return dialect.type_descriptor(CITEXT())
@@ -71,22 +71,21 @@ class JsonType(TypeDecorator):
             return value
 
 
-user_roles_association = Table('user_roles', Base.metadata,
-                               Column('user_id', String(64), ForeignKey('users.id'), primary_key=True),
-                               Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+user_roles_association = Table(
+    'user_roles', Base.metadata,
+    Column('user_id', String(64), ForeignKey('users.id'), primary_key=True),
+    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('given_by_id', String(64), ForeignKey('users.id'), nullable=False),
+    Column('given_at', Float, nullable=False, default=time.time),
+)
 
-                               Column('given_by_id', String(64), ForeignKey('users.id'), nullable=False),
-
-                               Column('given_at', Float, nullable=False, default=time.time)
-                               )
-
-role_permissions_association = Table('role_permissions', Base.metadata,
-                                     Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
-                                     Column('permission_id', Integer, ForeignKey('permissions.id'), primary_key=True),
-
-                                     Column('added_by_id', String(64), ForeignKey('users.id'), nullable=True),
-                                     Column('added_at', Float, nullable=False, default=time.time)
-                                     )
+role_permissions_association = Table(
+    'role_permissions', Base.metadata,
+    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('permission_id', Integer, ForeignKey('permissions.id'), primary_key=True),
+    Column('added_by_id', String(64), ForeignKey('users.id'), nullable=True),
+    Column('added_at', Float, nullable=False, default=time.time),
+)
 
 
 class User(Base):
@@ -104,22 +103,28 @@ class User(Base):
 
     password_hash = Column(String(256), nullable=True)
     email_verified = Column(Boolean, default=False, nullable=False)
-    requires_password_reset = Column(Boolean, default=False,
-                                     nullable=False)
+    requires_password_reset = Column(Boolean, default=False, nullable=False)
     mfa_enabled = Column(Boolean, default=False, nullable=False)
 
     created_at = Column(Float, nullable=False, default=time.time)
     last_login = Column(Float, nullable=False, default=time.time)
 
-    roles = relationship('Role', secondary=user_roles_association, back_populates='users', lazy='joined',
-                         foreign_keys=[user_roles_association.c.user_id])
+    # Relationships
+    roles = relationship(
+        "Role",
+        secondary=user_roles_association,
+        back_populates="users",
+        lazy="joined",
+        primaryjoin=lambda: User.id == user_roles_association.c.user_id,
+        secondaryjoin=lambda: Role.id == user_roles_association.c.role_id,
+    )
 
-    sessions = relationship('Session', back_populates='user', cascade="all, delete-orphan")
-    tokens = relationship('Token', back_populates='user', cascade="all, delete-orphan", foreign_keys='Token.user_id')
-    social_accounts = relationship('SocialAccount', back_populates='user', cascade="all, delete-orphan")
-    mfa_methods = relationship('MFAMethod', back_populates='user', cascade="all, delete-orphan")
-    mfa_recovery_codes = relationship('MFARecoveryCode', back_populates='user', cascade="all, delete-orphan")
-    audit_events = relationship('AuditEvent', back_populates='user', cascade="all, delete-orphan")
+    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    tokens = relationship("Token", back_populates="user", cascade="all, delete-orphan", foreign_keys="Token.user_id")
+    social_accounts = relationship("SocialAccount", back_populates="user", cascade="all, delete-orphan")
+    mfa_methods = relationship("MFAMethod", back_populates="user", cascade="all, delete-orphan")
+    mfa_recovery_codes = relationship("MFARecoveryCode", back_populates="user", cascade="all, delete-orphan")
+    audit_events = relationship("AuditEvent", back_populates="user", cascade="all, delete-orphan")
 
     def set_password(self, password):
         """Sets the user's password hash."""
@@ -150,41 +155,42 @@ class User(Base):
         return False
 
     def __repr__(self):
-        return f'<User {self.username}>'
+        return f"<User {self.username}>"
 
 
 class Role(Base):
-    """
-    Represents a role that can be assigned to users.
-    """
     __tablename__ = 'roles'
+
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(255))
     system = Column(Boolean, default=False, nullable=False)
-    users = relationship('User', secondary=user_roles_association, back_populates='roles',
-                         foreign_keys=[user_roles_association.c.role_id])
-    permissions = relationship('Permission', secondary=role_permissions_association, back_populates='roles',
-                               lazy='joined')
+
+    users = relationship(
+        "User",
+        secondary=user_roles_association,
+        back_populates="roles",
+        primaryjoin=lambda: Role.id == user_roles_association.c.role_id,
+        secondaryjoin=lambda: User.id == user_roles_association.c.user_id,
+    )
+    permissions = relationship("Permission", secondary=role_permissions_association, back_populates="roles", lazy="joined")
 
     def __repr__(self):
-        return f'<Role {self.name}>'
+        return f"<Role {self.name}>"
 
 
 class Permission(Base):
-    """
-    Represents a specific permission.
-    """
     __tablename__ = 'permissions'
+
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(255))
     system = Column(Boolean, default=False, nullable=False)
 
-    roles = relationship('Role', secondary=role_permissions_association, back_populates='permissions')
+    roles = relationship("Role", secondary=role_permissions_association, back_populates="permissions")
 
     def __repr__(self):
-        return f'<Permission {self.name}>'
+        return f"<Permission {self.name}>"
 
 
 class Session(Base):
@@ -245,9 +251,6 @@ class Session(Base):
 
 
 class Token(Base):
-    """
-    Represents a single-use token for actions like password reset or email verification.
-    """
     __tablename__ = 'tokens'
 
     id = Column(String(64), primary_key=True)
@@ -256,17 +259,15 @@ class Token(Base):
 
     ctime = Column(Float, nullable=False, default=time.time)
     etime = Column(Float, nullable=False)
-
     used = Column(Boolean, default=False, nullable=False)
 
     new_gen_id = Column(String(64), ForeignKey('tokens.id'), nullable=True)
 
-    user = relationship('User', back_populates='tokens', foreign_keys=[user_id])
-
-    new_generation = relationship('Token', remote_side=[id], backref='previous_generation', uselist=False)
+    user = relationship("User", back_populates="tokens", foreign_keys=[user_id])
+    new_generation = relationship("Token", remote_side=[id], backref="previous_generation", uselist=False)
 
     def __repr__(self):
-        return f'<Token {self.id} for {self.purpose}>'
+        return f"<Token {self.id} for {self.purpose}>"
 
 
 class SocialAccount(Base, OAuth2ClientMixin):

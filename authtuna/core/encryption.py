@@ -50,21 +50,21 @@ class EncryptionUtils:
         """
         return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-    def encrypt_data(self, data: bytes) -> bytes:
+    def encrypt_data(self, data: bytes) -> str:
         """
         Encrypts data using the primary (newest) Fernet key.
         """
         if not self.fernet_initialized:
             raise ValueError("Fernet is not initialized.")
-        return self.fernet_keys[0].encrypt(data)
+        return self.fernet_keys[0].encrypt(data).decode('utf-8')
 
-    def decrypt_data(self, data: bytes) -> bytes:
+    def decrypt_data(self, data: bytes) -> str:
         """
         Decrypts data by attempting all keys in the rotation.
         """
         if not self.fernet_initialized:
             raise ValueError("Fernet is not initialized.")
-        return self.multi_fernet.decrypt(data)
+        return self.multi_fernet.decrypt(data).decode('utf-8')
 
     @staticmethod
     def gen_random_string(length: int = 8, symbol_set: Optional[Sequence] = None):
@@ -99,7 +99,7 @@ class EncryptionUtils:
             expire = time.time() + settings.SESSION_LIFETIME_SECONDS  # Default to session lifetime
 
         to_encode.update({"exp": expire})
-        return jwt.encode({"session": self.encrypt_data(json.dumps(to_encode).encode())}, self.jwt_secret, algorithm=self.jwt_algorithm)
+        return jwt.encode({"session": self.encrypt_data(json.dumps(to_encode).encode("utf-8"))}, self.jwt_secret, algorithm=self.jwt_algorithm)
 
     def decode_jwt_token(self, token: str) -> Optional[dict]:
         """

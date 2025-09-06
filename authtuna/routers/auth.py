@@ -79,12 +79,24 @@ async def login_user(
         ).first
     )
 
-    if not user or not await run_in_threadpool(user.check_password, login_data.password):
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username/email or password."
         )
-
+    password_valid = await run_in_threadpool(user.check_password, login_data.password)
+    if password_valid is None:
+        raise HTTPException(status_code=status.HTTP_412_PRECONDITION_FAILED,
+                             detail="Email Not Verified.")
+    elif password_valid is False:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username/email or password."
+        )
+    elif password_valid is True:
+        pass
+    else:
+        raise HTTPException(status_code=500, detail="Internal Server Error (1041).")
     await run_in_threadpool(db.commit)
     if user is not None and isinstance(user, User):
         await create_session_and_set_cookie(user, request, response, db)
