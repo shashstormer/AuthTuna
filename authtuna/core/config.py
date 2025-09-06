@@ -9,7 +9,6 @@ import dotenv
 
 dotenv.load_dotenv()
 module_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-email_template_dir = os.path.join(module_path, "templates/email")
 
 
 class Settings(BaseSettings):
@@ -51,14 +50,16 @@ class Settings(BaseSettings):
     DKIM_SELECTOR: Optional[str] = None
     DEFAULT_SENDER_EMAIL: str = "noreply@example.com"
     EMAIL_DOMAINS: List[str] = ["gmail.com"]
+    TOKENS_EXPIRY_SECONDS: int = 3600
+    TOKENS_MAX_COUNT_PER_DAY_PER_USER_PER_ACTION: int = 5  # max 5 for email verification, max 5 password reset tokens etc etc...
 
     MAIL_STARTTLS: bool = True
     MAIL_SSL_TLS: bool = False
     USE_CREDENTIALS: bool = True
     VALIDATE_CERTS: bool = True
 
-    EMAIL_TEMPLATE_DIR: str = email_template_dir
-
+    EMAIL_TEMPLATE_DIR: str = os.path.join(module_path, "templates/email")
+    HTML_TEMPLATE_DIR: str = os.path.join(module_path, "templates/pages")
     # OAuth settings
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[SecretStr] = None

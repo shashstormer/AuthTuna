@@ -22,6 +22,19 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         request.state.user_id = None
         request.state.session_id = None
         request.state.device_data = device_data
+        if request.url.path in [
+            "/auth/login", "/auth/register", "/auth/forgot-password", "/auth/reset-password",
+            # "/auth/verify-email", "/auth/resend-email-verification", "/auth/change-password",
+            # "/auth/change-email", "/auth/logout", "/auth/social/callback", "/auth/social/login",
+            # "/auth/social/register", "/auth/social/forgot-password", "/auth/social/reset-password",
+            # "/auth/social/verify-email", "/auth/social/resend-email-verification",
+            # "/auth/social/change-password", "/auth/social/change-email", "/auth/social/logout",
+            # "/auth/social/callback", "/auth/social/login", "/auth/social/register",
+            # "/auth/social/forgot-password", "/auth/social/reset-password",
+            # "/auth/social/verify-email", "/auth/social/resend-email-verification",
+            # "/auth/social/change-password", "/auth/social/change-email", "/auth/social/logout",
+        ]:
+            return await call_next(request)
         try:
             if session_cookie:
                 session_data = encryption_utils.decode_jwt_token(session_cookie)
@@ -39,9 +52,9 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                     ).first()
 
                     if db_session and db_session.is_valid(
-                        region=device_data["region"],
-                        device=device_data["device"],
-                        random_string=session_data["random_string"],
+                            region=device_data["region"],
+                            device=device_data["device"],
+                            random_string=session_data["random_string"],
                     ):
                         db_session.update_last_ip(await get_remote_address(request))
                         db_session.update_random_string()

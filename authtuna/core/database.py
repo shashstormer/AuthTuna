@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin
 from authtuna.core.config import settings
 from contextlib import contextmanager
-from requestez.helpers import log
+
 Base = declarative_base()
 engine = create_engine(settings.DEFAULT_DATABASE_URI,
                        connect_args={'check_same_thread': False} if 'sqlite' in settings.DEFAULT_DATABASE_URI else {})
@@ -291,13 +291,16 @@ class Token(Base):
     user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
 
     ctime = Column(Float, nullable=False, default=time.time)
-    etime = Column(Float, nullable=False)
+    etime = Column(Float, nullable=False, default=lambda: time.time() + settings.TOKENS_EXPIRY_SECONDS)
     used = Column(Boolean, default=False, nullable=False)
 
     new_gen_id = Column(String(64), ForeignKey('tokens.id'), nullable=True)
 
     user = relationship("User", back_populates="tokens", foreign_keys=[user_id])
     new_generation = relationship("Token", remote_side=[id], backref="previous_generation", uselist=False)
+
+    def is_valid(self):
+        return self.used is False and self.etime > time.time()
 
     def mark_used(self, ip: str, db_manager_custom=None):
         db_manager_to_use = db_manager_custom or db_manager
