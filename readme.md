@@ -1,6 +1,8 @@
 # AuthTuna 🐟
 
-A high-performance, framework-agnostic authorization and session management library for Python.
+IT'S more focused on fastapi no longer framework-agnostic. But it is still extendable to other frameworks.
+
+A high-performance, framework-agnostic (no longer, me too lazy to update full docs) authorization and session management library for Python.
 
 AuthTuna provides a robust, multi-layered security foundation for modern web applications. It is designed for developers who need to build complex, multi-tenant systems without compromising on security or performance. The library combines a powerful hierarchical permission model with an advanced, stateful session management system to actively defend against a wide range of modern threats.
 
