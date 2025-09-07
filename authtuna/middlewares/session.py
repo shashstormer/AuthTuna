@@ -76,11 +76,9 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                 raise exc
             except Exception as e:
                 logger.debug(e)
-                raise e
                 response = Response(status_code=500, content="Internal Server Error")
         except Exception as e:
             logger.error(f"Authentication failed: {e}")
-            raise e
             response = Response(status_code=401, content="Authentication failed.")
         if session_cookie is None:
             response.delete_cookie(settings.SESSION_TOKEN_NAME)
