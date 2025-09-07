@@ -60,8 +60,8 @@ async def social_callback(
 
         user_info_raw = {}
         if provider_name == 'google':
-            # For OIDC providers like Google, parse the id_token
-            user_info_raw = await provider.parse_id_token(request, token)
+            resp = await provider.userinfo(token=token)
+            user_info_raw = resp
         elif provider_name == 'github':
             # For OAuth 2.0 providers like GitHub, use the token to fetch user info
             resp = await provider.get('user', token=token)
@@ -115,7 +115,7 @@ async def social_callback(
                 await email_manager.send_new_social_account_connected_email(
                     email=user_to_link.email,
                     background_tasks=background_tasks,
-                    context={"username": user_to_link.username, "provider": provider_name.capitalize()}
+                    context={"username": user_to_link.username, "provider_name": provider_name.capitalize()}
                 )
 
             # Case 2 & 3: This is a new social login. Check if the email exists.

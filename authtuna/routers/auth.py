@@ -284,6 +284,7 @@ async def login_user(
 
 
 @router.post("/logout")
+@router.get("/logout")
 async def logout_user(
         request: Request,
         response: Response,

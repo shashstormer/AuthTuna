@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from sqlalchemy.pool import QueuePool
 
 Base = declarative_base()
+
 engine = create_engine(
     settings.DEFAULT_DATABASE_URI,
     connect_args={'check_same_thread': False} if 'sqlite' in settings.DEFAULT_DATABASE_URI else {},
