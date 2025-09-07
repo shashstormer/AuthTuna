@@ -28,6 +28,11 @@ class Settings(BaseSettings):
 
     # Database settings
     DEFAULT_DATABASE_URI: str = "sqlite:///./authtuna_dev.db"
+    DATABASE_POOL_SIZE: int = 20
+    DATABASE_MAX_OVERFLOW: int = 40
+    DATABASE_POOL_TIMEOUT: int = 30
+    DATABASE_POOL_RECYCLE: int = 1800
+    DATABASE_POOL_PRE_PING: bool = True
 
     # Session settings
     FINGERPRINT_HEADERS: List[str] = ["User-Agent", "Accept-Language"]

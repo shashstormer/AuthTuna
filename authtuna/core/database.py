@@ -10,10 +10,19 @@ from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin
 from authtuna.core.config import settings
 from contextlib import contextmanager
+from sqlalchemy.pool import QueuePool
 
 Base = declarative_base()
-engine = create_engine(settings.DEFAULT_DATABASE_URI,
-                       connect_args={'check_same_thread': False} if 'sqlite' in settings.DEFAULT_DATABASE_URI else {})
+engine = create_engine(
+    settings.DEFAULT_DATABASE_URI,
+    connect_args={'check_same_thread': False} if 'sqlite' in settings.DEFAULT_DATABASE_URI else {},
+    poolclass=QueuePool,
+    pool_size=settings.DATABASE_POOL_SIZE,
+    max_overflow=settings.DATABASE_MAX_OVERFLOW,
+    pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+    pool_recycle=settings.DATABASE_POOL_RECYCLE,
+    pool_pre_ping=settings.DATABASE_POOL_PRE_PING,
+)
 
 if engine.dialect.name == 'sqlite':
     @event.listens_for(Engine, "connect")
