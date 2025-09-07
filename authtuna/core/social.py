@@ -9,8 +9,6 @@ logger = logging.getLogger(__name__)
 oauth = OAuth()
 
 # --- OAuth Provider Registration ---
-# We register each social provider as a client on the OAuth registry.
-# This approach centralizes all provider configurations.
 
 # Register Google as an OpenID Connect (OIDC) client.
 # Authlib can automatically discover the endpoints from the server metadata URL.
@@ -39,6 +37,7 @@ if settings.GITHUB_CLIENT_ID and settings.GITHUB_CLIENT_SECRET:
             access_token_url='https://github.com/login/oauth/access_token',
             authorize_url='https://github.com/login/oauth/authorize',
             api_base_url='https://api.github.com/',
+            redirect_uri=settings.API_BASE_URL + '/auth/github/callback',
             client_kwargs={
                 'scope': 'user:email read:user'
             }

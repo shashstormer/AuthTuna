@@ -218,8 +218,13 @@ async def signup_user(
 
 @router.get("/login", response_class=HTMLResponse)
 async def show_login_page(request: Request):
-    """Serves the login page."""
-    return templates.TemplateResponse("login.html", {"request": request})
+    """Serves the login page and indicates which social providers are enabled."""
+    context = {
+        "request": request,
+        "google_login_enabled": bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET),
+        "github_login_enabled": bool(settings.GITHUB_CLIENT_ID and settings.GITHUB_CLIENT_SECRET),
+    }
+    return templates.TemplateResponse("login.html", context)
 
 
 @router.post("/login")

@@ -1,15 +1,16 @@
 import base64
 import json
+import logging
 import secrets
 import string
 import time
 from typing import Optional, Sequence
-
 import bcrypt
 from cryptography.fernet import Fernet, MultiFernet
 from jose import jwt, JWTError
+from authtuna.core.config import settings
 
-from authtuna.core.config import settings, logger
+logger = logging.getLogger(__name__)
 
 
 class EncryptionUtils:
@@ -96,7 +97,7 @@ class EncryptionUtils:
         if expires_delta:
             expire = time.time() + expires_delta
         else:
-            expire = time.time() + settings.SESSION_LIFETIME_SECONDS  # Default to session lifetime
+            expire = time.time() + settings.SESSION_LIFETIME_SECONDS
 
         to_encode.update({"exp": expire})
         return jwt.encode({"session": self.encrypt_data(json.dumps(to_encode).encode("utf-8"))}, self.jwt_secret, algorithm=self.jwt_algorithm)
@@ -116,7 +117,7 @@ class EncryptionUtils:
             payload = json.loads(self.decrypt_data(payload["session"]))
             return payload
         except JWTError as e:
-            logger.error(f"JWT decoding failed: {e}")
+            logger.debug(f"JWT decoding failed: {e}")
             return None
 
 

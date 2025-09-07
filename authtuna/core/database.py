@@ -367,7 +367,7 @@ class SocialAccount(Base, OAuth2ClientMixin):
     token_type = Column(String(40), nullable=False, default="bearer")
     access_token = Column(String(1200), nullable=False)
     refresh_token = Column(String(1200))
-    expires_at = Column(Integer, nullable=False)
+    expires_at = Column(Integer, nullable=True)
 
     user = relationship('User', back_populates='social_accounts')
 
