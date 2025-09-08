@@ -1,15 +1,15 @@
 import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr
-from typing import List, Optional
+from typing import List, Optional, Any
 
 logger = logging.getLogger(__name__)
 import os
-import dotenv
 
-dotenv.load_dotenv()
 module_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+_settings_instance: Optional["Settings"] = None
 
+use_env = os.getenv("AUTHTUNA_NO_ENV", "false").lower() in ("true", "1", "t")
 
 class Settings(BaseSettings):
     """
@@ -77,22 +77,59 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
                                       extra='ignore')
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.EMAIL_ENABLED:
-            assert self.SMTP_HOST, "SMTP_HOST must be set if email is enabled"
-            assert self.SMTP_PORT, "SMTP_PORT must be set if email is enabled"
-            assert self.DEFAULT_SENDER_EMAIL != "noreply@example.com", "DEFAULT_SENDER_EMAIL must be set if email is enabled"
-            if self.DKIM_PRIVATE_KEY_PATH:
-                assert self.DKIM_DOMAIN, "DKIM_DOMAIN must be set if DKIM private key path is set"
-                assert self.DKIM_SELECTOR, "DKIM_SELECTOR must be set if DKIM private key path is set"
-        if self.DEFAULT_DATABASE_URI == "sqlite:///./authtuna_dev.db":
-            logger.warning("DEFAULT_DATABASE_URI is set to default value. Change it in production.")
-        if self.JWT_SECRET_KEY.get_secret_value() == "dev-secret-key-change-in-production":
-            logger.warning("JWT_SECRET_KEY is set to default value. Change it in production.")
-        if self.ENCRYPTION_PRIMARY_KEY.get_secret_value() == "dev-encryption-key-change-in-production":
-            logger.warning("ENCRYPTION_PRIMARY_KEY is set to default value. Change it in production.")
+
+def init_settings(**kwargs: Any) -> "Settings":
+    """
+    Initializes or re-initializes the global settings singleton. This should
+    be called explicitly at the start of your application, especially for
+    testing or when using a secrets manager.
+
+    Args:
+        **kwargs: Keyword arguments to override settings from the environment.
+    """
+    global _settings_instance
+    if _settings_instance is not None:
+        logger.warning("Settings have already been initialized. Re-initializing.")
+    # The standard constructor loads from env/.env first, then overrides with kwargs.
+    _settings_instance = Settings(**kwargs)
+    return _settings_instance
 
 
-# Instantiate settings to be imported by other modules
-settings = Settings()
+def get_settings() -> "Settings":
+    """
+    Retrieves the global settings singleton.
+
+    If settings have not been initialized manually via `init_settings()`, this
+    function will attempt to auto-initialize them, unless the `AUTHTUNA_NO_ENV`
+    flag is set.
+    """
+
+    global _settings_instance
+    if _settings_instance is None:
+        # Check if the user has explicitly disabled auto-initialization
+        if use_env:
+            raise RuntimeError(
+                "AUTHTUNA_NO_ENV is set. Settings must be initialized manually "
+                "by calling `init_settings()` at application startup."
+            )
+        else:
+            # Auto-initialize for backward compatibility and simple use cases.
+            logger.debug("Auto-initializing settings on first access.")
+            _settings_instance = init_settings()
+
+    return _settings_instance
+
+
+# --- The Global Settings Proxy ---
+# This proxy object allows other modules to do `from authtuna.core.config import settings`
+# and use it as before. The magic happens in `__getattr__`, which calls `get_settings()`
+# the very first time any attribute (e.g., `settings.APP_NAME`) is accessed.
+# This provides the just-in-time, conditional initialization.
+
+class _SettingsProxy:
+    def __getattr__(self, name: str) -> Any:
+        return getattr(get_settings(), name)
+
+
+settings = _SettingsProxy()
+

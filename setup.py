@@ -34,14 +34,20 @@ setup(
         "cryptography>=41.0.0",
         "pyotp>=2.8.0",
         "PyJWT>=2.8.0",
+        "python-jose[cryptography]>=3.3.0",
         "aiosmtplib>=2.0.0",
         "dkimpy>=1.1.0",
         "slowapi>=0.1.0",
+        "authlib>=1.0.0",
+        "ua-parser>=0.10.0",
+        "bcrypt>=4.0.0",
+        "python-dotenv>=1.0.0"
     ],
     extras_require={
         "fastapi": [
             "fastapi>=0.100.0",
             "starlette>=0.27.0",
+            "Jinja2>=3.0.0"
         ],
         "dev": [
             "pytest>=7.0.0",

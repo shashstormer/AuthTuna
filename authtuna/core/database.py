@@ -88,6 +88,7 @@ user_roles_association = Table(
     'user_roles', Base.metadata,
     Column('user_id', String(64), ForeignKey('users.id'), primary_key=True),
     Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('scope', String(255), primary_key=True, default='global', nullable=False),
     Column('given_by_id', String(64), ForeignKey('users.id'), nullable=False),
     Column('given_at', Float, nullable=False, default=time.time),
 )
@@ -155,7 +156,7 @@ class User(Base):
         if self.requires_password_reset:
             db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "password_reset_required"})
             return False
-        if not self.email_verified:
+        if settings.EMAIL_ENABLED and not self.email_verified:
             db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "email_not_verified"})
             return None
         if self.password_hash:

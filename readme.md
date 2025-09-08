@@ -55,18 +55,19 @@ Here's a brief example of how to protect a FastAPI route using AuthTuna's core c
 ```python
 from fastapi import FastAPI, Depends, HTTPException
 from authtuna.core.authorizer import Authorizer
-from authtuna.integrations.fastapi import get_authorizer, get_current_user
+from authtuna.integrations.fastapi_integration import get_authorizer, get_current_user
 from authtuna.data.models import User, Post  # Your application's models
 
 # Assume 'authorizer' is initialized with your data provider in your app's setup
 app = FastAPI()
 
+
 # A protected route to edit a blog post
 @app.put("/posts/{post_id}")
 async def edit_post(
-    post_id: int,
-    user: User = Depends(get_current_user),
-    authorizer: Authorizer = Depends(get_authorizer)
+        post_id: int,
+        user: User = Depends(get_current_user),
+        authorizer: Authorizer = Depends(get_authorizer)
 ):
     """
     This endpoint allows a user to edit a post, but only if they have
@@ -85,13 +86,13 @@ async def edit_post(
     if not authorizer.can(user, "post:edit", post_to_edit):
         # If the check fails, deny access.
         raise HTTPException(
-            status_code=403, 
+            status_code=403,
             detail="You do not have permission to perform this action."
         )
 
     # 3. If the check passes, proceed with the business logic
     # ... update the post in the database
-    
+
     return {"status": "success", "message": "Post updated successfully."}
 ```
 
