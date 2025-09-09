@@ -2,12 +2,15 @@ import logging
 import time
 from typing import Callable, Set, Union
 
+from fastapi import Request, Response
+from sqlalchemy import select
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from authtuna.core.config import settings
-from authtuna.core.database import db_manager, Session
+from authtuna.core.database import db_manager
+from authtuna.core.database import Session as DBSession
 from authtuna.core.encryption import encryption_utils
 from authtuna.helpers import get_device_data, get_remote_address
-from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -41,76 +44,68 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                 "/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/reset-password",
                 "/auth/github/callback", "/auth/github/login",
                 "/auth/google/callback", "/auth/google/login",
-                "/auth/logout",
+                "/auth/logout", "/auth/verify",
             }
         else:
-            # If a list is provided, convert it to a set for performance.
-            # If it's a function, keep it as is.
             self.public_routes = set(public_routes) if isinstance(public_routes, list) else public_routes
 
     async def _is_public_route(self, request: Request) -> bool:
         """
-        Checks if the current request is for a public route,
-        handling both a set of paths and a callable function.
+        Checks if the current request is for a public route.
         """
         path = request.url.path
-
-        # Handle built-in FastAPI docs
         if self.public_fastapi_docs and path.startswith(("/docs", "/openapi.json")):
             return True
-
-        # Check if public_routes is a function
         if callable(self.public_routes):
-            # If the user provided a function, call it with the request
             return self.public_routes(request)
-
-        # Otherwise, assume it's a set and check for membership
         return path in self.public_routes
 
     async def dispatch(self, request: Request, call_next):
-        # Initialize request state
         request.state.user_id = None
         request.state.session_id = None
         request.state.device_data = await get_device_data(request, region_kwargs=self.region_kwargs)
-
-        # Bypass session validation for public endpoints using the new helper
+        request.state.user_ip_address = await get_remote_address(request)  # For now im just using cf ip, afterwards ill add params to config it one day.
         if await self._is_public_route(request):
             return await call_next(request)
 
         session_cookie = request.cookies.get(settings.SESSION_TOKEN_NAME)
-        response = None
 
         try:
             if session_cookie:
                 session_data = encryption_utils.decode_jwt_token(session_cookie)
 
-                last_db_check = session_data.get("database_checked", 0)
-                needs_db_check = time.time() - last_db_check > settings.SESSION_DB_VERIFICATION_INTERVAL
+                if session_data:
+                    last_db_check = session_data.get("database_checked", 0)
+                    needs_db_check = time.time() - last_db_check > settings.SESSION_DB_VERIFICATION_INTERVAL
 
-                if needs_db_check:
-                    with db_manager.get_context_manager_db() as db:
-                        db_session = db.query(Session).filter(
-                            Session.session_id == session_data.get("session"),
-                            Session.user_id == session_data.get("user_id")
-                        ).first()
+                    if needs_db_check:
+                        async with db_manager.get_db() as db:
+                            stmt = select(DBSession).where(
+                                DBSession.session_id == session_data.get("session"),
+                                DBSession.user_id == session_data.get("user_id")
+                            )
+                            result = await db.execute(stmt)
+                            db_session = result.scalar_one_or_none()
 
-                        if db_session and db_session.is_valid(
-                                region=request.state.device_data["region"],
-                                device=request.state.device_data["device"],
-                                random_string=session_data.get("random_string"),
-                                db=db
-                        ):
-                            db_session.update_last_ip(await get_remote_address(request), db=db)
-                            db_session.update_random_string()
-                            request.state.user_id = db_session.user_id
-                            request.state.session_id = db_session.session_id
-                            session_cookie = db_session.get_cookie_string()
-                            db.commit()
-                        else:
-                            session_cookie = None
+                            if db_session and await db_session.is_valid(
+                                    region=request.state.device_data["region"],
+                                    device=request.state.device_data["device"],
+                                    random_string=session_data.get("random_string"),
+                                    db=db
+                            ):
+                                await db_session.update_last_ip(await get_remote_address(request), db=db)
+                                await db_session.update_random_string()
+                                request.state.user_id = db_session.user_id
+                                request.state.session_id = db_session.session_id
+                                session_cookie = db_session.get_cookie_string()
+                                await db.commit()
+                            else:
+                                session_cookie = None
+                    else:
+                        request.state.user_id = session_data.get("user_id")
+                        request.state.session_id = session_data.get("session")
                 else:
-                    request.state.user_id = session_data.get("user_id")
-                    request.state.session_id = session_data.get("session")
+                    session_cookie = None
             else:
                 session_cookie = None
 
@@ -137,4 +132,3 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                     max_age=settings.SESSION_ABSOLUTE_LIFETIME_SECONDS
                 )
         return response
-

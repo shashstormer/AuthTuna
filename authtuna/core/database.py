@@ -1,23 +1,35 @@
 import json
 import logging
 import time
-from sqlalchemy import create_engine, Column, event, Table, ForeignKey, text
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship
-from sqlalchemy.types import TypeDecorator, TEXT, String, Text, Boolean, Integer, Float
-from sqlalchemy.engine import Engine
-from authtuna.core.encryption import encryption_utils
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+import asyncio
+from sqlalchemy import Column, event, Table, ForeignKey, text, AsyncAdaptedQueuePool
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
+from sqlalchemy.engine import Engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.types import TypeDecorator, TEXT, String, Text, Boolean, Integer, Float
+
 from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin
 from authtuna.core.config import settings
-from contextlib import contextmanager
-from sqlalchemy.pool import QueuePool
+from authtuna.core.encryption import encryption_utils
 
+# --- Base Model ---
+# Declarative base for all SQLAlchemy models.
 Base = declarative_base()
 
-engine = create_engine(
-    settings.DEFAULT_DATABASE_URI,
-    connect_args={'check_same_thread': False} if 'sqlite' in settings.DEFAULT_DATABASE_URI else {},
-    poolclass=QueuePool,
+# --- Async Engine Setup ---
+# The database URL is modified for async drivers if needed.
+db_uri = settings.DEFAULT_DATABASE_URI
+if 'sqlite' in db_uri and 'aiosqlite' not in db_uri:
+    db_uri = db_uri.replace('sqlite:///', 'sqlite+aiosqlite:///')
+
+# Asynchronous engine for database connections.
+engine = create_async_engine(
+    db_uri,
+    connect_args={'check_same_thread': False} if 'sqlite' in db_uri else {},
+    poolclass=AsyncAdaptedQueuePool,
     pool_size=settings.DATABASE_POOL_SIZE,
     max_overflow=settings.DATABASE_MAX_OVERFLOW,
     pool_timeout=settings.DATABASE_POOL_TIMEOUT,
@@ -25,6 +37,8 @@ engine = create_engine(
     pool_pre_ping=settings.DATABASE_POOL_PRE_PING,
 )
 
+# --- SQLite PRAGMA Configuration ---
+# This event listener works for both sync and async engines.
 if engine.dialect.name == 'sqlite':
     @event.listens_for(Engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -34,6 +48,8 @@ if engine.dialect.name == 'sqlite':
         cursor.execute("PRAGMA case_sensitive_like=OFF")
         cursor.close()
 
+
+# --- Custom Column Types ---
 
 class CaseInsensitiveText(TypeDecorator):
     """
@@ -46,9 +62,9 @@ class CaseInsensitiveText(TypeDecorator):
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
             return dialect.type_descriptor(CITEXT())
-        elif dialect.name == 'sqlite':
-            return dialect.type_descriptor(String)
         else:
+            # For SQLite, the collation is set on the Column itself.
+            # For other DBs, it falls back to a standard string.
             return dialect.type_descriptor(String)
 
 
@@ -58,6 +74,7 @@ class JsonType(TypeDecorator):
     for efficiency, and a regular TEXT field on other databases.
     """
     impl = TEXT
+    cache_ok = True
 
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
@@ -68,21 +85,27 @@ class JsonType(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
+        # PostgreSQL with JSONB handles dicts natively.
         if dialect.name == 'postgresql':
             return value
-        else:
-            return json.dumps(value)
+        return json.dumps(value)
 
     def process_result_value(self, value, dialect):
         if value is None:
             return None
+        # PostgreSQL with JSONB returns a dict.
         if dialect.name == 'postgresql':
             return value
-        else:
-            if isinstance(value, str):
+        # Other DBs store it as a string.
+        if isinstance(value, str):
+            try:
                 return json.loads(value)
-            return value
+            except json.JSONDecodeError:
+                return {}
+        return value
 
+
+# --- Association Tables ---
 
 user_roles_association = Table(
     'user_roles', Base.metadata,
@@ -102,10 +125,12 @@ role_permissions_association = Table(
 )
 
 
+# --- ORM Models ---
+
 class User(Base):
     """
     Represents a user in the database.
-    Maps to the 'users' table.
+    Maps to the 'users' table. All methods are now async.
     """
     __tablename__ = 'users'
 
@@ -123,12 +148,8 @@ class User(Base):
     created_at = Column(Float, nullable=False, default=time.time)
     last_login = Column(Float, nullable=False, default=time.time)
 
-    # Relationships
     roles = relationship(
-        "Role",
-        secondary=user_roles_association,
-        back_populates="users",
-        lazy="joined",
+        "Role", secondary=user_roles_association, back_populates="users", lazy="joined",
         primaryjoin=lambda: User.id == user_roles_association.c.user_id,
         secondaryjoin=lambda: Role.id == user_roles_association.c.role_id,
     )
@@ -140,45 +161,42 @@ class User(Base):
     mfa_recovery_codes = relationship("MFARecoveryCode", back_populates="user", cascade="all, delete-orphan")
     audit_events = relationship("AuditEvent", back_populates="user", cascade="all, delete-orphan")
 
-    def set_password(self, password, ip: str, db_manager_custom=None, db=None):
-        """Sets the user's password hash."""
+    async def set_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None):
+        """Asynchronously sets the user's password hash and logs the event."""
         db_manager_to_use = db_manager_custom or db_manager
         old_hash = self.password_hash
         self.password_hash = encryption_utils.hash_password(password)
-        db_manager_to_use.log_audit_event(
+        await db_manager_to_use.log_audit_event(
             self.id, "PASSWORD_CHANGED", ip,
-            {"had_old_password": bool(old_hash)},
-            db=db,
+            {"had_old_password": bool(old_hash)}, db=db,
         )
 
-    def check_password(self, password, ip: str, db_manager_custom=None, db=None):
-        """Checks if the given password matches the user's password hash."""
+    async def check_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None) -> bool:
+        """Asynchronously checks the password and logs login attempts."""
         db_manager_to_use = db_manager_custom or db_manager
         if self.requires_password_reset:
-            db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "password_reset_required"}, db=db)
+            await db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "password_reset_required"}, db=db)
             return False
         if settings.EMAIL_ENABLED and not self.email_verified:
-            db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "email_not_verified"}, db=db)
-            return None
+            await db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "email_not_verified"}, db=db)
+            return False
         if self.password_hash:
             if encryption_utils.verify_password(password, self.password_hash):
-                db_manager_to_use.log_audit_event(self.id, "LOGIN_SUCCESS", ip, db=db)
+                await db_manager_to_use.log_audit_event(self.id, "LOGIN_SUCCESS", ip, db=db)
                 return True
             else:
-                db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "incorrect_password"}, db=db)
+                await db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "incorrect_password"}, db=db)
                 return False
-        db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "no_password_set"}, db=db)
+        await db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "no_password_set"}, db=db)
         return False
 
     def is_email_verified(self):
         return self.email_verified
 
-    def has_role(self, role_name):
-        """Checks if the user has a role with the given name."""
+    def has_role(self, role_name: str):
         return any(role.name == role_name for role in self.roles)
 
-    def has_permission(self, permission_name):
-        """Checks if a user has a permission through any of their roles."""
+    def has_permission(self, permission_name: str):
         for role in self.roles:
             if any(permission.name == permission_name for permission in role.permissions):
                 return True
@@ -190,21 +208,16 @@ class User(Base):
 
 class Role(Base):
     __tablename__ = 'roles'
-
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(255))
     system = Column(Boolean, default=False, nullable=False)
-
     users = relationship(
-        "User",
-        secondary=user_roles_association,
-        back_populates="roles",
+        "User", secondary=user_roles_association, back_populates="roles",
         primaryjoin=lambda: Role.id == user_roles_association.c.role_id,
         secondaryjoin=lambda: User.id == user_roles_association.c.user_id,
     )
-    permissions = relationship("Permission", secondary=role_permissions_association, back_populates="roles",
-                               lazy="joined")
+    permissions = relationship("Permission", secondary=role_permissions_association, back_populates="roles", lazy="joined")
 
     def __repr__(self):
         return f"<Role {self.name}>"
@@ -212,12 +225,10 @@ class Role(Base):
 
 class Permission(Base):
     __tablename__ = 'permissions'
-
     id = Column(Integer, primary_key=True)
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(255))
     system = Column(Boolean, default=False, nullable=False)
-
     roles = relationship("Role", secondary=role_permissions_association, back_populates="permissions")
 
     def __repr__(self):
@@ -225,9 +236,7 @@ class Permission(Base):
 
 
 class Session(Base):
-    """
-    Represents an active user session.
-    """
+    """Represents an active user session. All methods are now async."""
     __tablename__ = 'sessions'
 
     session_id = Column(String(32), primary_key=True)
@@ -243,283 +252,197 @@ class Session(Base):
     create_ip = Column(String(45))
     last_ip = Column(String(45))
     user = relationship('User', back_populates='sessions')
-    random_string = Column(String(255), nullable=False, default=encryption_utils.gen_random_string,
-                           onupdate=encryption_utils.gen_random_string)  # VV-IMP: This minimizes session hijack risks.
-
-    def __repr__(self):
-        return f'<Session {self.session_id} for User {self.user_id}>'
+    random_string = Column(String(255), nullable=False, default=encryption_utils.gen_random_string, onupdate=encryption_utils.gen_random_string)
 
     def is_expired(self):
         return time.time() > self.etime or time.time() > self.e_abs_time
 
-    def is_valid(self, region: str = "", device: str = "", random_string: str = "", db=None):
+    async def is_valid(self, region: str = "", device: str = "", random_string: str = "", db: AsyncSession = None) -> bool:
         if self.active and not self.is_expired():
-            if self.region == region:
-                pass
-            else:
-                db_manager.log_audit_event(
-                    self.user_id, "SESSION_INVALIDATED", self.last_ip,
-                    {"reason": "region_mismatch"}, db=db
-                )
-                self.terminate(self.last_ip)
+            if self.region != region:
+                await db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip, {"reason": "region_mismatch"}, db=db)
+                await self.terminate(self.last_ip, db=db)
                 return False
-            if self.device == device:
-                pass
-            else:
-                db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip,
-                                           {"reason": "device_mismatch"}, db=db)
-                self.terminate(self.last_ip)
+            if self.device != device:
+                await db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip, {"reason": "device_mismatch"}, db=db)
+                await self.terminate(self.last_ip, db=db)
                 return False
             if self.random_string == random_string:
                 return True
             else:
-                db_manager.log_audit_event(
-                    self.user_id, "SESSION_INVALIDATED", self.last_ip,
-                    {"reason": "random_string_mismatch"}, db=db
-                )
-                self.terminate(self.last_ip)
+                await db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip, {"reason": "random_string_mismatch"}, db=db)
+                await self.terminate(self.last_ip, db=db)
         return False
 
-    def update_last_ip(self, ip: str, db_manager_custom=None, db=None):
+    async def update_last_ip(self, ip: str, db_manager_custom=None, db: AsyncSession = None):
         db_manager_to_use = db_manager_custom or db_manager
         old_ip = self.last_ip
         self.last_ip = ip
         self.mtime = time.time()
         if old_ip != ip:
-            db_manager_to_use.log_audit_event(
-                self.user_id, "SESSION_IP_UPDATED", ip,
-                {"old_ip": old_ip, "new_ip": ip}, db=db
-            )
+            await db_manager_to_use.log_audit_event(self.user_id, "SESSION_IP_UPDATED", ip, {"old_ip": old_ip, "new_ip": ip}, db=db)
 
-    def get_random_string(self):
-        return self.random_string
-
-    def get_user_id(self):
-        return self.user_id
-
-    def update_random_string(self):
-        self.random_string = encryption_utils.gen_random_string()
-        self.mtime = time.time()
-        return self.random_string
-
-    def terminate(self, ip: str, db_manager_custom=None, db=None):
-        db_manager_to_use = db_manager_custom or db_manager
-        self.active = False
-        db_manager_to_use.log_audit_event(
-            self.user_id, "SESSION_TERMINATED", ip,
-            {"session_id": self.session_id}, db=db
-        )
-
-    def get_cookie_string(self):
+    def get_cookie_string(self) -> str:
         cookie_data = {
-            'session': self.session_id,
-            'e_abs_time': self.e_abs_time,
-            'random_string': self.random_string,
-            'user_id': self.user_id,
+            'session': self.session_id, 'e_abs_time': self.e_abs_time,
+            'random_string': self.random_string, 'user_id': self.user_id,
             'database_checked': time.time(),
         }
         return encryption_utils.create_jwt_token(cookie_data)
 
+    async def update_random_string(self):
+        self.random_string = encryption_utils.gen_random_string()
+        self.mtime = time.time()
+        return self.random_string
+
+    async def terminate(self, ip: str, db_manager_custom=None, db: AsyncSession = None):
+        db_manager_to_use = db_manager_custom or db_manager
+        self.active = False
+        await db_manager_to_use.log_audit_event(self.user_id, "SESSION_TERMINATED", ip, {"session_id": self.session_id}, db=db)
+
 
 class Token(Base):
     __tablename__ = 'tokens'
-
     id = Column(String(64), primary_key=True)
     purpose = Column(String(50), nullable=False, index=True)
     user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
-
     ctime = Column(Float, nullable=False, default=time.time)
     etime = Column(Float, nullable=False, default=lambda: time.time() + settings.TOKENS_EXPIRY_SECONDS)
     used = Column(Boolean, default=False, nullable=False)
-
     new_gen_id = Column(String(64), ForeignKey('tokens.id'), nullable=True)
-
     user = relationship("User", back_populates="tokens", foreign_keys=[user_id])
     new_generation = relationship("Token", remote_side=[id], backref="previous_generation", uselist=False)
 
     def is_valid(self):
-        return self.used is False and self.etime > time.time()
+        return not self.used and self.etime > time.time()
 
-    def mark_used(self, ip: str, db_manager_custom=None, db=None):
+    async def mark_used(self, ip: str, db_manager_custom=None, db: AsyncSession = None):
         db_manager_to_use = db_manager_custom or db_manager
         self.used = True
-        db_manager_to_use.log_audit_event(
-            self.user_id, "TOKEN_USED", ip,
-            {"token_id": self.id, "purpose": self.purpose}, db=db
-        )
-
-    def __repr__(self):
-        return f"<Token {self.id} for {self.purpose}>"
+        await db_manager_to_use.log_audit_event(self.user_id, "TOKEN_USED", ip, {"token_id": self.id, "purpose": self.purpose}, db=db)
 
 
 class SocialAccount(Base, OAuth2ClientMixin):
-    """
-    Represents a link between a user and an external OAuth provider.
-    Now integrates with Authlib for a seamless OAuth client experience.
-    """
     __tablename__ = 'social_accounts'
     id = Column(Integer, primary_key=True)
     user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
     extra_data = Column(JsonType, nullable=True)
     created_at = Column(Float, nullable=False, default=time.time)
     last_used_at = Column(Float, nullable=False, default=time.time)
-
-    # Authlib Mixin required columns
     provider = Column(String(50), nullable=False, index=True)
     provider_user_id = Column(String(255), nullable=False, index=True)
     token_type = Column(String(40), nullable=False, default="bearer")
     access_token = Column(String(1200), nullable=False)
     refresh_token = Column(String(1200))
     expires_at = Column(Integer, nullable=True)
-
     user = relationship('User', back_populates='social_accounts')
-
-    def __repr__(self):
-        return f'<SocialAccount {self.provider}:{self.provider_user_id} for User {self.user_id}>'
 
 
 class MFAMethod(Base):
-    """
-    Stores a configured MFA method for a user (e.g., TOTP authenticator app).
-    """
     __tablename__ = 'mfa_methods'
     id = Column(Integer, primary_key=True)
     user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
-
     method_type = Column(String(20), nullable=False)
     secret = Column(String(255), nullable=True)
     is_verified = Column(Boolean, default=False, nullable=False)
-
     user = relationship('User', back_populates='mfa_methods')
-
-    def __repr__(self):
-        return f'<MFAMethod {self.method_type} for User {self.user_id}>'
 
 
 class MFARecoveryCode(Base):
-    """
-    Stores a single-use MFA recovery code.
-    """
     __tablename__ = 'mfa_recovery_codes'
     id = Column(Integer, primary_key=True)
     user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
-
     hashed_code = Column(String(256), nullable=False, unique=True)
     is_used = Column(Boolean, default=False, nullable=False)
     actived_at = Column(Float, nullable=True)
     active = Column(Boolean, default=False, nullable=False)
     user = relationship('User', back_populates='mfa_recovery_codes')
 
-    def __repr__(self):
-        return f'<MFARecoveryCode for User {self.user_id}>'
-
 
 class DeletedUser(Base):
-    """
-    Stores information about users marked for deletion to manage a staged cleanup process.
-    """
     __tablename__ = 'deleted_users'
-
     user_id = Column(String(64), primary_key=True)
     email = Column(String(255), nullable=False)
-
     data = Column(JsonType, nullable=True)
-
     initiated_at = Column(Float, nullable=False, default=time.time)
-
     cleanup_counter = Column(Integer, default=0, nullable=False)
-
-    def __repr__(self):
-        return f'<DeletedUser {self.user_id} - Cleanup step {self.cleanup_counter}>'
 
 
 class AuditEvent(Base):
-    """
-    Represents a single audit trail event for security and tracking purposes.
-    """
     __tablename__ = 'audit_events'
-
     id = Column(Integer, primary_key=True)
-
     user_id = Column(String(64), ForeignKey('users.id'), nullable=True, index=True)
-
     event_type = Column(String(100), nullable=False, index=True)
     timestamp = Column(Float, nullable=False, default=time.time)
     ip_address = Column(String(45), nullable=True)
-
     details = Column(JsonType, nullable=True)
-
     user = relationship('User', back_populates='audit_events')
-
-    def __repr__(self):
-        return f'<AuditEvent {self.event_type} at {self.timestamp}>'
 
 
 class DatabaseManager:
-    """
-    Manages database connections and sessions using SQLAlchemy.
-    """
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    """Manages async database connections and sessions."""
+    AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
     def __init__(self):
+        self._initialized = False
+        self._init_lock = asyncio.Lock()
+
+    async def initialize_database(self):
         """Initializes the database and creates tables if they don't exist."""
-        super().__init__()
         if engine.dialect.name == 'postgresql':
             try:
-                with engine.connect() as conn:
-                    conn.execute(text('CREATE EXTENSION IF NOT EXISTS citext;'))
-                    conn.commit()
+                async with engine.connect() as conn:
+                    await conn.run_sync(
+                        lambda sync_conn: sync_conn.execute(text('CREATE EXTENSION IF NOT EXISTS citext;'))
+                    )
+                    await conn.commit()
             except Exception as e:
-                logging.debug(f"Error creating PostgreSQL extension citext: {e}")
-        Base.metadata.create_all(bind=engine)
+                logging.debug(f"Could not create PostgreSQL extension citext (it may already exist): {e}")
 
-    @contextmanager
-    def get_context_manager_db(self):
-        return self.get_db()
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    @asynccontextmanager
+    async def get_context_manager_db(self) -> AsyncGenerator[AsyncSession, None]:
+        """Provides an async database session as a context manager. Alias for get_db."""
+        if settings.AUTO_CREATE_DATABASE:
+            if not self._initialized:
+                async with self._init_lock:
+                    if not self._initialized and getattr(settings, 'AUTO_CREATE_DATABASE', False):
+                        await self.initialize_database()
+        async with self.AsyncSessionLocal() as session:
+            yield session
 
     def get_db(self):
-        """Provides a database session as a context manager."""
-        db = self.SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
+        """Provides an async database session as a context manager."""
+        # Returns the async context manager itself to be used with `async with`
+        return self.get_context_manager_db()
 
-
-    def log_audit_event(self, user_id: str, event_type: str, ip_address: str = None, details: dict = None, db=None):
-        """Logs an audit event in the database."""
+    async def log_audit_event(self, user_id: str, event_type: str, ip_address: str = None, details: dict = None, db: AsyncSession = None):
+        """Asynchronously logs an audit event in the database, maintaining robust session handling."""
+        audit_event = AuditEvent(
+            user_id=user_id,
+            event_type=event_type,
+            ip_address=ip_address,
+            details=details or {}
+        )
         if db:
-            audit_event = AuditEvent(
-                    user_id=user_id,
-                    event_type=event_type,
-                    ip_address=ip_address,
-                    details=details or {}
-            )
+            # If a session object is passed, add the event to that session.
+            # The caller is responsible for committing the transaction.
             db.add(audit_event)
             return audit_event
+
         try:
-            with self.get_db() as db:
-                audit_event = AuditEvent(
-                    user_id=user_id,
-                    event_type=event_type,
-                    ip_address=ip_address,
-                    details=details or {}
-                )
-                db.add(audit_event)
-                db.commit()
+            async with self.get_db() as session:
+                session.add(audit_event)
+                await session.commit()
                 return audit_event
         except TypeError:
-            with self.get_context_manager_db() as db:
-                audit_event = AuditEvent(
-                    user_id=user_id,
-                    event_type=event_type,
-                    ip_address=ip_address,
-                    details=details or {}
-                )
-                db.add(audit_event)
-                db.commit()
+            async with self.get_context_manager_db() as session:
+                session.add(audit_event)
+                await session.commit()
                 return audit_event
-
 
 
 db_manager = DatabaseManager()
+

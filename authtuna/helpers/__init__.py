@@ -1,12 +1,11 @@
 import string
 
 from fastapi import Request, Response
-from starlette.concurrency import run_in_threadpool
+from sqlalchemy.ext.asyncio import AsyncSession
 from ua_parser import user_agent_parser
 from authtuna.core.config import settings
 from authtuna.core.database import Session as DBSession, User
 from authtuna.core.encryption import encryption_utils
-from sqlalchemy.orm import Session
 
 
 async def get_remote_address(request: Request, default_ip: str = "127.0.0.1", use_cf_connecting_ip: bool = True,
@@ -149,7 +148,7 @@ async def is_password_valid(password):
     return {}
 
 
-async def create_session_and_set_cookie(user: User, request: Request, response: Response, db: Session):
+async def create_session_and_set_cookie(user: User, request: Request, response: Response, db: AsyncSession):
     """
     Helper function to create a new database session, save it, and set the session cookie.
     """
@@ -162,8 +161,8 @@ async def create_session_and_set_cookie(user: User, request: Request, response: 
         create_ip=await get_remote_address(request),
         last_ip=await get_remote_address(request)
     )
-    await run_in_threadpool(db.add, new_session)
-    await run_in_threadpool(db.commit)
+    db.add(new_session)
+    await db.commit()
 
     response.set_cookie(
         key=settings.SESSION_TOKEN_NAME,

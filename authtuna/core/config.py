@@ -27,7 +27,9 @@ class Settings(BaseSettings):
     FERNET_KEYS: List[SecretStr] = []
 
     # Database settings
-    DEFAULT_DATABASE_URI: str = "sqlite:///./authtuna_dev.db"
+    DEFAULT_DATABASE_URI: str = "sqlite+aiosqlite:///./authtuna_dev.db"  # JUST PROVIDE SYNC URI and set async to true if you want to use async db
+    DATABASE_USE_ASYNC_ENGINE: bool = True  # WILL replace sqlite with sqlite+aiosqlite and asyncpg with asyncpg+asyncpg (if true)
+    AUTO_CREATE_DATABASE: bool = True  # Automatically create the database tables if they don't exist
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 40
     DATABASE_POOL_TIMEOUT: int = 30
