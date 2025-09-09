@@ -1,3 +1,9 @@
+"""
+Database models and async database manager for AuthTuna.
+
+This module defines all SQLAlchemy ORM models (User, Role, Permission, Session, Token, etc.) and provides the async database engine and session manager. Only SQLite (aiosqlite) and PostgreSQL (asyncpg) are supported. All operations are async and designed for high-security, high-performance web applications.
+"""
+
 import json
 import logging
 import time
@@ -21,6 +27,7 @@ Base = declarative_base()
 
 # --- Async Engine Setup ---
 # The database URL is modified for async drivers if needed.
+# Only SQLite (aiosqlite) and PostgreSQL (asyncpg) are supported.
 db_uri = settings.DEFAULT_DATABASE_URI
 if 'sqlite' in db_uri and 'aiosqlite' not in db_uri:
     db_uri = db_uri.replace('sqlite:///', 'sqlite+aiosqlite:///')
@@ -53,8 +60,8 @@ if engine.dialect.name == 'sqlite':
 
 class CaseInsensitiveText(TypeDecorator):
     """
-    A case-insensitive Text type that uses CITEXT on PostgreSQL and
-    a case-insensitive collation on SQLite, falling back to regular Text.
+    Case-insensitive text column type.
+    Uses CITEXT on PostgreSQL and NOCASE collation on SQLite.
     """
     impl = TEXT
     cache_ok = True
@@ -70,8 +77,7 @@ class CaseInsensitiveText(TypeDecorator):
 
 class JsonType(TypeDecorator):
     """
-    Stores a Python dict as JSON. Uses the native JSONB type on PostgreSQL
-    for efficiency, and a regular TEXT field on other databases.
+    Stores a Python dict as JSON. Uses native JSONB on PostgreSQL, TEXT on SQLite.
     """
     impl = TEXT
     cache_ok = True
@@ -130,7 +136,7 @@ role_permissions_association = Table(
 class User(Base):
     """
     Represents a user in the database.
-    Maps to the 'users' table. All methods are now async.
+    All password and login methods are async and log audit events.
     """
     __tablename__ = 'users'
 
@@ -162,7 +168,9 @@ class User(Base):
     audit_events = relationship("AuditEvent", back_populates="user", cascade="all, delete-orphan")
 
     async def set_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None):
-        """Asynchronously sets the user's password hash and logs the event."""
+        """
+        Asynchronously sets the user's password hash and logs the event.
+        """
         db_manager_to_use = db_manager_custom or db_manager
         old_hash = self.password_hash
         self.password_hash = encryption_utils.hash_password(password)
@@ -172,7 +180,10 @@ class User(Base):
         )
 
     async def check_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None) -> bool:
-        """Asynchronously checks the password and logs login attempts."""
+        """
+        Asynchronously checks the password and logs login attempts.
+        Returns True if valid, False otherwise.
+        """
         db_manager_to_use = db_manager_custom or db_manager
         if self.requires_password_reset:
             await db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "password_reset_required"}, db=db)
@@ -236,7 +247,10 @@ class Permission(Base):
 
 
 class Session(Base):
-    """Represents an active user session. All methods are now async."""
+    """
+    Represents an active user session.
+    All methods are async and support advanced session hijack detection.
+    """
     __tablename__ = 'sessions'
 
     session_id = Column(String(32), primary_key=True)
@@ -258,6 +272,10 @@ class Session(Base):
         return time.time() > self.etime or time.time() > self.e_abs_time
 
     async def is_valid(self, region: str = "", device: str = "", random_string: str = "", db: AsyncSession = None) -> bool:
+        """
+        Checks if the session is valid, not expired, and matches device/region/random_string.
+        Invalidates and logs if any check fails.
+        """
         if self.active and not self.is_expired():
             if self.region != region:
                 await db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip, {"reason": "region_mismatch"}, db=db)
@@ -275,6 +293,9 @@ class Session(Base):
         return False
 
     async def update_last_ip(self, ip: str, db_manager_custom=None, db: AsyncSession = None):
+        """
+        Updates the last IP address for the session and logs the change.
+        """
         db_manager_to_use = db_manager_custom or db_manager
         old_ip = self.last_ip
         self.last_ip = ip
@@ -295,13 +316,17 @@ class Session(Base):
         return encryption_utils.create_jwt_token(cookie_data)
 
     async def update_random_string(self):
-        """Rotate the per-request random_string to mitigate replay attacks."""
+        """
+        Rotates the per-request random_string to mitigate replay attacks.
+        """
         self.random_string = encryption_utils.gen_random_string()
         self.mtime = time.time()
         return self.random_string
 
     async def terminate(self, ip: str, db_manager_custom=None, db: AsyncSession = None):
-        """Mark session inactive and write an audit event."""
+        """
+        Marks session inactive and writes an audit event.
+        """
         db_manager_to_use = db_manager_custom or db_manager
         self.active = False
         await db_manager_to_use.log_audit_event(self.user_id, "SESSION_TERMINATED", ip, {"session_id": self.session_id}, db=db)
@@ -386,7 +411,11 @@ class AuditEvent(Base):
 
 
 class DatabaseManager:
-    """Manages async database connections and sessions."""
+    """
+    Manages async database connections and sessions for AuthTuna.
+    Only supports SQLite (aiosqlite) and PostgreSQL (asyncpg).
+    Handles auto-creation of tables and audit event logging.
+    """
     AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
     def __init__(self):
@@ -394,7 +423,10 @@ class DatabaseManager:
         self._init_lock = asyncio.Lock()
 
     async def initialize_database(self):
-        """Initializes the database and creates tables if they don't exist."""
+        """
+        Initializes the database and creates tables if they don't exist.
+        For PostgreSQL, ensures the citext extension is available.
+        """
         if engine.dialect.name == 'postgresql':
             try:
                 async with engine.connect() as conn:
@@ -410,7 +442,10 @@ class DatabaseManager:
 
     @asynccontextmanager
     async def get_context_manager_db(self) -> AsyncGenerator[AsyncSession, None]:
-        """Provides an async database session as a context manager. Alias for get_db."""
+        """
+        Provides an async database session as a context manager.
+        Ensures tables are created if AUTO_CREATE_DATABASE is enabled.
+        """
         if settings.AUTO_CREATE_DATABASE:
             if not self._initialized:
                 async with self._init_lock:
@@ -420,12 +455,18 @@ class DatabaseManager:
             yield session
 
     def get_db(self):
-        """Provides an async database session as a context manager."""
+        """
+        Returns an async context manager for a database session.
+        Usage: async with db_manager.get_db() as db:
+        """
         # Returns the async context manager itself to be used with `async with`
         return self.get_context_manager_db()
 
     async def log_audit_event(self, user_id: str, event_type: str, ip_address: str = None, details: dict = None, db: AsyncSession = None):
-        """Asynchronously logs an audit event in the database, maintaining robust session handling."""
+        """
+        Asynchronously logs an audit event in the database.
+        If db is provided, adds to that session; otherwise, creates a new session.
+        """
         audit_event = AuditEvent(
             user_id=user_id,
             event_type=event_type,
@@ -451,4 +492,3 @@ class DatabaseManager:
 
 
 db_manager = DatabaseManager()
-

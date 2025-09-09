@@ -48,6 +48,9 @@ class TokenValidation(BaseModel):
 
 @router.get("/signup", response_class=HTMLResponse)
 async def show_signup_page(request: Request):
+    """
+    Render the signup page (HTML form).
+    """
     return templates.TemplateResponse("signup.html", {"request": request})
 
 
@@ -59,6 +62,11 @@ async def signup_user(
         db: AsyncSession = Depends(db_manager.get_db),
         background_tasks: BackgroundTasks = BackgroundTasks()
 ):
+    """
+    Register a new user. If email verification is enabled, sends a verification email.
+    Otherwise, creates a session and logs the user in immediately.
+    Returns a message indicating the result.
+    """
     try:
         ip_address = request.state.user_ip_address
         user, token = await auth_service.signup(
@@ -87,6 +95,9 @@ async def signup_user(
 
 @router.get("/login", response_class=HTMLResponse)
 async def show_login_page(request: Request):
+    """
+    Render the login page (HTML form), with social login options if enabled.
+    """
     context = {
         "request": request,
         "google_login_enabled": bool(settings.GOOGLE_CLIENT_ID),
@@ -103,6 +114,10 @@ async def login_user(
         # db: AsyncSession = Depends(db_manager.get_db),
         background_tasks: BackgroundTasks = BackgroundTasks()
 ):
+    """
+    Authenticate a user and create a session. Sets the session cookie and sends a new login email if enabled.
+    Returns a message indicating the result.
+    """
     try:
         ip_address = request.scope['client'][0]
         user, session = await auth_service.login(
@@ -139,6 +154,9 @@ async def login_user(
 
 @router.api_route("/logout", methods=["GET", "POST"])
 async def logout_user(request: Request, response: Response):
+    """
+    Log out the current user by terminating the session and deleting the session cookie.
+    """
     session_id = getattr(request.state, "session_id", None)
     if session_id:
         ip_address = request.state.user_ip_address
@@ -150,6 +168,9 @@ async def logout_user(request: Request, response: Response):
 
 @router.get("/forgot-password", response_class=HTMLResponse)
 async def show_forgot_password_page(request: Request):
+    """
+    Render the forgot password page (HTML form).
+    """
     return templates.TemplateResponse("forgot_password.html", {"request": request})
 
 
@@ -158,6 +179,10 @@ async def forgot_password(
         request_data: PasswordResetRequest,
         background_tasks: BackgroundTasks
 ):
+    """
+    Request a password reset. If the email exists, sends a password reset email (if enabled).
+    Always returns a generic message for security.
+    """
     if not settings.EMAIL_ENABLED:
         raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Email functionality is disabled.")
 
@@ -179,6 +204,10 @@ async def reset_password(
         request: Request,
         background_tasks: BackgroundTasks
 ):
+    """
+    Reset the user's password using a valid reset token. Sends a password change email if successful.
+    Returns a message indicating the result.
+    """
     if not settings.EMAIL_ENABLED:
         raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Email functionality is disabled.")
 
@@ -199,6 +228,9 @@ async def verify_email(
         token: str,
         request: Request
 ):
+    """
+    Verify a user's email address using a verification token. Renders a success or error page.
+    """
     try:
         ip_address = request.state.user_ip_address
         await auth_service.verify_email(token, ip_address)
@@ -212,6 +244,9 @@ async def verify_email(
 
 @router.get("/reset-password", response_class=HTMLResponse)
 async def show_reset_page(token: str, request: Request, db: AsyncSession = Depends(db_manager.get_db)):
+    """
+    Render the reset password page if the token is valid, otherwise show an error page.
+    """
     stmt = select(Token).where(Token.id == token, Token.purpose == "password_reset")
     result = await db.execute(stmt)
     token_obj = result.unique().scalar_one_or_none()

@@ -1,3 +1,9 @@
+"""
+Session middleware for AuthTuna (FastAPI).
+
+This middleware validates and refreshes DB-backed sessions on every request. It uses a dual-state model (server-side session + JWT cookie) and actively checks for session hijacking (region/device/random_string). Integrates tightly with FastAPI and is fully async.
+"""
+
 import logging
 import time
 from typing import Callable, Set, Union
@@ -16,11 +22,15 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseSessionMiddleware(BaseHTTPMiddleware):
-    """FastAPI middleware that validates and refreshes AuthTuna DB-backed sessions.
+    """
+    FastAPI middleware that validates and refreshes AuthTuna DB-backed sessions.
 
-    The middleware reads the session cookie, verifies it against the database
-    periodically, refreshes the random_string to prevent replay, and injects
-    request.state.user_id and request.state.session_id for downstream dependencies.
+    - Reads the session cookie and decodes the JWT.
+    - Periodically verifies session validity against the database (interval configurable).
+    - Checks for session hijack (region/device/random_string mismatch) and invalidates if detected.
+    - Refreshes the random_string to prevent replay attacks.
+    - Injects request.state.user_id and request.state.session_id for downstream dependencies.
+    - Handles public routes and FastAPI docs as unauthenticated by default.
     """
     def __init__(
             self,
@@ -58,7 +68,8 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
 
     async def _is_public_route(self, request: Request) -> bool:
         """
-        Checks if the current request is for a public route.
+        Checks if the current request is for a public route (e.g., login/signup/docs).
+        Returns True if the route is public, False otherwise.
         """
         path = request.url.path
         if self.public_fastapi_docs and path.startswith(("/docs", "/openapi.json")):
@@ -68,6 +79,10 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         return path in self.public_routes
 
     async def dispatch(self, request: Request, call_next):
+        """
+        Main middleware entrypoint. Validates session, injects user/session info, and refreshes cookies.
+        If session is invalid or hijacked, deletes the session cookie.
+        """
         request.state.user_id = None
         request.state.session_id = None
         request.state.device_data = await get_device_data(request, region_kwargs=self.region_kwargs)
