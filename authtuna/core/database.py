@@ -88,7 +88,7 @@ user_roles_association = Table(
     'user_roles', Base.metadata,
     Column('user_id', String(64), ForeignKey('users.id'), primary_key=True),
     Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
-    Column('scope', String(255), primary_key=True, default='global', nullable=False),
+    Column('scope', String(255), primary_key=True, default='none', nullable=False),
     Column('given_by_id', String(64), ForeignKey('users.id'), nullable=False),
     Column('given_at', Float, nullable=False, default=time.time),
 )
