@@ -127,24 +127,25 @@ async def user_agent_to_human_readable(user_agent):
 
 async def is_password_valid(password):
     """
-    Checks the validity of a given password based on the defined constraints. The function
-    ensures the password meets minimum requirements such as length, inclusion of alphanumeric
-    characters, and the presence of uppercase and lowercase letters.
-
-    :param password: The password string to validate
-    :type password: str
-    :return: A dictionary containing the error message if the password is invalid, or an
-             empty dictionary if the password meets all requirements
-    :rtype: dict
+    Validate password complexity:
+    - At least 8 characters
+    - Contains at least one letter and one number
+    - Contains at least one uppercase and one lowercase letter
+    Returns {} if valid, otherwise {'error': <message>}.
     """
     if len(password) < 8:
         return {"error": "Password must be at least 8 characters"}
-    if any(not i.isalnum() for i in password):
+    # If any non-alphanumeric characters are present, fail on letter/number requirement
+    if any(not ch.isalnum() for ch in password):
         return {"error": "Password must contain at least one letter and one number"}
-    if any(i.islower() for i in password):
-        return {"error": "Password must contain at least one lowercase letter"}
-    if any(i.isupper() for i in password):
+    if not any(ch.isupper() for ch in password):
         return {"error": "Password must contain at least one uppercase letter"}
+    if not any(ch.islower() for ch in password):
+        return {"error": "Password must contain at least one lowercase letter"}
+    has_digit = any(ch.isdigit() for ch in password)
+    has_alpha = any(ch.isalpha() for ch in password)
+    if not (has_digit and has_alpha):
+        return {"error": "Password must contain at least one letter and one number"}
     return {}
 
 
@@ -176,13 +177,13 @@ async def create_session_and_set_cookie(user: User, request: Request, response: 
 def sanitize_username(username: str) -> str:
     """
     Sanitizes a string to contain only alphanumeric characters.
-    Removes spaces and other symbols.
+    Removes spaces and other symbols. Result is capitalized with the rest lowercased.
     """
     if not username:
         return ""
-    # Remove spaces and then filter out non-alphanumeric characters
-    sanitized = "".join(char for char in username.title().replace(" ", "") if char.isalnum())
-    return sanitized
+    filtered = "".join(char for char in username if char.isalnum())
+    lowered = filtered.lower()
+    return lowered.capitalize() if lowered else ""
 
 
 def generate_random_username(prefix: str = "user") -> str:

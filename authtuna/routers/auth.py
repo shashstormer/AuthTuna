@@ -1,4 +1,6 @@
+import datetime
 import logging
+import time
 
 from authtuna.core.config import settings
 from authtuna.core.database import db_manager, Token
@@ -59,8 +61,8 @@ async def signup_user(
         user_data: UserSignup,
         request: Request,
         response: Response,
-        db: AsyncSession = Depends(db_manager.get_db),
-        background_tasks: BackgroundTasks = BackgroundTasks()
+        background_tasks: BackgroundTasks,
+        db: AsyncSession = Depends(db_manager.get_db)
 ):
     """
     Register a new user. If email verification is enabled, sends a verification email.
@@ -111,8 +113,7 @@ async def login_user(
         login_data: UserLogin,
         request: Request,
         response: Response,
-        # db: AsyncSession = Depends(db_manager.get_db),
-        background_tasks: BackgroundTasks = BackgroundTasks()
+        background_tasks: BackgroundTasks
 ):
     """
     Authenticate a user and create a session. Sets the session cookie and sends a new login email if enabled.
@@ -143,6 +144,7 @@ async def login_user(
                 "region": request.state.device_data["region"],
                 "ip_address": ip_address,
                 "device": request.state.device_data["device"],
+                "login_time": datetime.datetime.fromtimestamp(session.ctime).strftime("%Y-%m-%d %H:%M:%S"),
             })
         return {"message": "Login successful."}
     except (InvalidCredentialsError, EmailNotVerifiedError) as e:

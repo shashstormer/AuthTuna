@@ -349,12 +349,12 @@ class AuthTunaAsync:
                 (User.email == username_or_email) | (User.username == username_or_email)
             )
             user = (await db.execute(stmt)).unique().scalar_one_or_none()
-
-            if not user or not await user.check_password(password, ip_address, self.db_manager, db):
-                raise InvalidCredentialsError("Incorrect username/email or password.")
-
-            if settings.EMAIL_ENABLED and not getattr(user, 'email_verified', True):
-                raise EmailNotVerifiedError("Email Not Verified.")
+            password_valid = await user.check_password(password, ip_address, self.db_manager, db)
+            if not user:
+                if password_valid is False:
+                    raise InvalidCredentialsError("Incorrect username/email or password.")
+                if password_valid is None:
+                    raise EmailNotVerifiedError("Email Not Verified.")
 
             await db.commit()
 

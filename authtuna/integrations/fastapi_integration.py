@@ -98,18 +98,41 @@ class RoleChecker:
     """
     A dependency factory for checking if a user has specific roles.
 
-    OPTIMIZATION: This class now uses the pre-loaded roles from the `user` object
-    provided by the `get_current_user` dependency, avoiding a separate DB query.
+    This implementation prefers a pre-loaded user object on request.state (as set by
+    middleware or another dependency). If unavailable, it falls back to fetching the
+    user by request.state.user_id. If neither is present, it raises 401.
     """
 
     def __init__(self, *roles: str):
         self.roles = set(roles)
 
-    async def __call__(self, request: Request, user: User = Depends(get_current_user)):
+    async def __call__(self, request: Request):
+        # Try to get the user from request.state cache first
+        user: Optional[User] = getattr(request.state, "user_object", None)
+        if user is None:
+            user_id = getattr(request.state, "user_id", None)
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Not authenticated"
+                )
+            try:
+                user = await auth_service.users.get_by_id(user_id, with_relations=True)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Could not retrieve user: {e}")
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found for this session",
+                )
         user_role_names = {role.name for role in user.roles}
         if not self.roles.issubset(user_role_names):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"User lacks required role(s). Requires: {', '.join(self.roles)}"
             )
+        # Make user available to downstream if needed
+        request.state.user_object = user
         return user

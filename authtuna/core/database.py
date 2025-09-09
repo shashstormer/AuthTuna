@@ -179,7 +179,7 @@ class User(Base):
             {"had_old_password": bool(old_hash)}, db=db,
         )
 
-    async def check_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None) -> bool:
+    async def check_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None) -> bool | None:
         """
         Asynchronously checks the password and logs login attempts.
         Returns True if valid, False otherwise.
@@ -190,7 +190,7 @@ class User(Base):
             return False
         if settings.EMAIL_ENABLED and not self.email_verified:
             await db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "email_not_verified"}, db=db)
-            return False
+            return None
         if self.password_hash:
             if encryption_utils.verify_password(password, self.password_hash):
                 await db_manager_to_use.log_audit_event(self.id, "LOGIN_SUCCESS", ip, db=db)
