@@ -26,6 +26,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             "/auth/login", "/auth/register", "/auth/forgot-password", "/auth/reset-password",
             "/auth/github/callback", "/auth/github/login", "/auth/github/register",
             "/auth/google/callback", "/auth/google/login", "/auth/google/register",
+            "/auth/logout",
             # "/auth/verify-email", "/auth/resend-email-verification", "/auth/change-password",
             # "/auth/change-email", "/auth/logout", "/auth/social/callback", "/auth/social/login",
             # "/auth/social/register", "/auth/social/forgot-password", "/auth/social/reset-password",
@@ -75,9 +76,11 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             except HTTPException as exc:
                 raise exc
             except Exception as e:
+                raise e
                 logger.debug(e)
                 response = Response(status_code=500, content="Internal Server Error")
         except Exception as e:
+            raise e
             logger.error(f"Authentication failed: {e}")
             response = Response(status_code=401, content="Authentication failed.")
         if session_cookie is None:

@@ -140,33 +140,34 @@ class User(Base):
     mfa_recovery_codes = relationship("MFARecoveryCode", back_populates="user", cascade="all, delete-orphan")
     audit_events = relationship("AuditEvent", back_populates="user", cascade="all, delete-orphan")
 
-    def set_password(self, password, ip: str, db_manager_custom=None):
+    def set_password(self, password, ip: str, db_manager_custom=None, db=None):
         """Sets the user's password hash."""
         db_manager_to_use = db_manager_custom or db_manager
         old_hash = self.password_hash
         self.password_hash = encryption_utils.hash_password(password)
         db_manager_to_use.log_audit_event(
             self.id, "PASSWORD_CHANGED", ip,
-            {"had_old_password": bool(old_hash)}
+            {"had_old_password": bool(old_hash)},
+            db=db,
         )
 
-    def check_password(self, password, ip: str, db_manager_custom=None):
+    def check_password(self, password, ip: str, db_manager_custom=None, db=None):
         """Checks if the given password matches the user's password hash."""
         db_manager_to_use = db_manager_custom or db_manager
         if self.requires_password_reset:
-            db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "password_reset_required"})
+            db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "password_reset_required"}, db=db)
             return False
         if settings.EMAIL_ENABLED and not self.email_verified:
-            db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "email_not_verified"})
+            db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "email_not_verified"}, db=db)
             return None
         if self.password_hash:
             if encryption_utils.verify_password(password, self.password_hash):
-                db_manager_to_use.log_audit_event(self.id, "LOGIN_SUCCESS", ip)
+                db_manager_to_use.log_audit_event(self.id, "LOGIN_SUCCESS", ip, db=db)
                 return True
             else:
-                db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "incorrect_password"})
+                db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "incorrect_password"}, db=db)
                 return False
-        db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "no_password_set"})
+        db_manager_to_use.log_audit_event(self.id, "LOGIN_FAILED", ip, {"reason": "no_password_set"}, db=db)
         return False
 
     def is_email_verified(self):
@@ -251,14 +252,14 @@ class Session(Base):
     def is_expired(self):
         return time.time() > self.etime or time.time() > self.e_abs_time
 
-    def is_valid(self, region: str = "", device: str = "", random_string: str = ""):
+    def is_valid(self, region: str = "", device: str = "", random_string: str = "", db=None):
         if self.active and not self.is_expired():
             if self.region == region:
                 pass
             else:
                 db_manager.log_audit_event(
                     self.user_id, "SESSION_INVALIDATED", self.last_ip,
-                    {"reason": "region_mismatch"}
+                    {"reason": "region_mismatch"}, db=db
                 )
                 self.terminate(self.last_ip)
                 return False
@@ -266,7 +267,7 @@ class Session(Base):
                 pass
             else:
                 db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip,
-                                           {"reason": "device_mismatch"})
+                                           {"reason": "device_mismatch"}, db=db)
                 self.terminate(self.last_ip)
                 return False
             if self.random_string == random_string:
@@ -274,12 +275,12 @@ class Session(Base):
             else:
                 db_manager.log_audit_event(
                     self.user_id, "SESSION_INVALIDATED", self.last_ip,
-                    {"reason": "random_string_mismatch"}
+                    {"reason": "random_string_mismatch"}, db=db
                 )
                 self.terminate(self.last_ip)
         return False
 
-    def update_last_ip(self, ip: str, db_manager_custom=None):
+    def update_last_ip(self, ip: str, db_manager_custom=None, db=None):
         db_manager_to_use = db_manager_custom or db_manager
         old_ip = self.last_ip
         self.last_ip = ip
@@ -287,7 +288,7 @@ class Session(Base):
         if old_ip != ip:
             db_manager_to_use.log_audit_event(
                 self.user_id, "SESSION_IP_UPDATED", ip,
-                {"old_ip": old_ip, "new_ip": ip}
+                {"old_ip": old_ip, "new_ip": ip}, db=db
             )
 
     def get_random_string(self):
@@ -301,12 +302,12 @@ class Session(Base):
         self.mtime = time.time()
         return self.random_string
 
-    def terminate(self, ip: str, db_manager_custom=None):
+    def terminate(self, ip: str, db_manager_custom=None, db=None):
         db_manager_to_use = db_manager_custom or db_manager
         self.active = False
         db_manager_to_use.log_audit_event(
             self.user_id, "SESSION_TERMINATED", ip,
-            {"session_id": self.session_id}
+            {"session_id": self.session_id}, db=db
         )
 
     def get_cookie_string(self):
@@ -339,12 +340,12 @@ class Token(Base):
     def is_valid(self):
         return self.used is False and self.etime > time.time()
 
-    def mark_used(self, ip: str, db_manager_custom=None):
+    def mark_used(self, ip: str, db_manager_custom=None, db=None):
         db_manager_to_use = db_manager_custom or db_manager
         self.used = True
         db_manager_to_use.log_audit_event(
             self.user_id, "TOKEN_USED", ip,
-            {"token_id": self.id, "purpose": self.purpose}
+            {"token_id": self.id, "purpose": self.purpose}, db=db
         )
 
     def __repr__(self):
@@ -485,8 +486,17 @@ class DatabaseManager:
             db.close()
 
 
-    def log_audit_event(self, user_id: str, event_type: str, ip_address: str = None, details: dict = None):
+    def log_audit_event(self, user_id: str, event_type: str, ip_address: str = None, details: dict = None, db=None):
         """Logs an audit event in the database."""
+        if db:
+            audit_event = AuditEvent(
+                    user_id=user_id,
+                    event_type=event_type,
+                    ip_address=ip_address,
+                    details=details or {}
+            )
+            db.add(audit_event)
+            return audit_event
         try:
             with self.get_db() as db:
                 audit_event = AuditEvent(
