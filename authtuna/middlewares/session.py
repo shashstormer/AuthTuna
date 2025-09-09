@@ -12,9 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseSessionMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, region_kwargs=None):
+    def __init__(self, app, region_kwargs=None, raise_errors=False):
         super().__init__(app)
         self.region_kwargs = region_kwargs or {}
+        self.raise_errors = raise_errors
 
     async def dispatch(self, request: Request, call_next):
         device_data = await get_device_data(request, region_kwargs=self.region_kwargs)
@@ -76,11 +77,11 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             except HTTPException as exc:
                 raise exc
             except Exception as e:
-                raise e
+                if self.raise_errors: raise e
                 logger.debug(e)
                 response = Response(status_code=500, content="Internal Server Error")
         except Exception as e:
-            raise e
+            if self.raise_errors: raise e
             logger.error(f"Authentication failed: {e}")
             response = Response(status_code=401, content="Authentication failed.")
         if session_cookie is None:
