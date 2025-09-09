@@ -16,6 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseSessionMiddleware(BaseHTTPMiddleware):
+    """FastAPI middleware that validates and refreshes AuthTuna DB-backed sessions.
+
+    The middleware reads the session cookie, verifies it against the database
+    periodically, refreshes the random_string to prevent replay, and injects
+    request.state.user_id and request.state.session_id for downstream dependencies.
+    """
     def __init__(
             self,
             app,
@@ -33,6 +39,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             public_routes: A set of public path strings OR a function that takes a
                            Request and returns True if the route is public.
             raise_errors: If True, middleware errors will be raised instead of handled.
+            public_docs: If True, /docs and /openapi.json are considered public.
         """
         super().__init__(app)
         self.region_kwargs = region_kwargs or {}

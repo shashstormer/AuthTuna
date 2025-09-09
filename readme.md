@@ -1,8 +1,8 @@
 # AuthTuna 🐟
 
-IT'S more focused on fastapi no longer framework-agnostic. But it is still extendable to other frameworks.
+AuthTuna is currently focused on FastAPI. While parts of the core remain framework-agnostic and the design allows future adapters, the officially supported and actively maintained integration is FastAPI.
 
-A high-performance, framework-agnostic (no longer, me too lazy to update full docs) authorization and session management library for Python.
+A high-performance authorization, session, and user management library for Python with first-class FastAPI support.
 
 AuthTuna provides a robust, multi-layered security foundation for modern web applications. It is designed for developers who need to build complex, multi-tenant systems without compromising on security or performance. The library combines a powerful hierarchical permission model with an advanced, stateful session management system to actively defend against a wide range of modern threats.
 
@@ -22,79 +22,83 @@ AuthTuna is built on a few key architectural principles:
 
 ## Features
 
-- **Multi-Level Hierarchical Permissions**: Manage complex user roles across different organizational contexts with a clear and scalable data model.
-
-- **Object-Level Ownership Rules**: Easily define and check for permissions based on a user's relationship to a specific resource.
-
-- **Dual-State Session Management**: Combines a secure, server-side session store with a rotating JWT cookie for maximum security and control.
-
-- **Rotating Tokens**: The core of our session security. Each token is single-use, mitigating replay attacks and providing immediate, real-time breach detection.
-
-- **Session Hijack Detection**: Actively monitors sessions by "fingerprinting" the user's IP address and User-Agent on every request and comparing it against the secure server-side record.
-
-- **Built-in CSRF Protection**: The SameSite=Lax cookie strategy is the default, protecting all state-changing endpoints from cross-site request forgery.
-
-- **SQL-First Design**: Optimized for performance and data integrity with relational databases like PostgreSQL. The data access patterns are designed to leverage the power of SQL for complex, relational queries.
+- FastAPI-first integration: ready-to-use dependencies (get_current_user, PermissionChecker, RoleChecker) and session middleware.
+- Async SQLAlchemy models and manager for Users, Roles, Permissions, Sessions, Tokens, MFA, Social Accounts.
+- Dual-state session model: server-side sessions + JWT cookie with rotating random_string and periodic DB verification.
+- Session hijack detection: region/device fingerprint checks, IP tracking, automatic invalidation.
+- Email flows: verification, password reset, MFA notifications (Jinja templates included).
+- Extensible RBAC with scoped permissions (e.g., "project:read" with scope_from_path).
+- SQL-first design with PostgreSQL and SQLite support.
 
 ## Installation
 
-The library is designed to be modular. You can install the core engine by itself or with framework-specific extras.
+Install from PyPI.
 
 ```bash
-# Install the core library
 pip install authtuna
-
-# Install with FastAPI integration and its dependencies
-pip install authtuna[fastapi]
 ```
+
+## Configuration
+
+Key environment variables in authtuna.core.config.Settings (can also be overridden via .env):
+- DATABASE_URL: Async database URL (e.g., postgresql+asyncpg://user:pass@host/db or sqlite+aiosqlite:///./authtuna.db)
+- SESSION_TOKEN_NAME: Cookie name for session (default: authtuna_session)
+- SESSION_LIFETIME_SECONDS / SESSION_ABSOLUTE_LIFETIME_SECONDS
+- SESSION_DB_VERIFICATION_INTERVAL: Seconds between DB checks for session validity
+- EMAIL_ENABLED / SMTP settings for email flows
+
+See authtuna/core/config.py for full list and defaults.
 
 ## Quick Start
 
-Here's a brief example of how to protect a FastAPI route using AuthTuna's core components.
+FastAPI setup with session middleware and simple permission/role checks.
 
 ```python
-from fastapi import FastAPI, Depends, HTTPException
-from authtuna.core.authorizer import Authorizer
-from authtuna.integrations.fastapi_integration import get_authorizer, get_current_user
-from authtuna.data.models import User, Post  # Your application's models
+from fastapi import FastAPI, Depends
+from authtuna.middlewares.session import DatabaseSessionMiddleware
+from authtuna.integrations.fastapi_integration import get_current_user, PermissionChecker, RoleChecker
+from authtuna.core.database import User
 
-# Assume 'authorizer' is initialized with your data provider in your app's setup
 app = FastAPI()
 
+# Attach the session middleware
+app.add_middleware(DatabaseSessionMiddleware)
 
-# A protected route to edit a blog post
-@app.put("/posts/{post_id}")
-async def edit_post(
-        post_id: int,
-        user: User = Depends(get_current_user),
-        authorizer: Authorizer = Depends(get_authorizer)
+@app.get("/me")
+async def whoami(user: User = Depends(get_current_user)):
+    return {"id": user.id, "username": user.username, "email": user.email}
+
+# Require a specific permission (AND by default)
+@app.get("/projects/{project_id}")
+async def read_project(
+    project_id: str,
+    user: User = Depends(PermissionChecker("project:read", scope_from_path="project_id"))
 ):
-    """
-    This endpoint allows a user to edit a post, but only if they have
-    the required permissions as determined by AuthTuna.
-    """
-    # 1. Fetch the resource from the database
-    # This is the object we want to check permissions against.
-    post_to_edit = await get_post_by_id(post_id)
-    if not post_to_edit:
-        raise HTTPException(status_code=404, detail="Post not found")
+    return {"project_id": project_id, "user": user.id}
 
-    # 2. Check permission using the Authorizer
-    # This single call executes the entire multi-stage check:
-    # - Is the user the owner of the post?
-    # - Does their role in the post's team, project, or org grant permission?
-    if not authorizer.can(user, "post:edit", post_to_edit):
-        # If the check fails, deny access.
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to perform this action."
-        )
-
-    # 3. If the check passes, proceed with the business logic
-    # ... update the post in the database
-
-    return {"status": "success", "message": "Post updated successfully."}
+# Require one of multiple roles
+@app.get("/admin")
+async def admin_area(user: User = Depends(RoleChecker("admin", "moderator"))):
+    return {"message": f"Welcome, {user.username}"}
 ```
+
+## Built-in Routers and Templates
+
+AuthTuna ships optional routers for auth and social login and a set of Jinja templates you can mount quickly.
+
+```python
+from fastapi import FastAPI
+from authtuna.routers import auth as auth_router, social as social_router
+from authtuna.middlewares.session import DatabaseSessionMiddleware
+
+app = FastAPI()
+app.add_middleware(DatabaseSessionMiddleware)
+
+app.include_router(auth_router.router, prefix="/auth", tags=["auth"])
+app.include_router(social_router.router, prefix="/auth", tags=["social"])
+```
+
+Email templates are in authtuna/templates/email and page templates in authtuna/templates/pages. You can override them in your app by providing your own templates.
 
 ## Architectural Diagram
 
@@ -182,6 +186,10 @@ AuthTuna is designed with a defense-in-depth strategy. Security is not a single 
 | **Credential Stuffing** | While outside the library's direct scope, we strongly recommend rate limiting, CAPTCHA, and Multi-Factor Authentication (MFA) on the application's login form. |
 | **Insecure Direct Object Ref.** | The core authorizer.can(user, permission, resource) check is the fundamental defense against IDOR, ensuring a user is authorized for the specific resource they are requesting. |
 | **Session Fixation** | A new, cryptographically secure session_id is generated in the database after every successful login, ensuring a user cannot be forced into a pre-existing session. |
+
+## Project Status
+
+This library is under active development with FastAPI as the primary target. APIs may change; pin a version in production and review changelogs before upgrading.
 
 ## Contributing
 

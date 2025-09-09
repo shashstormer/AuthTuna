@@ -5,6 +5,7 @@ from authtuna.core.database import User, db_manager, Role
 from authtuna.manager.asynchronous import AuthTunaAsync
 
 
+# The primary asynchronous service used by FastAPI dependencies.
 auth_service = AuthTunaAsync(db_manager)
 
 

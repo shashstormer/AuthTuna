@@ -283,6 +283,10 @@ class Session(Base):
             await db_manager_to_use.log_audit_event(self.user_id, "SESSION_IP_UPDATED", ip, {"old_ip": old_ip, "new_ip": ip}, db=db)
 
     def get_cookie_string(self) -> str:
+        """Return a signed JWT string representing the current session state.
+        Encodes session_id, user_id, absolute expiry and the current random_string,
+        and includes a database_checked timestamp to control DB verification cadence.
+        """
         cookie_data = {
             'session': self.session_id, 'e_abs_time': self.e_abs_time,
             'random_string': self.random_string, 'user_id': self.user_id,
@@ -291,11 +295,13 @@ class Session(Base):
         return encryption_utils.create_jwt_token(cookie_data)
 
     async def update_random_string(self):
+        """Rotate the per-request random_string to mitigate replay attacks."""
         self.random_string = encryption_utils.gen_random_string()
         self.mtime = time.time()
         return self.random_string
 
     async def terminate(self, ip: str, db_manager_custom=None, db: AsyncSession = None):
+        """Mark session inactive and write an audit event."""
         db_manager_to_use = db_manager_custom or db_manager
         self.active = False
         await db_manager_to_use.log_audit_event(self.user_id, "SESSION_TERMINATED", ip, {"session_id": self.session_id}, db=db)
