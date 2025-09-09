@@ -1,12 +1,10 @@
 from typing import Optional, Literal
 
 from fastapi import Depends, HTTPException, status, Request
-from starlette.concurrency import run_in_threadpool
-
-from authtuna.core.database import User, db_manager, user_roles_association, Role
+from authtuna.core.database import User, db_manager, Role
 from authtuna.manager.asynchronous import AuthTunaAsync
 
-# This service object is the single entry point for all core logic.
+
 auth_service = AuthTunaAsync(db_manager)
 
 
@@ -14,7 +12,13 @@ async def get_current_user(request: Request) -> User:
     """
     FastAPI dependency that retrieves the current user based on the user_id
     populated by the session middleware.
+
+    OPTIMIZATION: This function now caches the full user object with roles pre-loaded
+    onto the request state. This ensures the database is hit only once per request
+    for user data, even if multiple dependencies need the user object.
     """
+    if hasattr(request.state, "user_object"):
+        return request.state.user_object
     user_id = getattr(request.state, "user_id", None)
     if not user_id:
         raise HTTPException(
@@ -22,12 +26,13 @@ async def get_current_user(request: Request) -> User:
             detail="Not authenticated",
         )
     try:
-        user = await auth_service.users.get_by_id(user_id, with_relations=False)  # No need for relations here
+        user = await auth_service.users.get_by_id(user_id, with_relations=True)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found for this session",
             )
+        request.state.user_object = user
         return user
     except Exception as e:
         raise HTTPException(
@@ -38,7 +43,8 @@ async def get_current_user(request: Request) -> User:
 
 class PermissionChecker:
     """
-    A dependency factory class for checking user permissions.
+    A dependency factory class for checking user permissions. This class relies on the
+    efficient `has_permission` method in the service layer.
     """
 
     def __init__(
@@ -89,25 +95,20 @@ class PermissionChecker:
 
 class RoleChecker:
     """
-    A dependency factory for checking if a user has a specific role.
+    A dependency factory for checking if a user has specific roles.
+
+    OPTIMIZATION: This class now uses the pre-loaded roles from the `user` object
+    provided by the `get_current_user` dependency, avoiding a separate DB query.
     """
 
     def __init__(self, *roles: str):
         self.roles = set(roles)
 
     async def __call__(self, request: Request, user: User = Depends(get_current_user)):
-        with db_manager.get_context_manager_db() as db:
-            user_roles = await run_in_threadpool(
-                db.query(Role.name).join(user_roles_association).filter(
-                    user_roles_association.c.user_id == user.id
-                ).all
-            )
-            user_role_names = {role[0] for role in user_roles}
-
+        user_role_names = {role.name for role in user.roles}
         if not self.roles.issubset(user_role_names):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"User lacks required role(s). Requires: {', '.join(self.roles)}"
             )
         return user
-
