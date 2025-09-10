@@ -1,7 +1,5 @@
 import datetime
 import logging
-import time
-
 from authtuna.core.config import settings
 from authtuna.core.database import db_manager, Token
 from authtuna.core.exceptions import (UserAlreadyExistsError, InvalidCredentialsError,
@@ -263,3 +261,4 @@ async def show_reset_page(token: str, request: Request,
         if not token_obj or not token_obj.is_valid():
             return templates.TemplateResponse("error.html", {"request": request, "message": "Invalid or expired token."})
         return templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
+

@@ -57,8 +57,8 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         self.public_fastapi_docs = public_docs
         self.default_public_routes = {
             "/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/reset-password",
-            "/auth/github/callback", "/auth/github/login",
-            "/auth/google/callback", "/auth/google/login",
+            # "/auth/github/callback", "/auth/github/login",
+            # "/auth/google/callback", "/auth/google/login",
             "/auth/logout", "/auth/verify",
         }
         if public_routes is None:
@@ -68,12 +68,11 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
 
     def default_public_routes_function(self, request: Request) -> bool:
         if request.url.path in self.default_public_routes:
-
             return True
         elif request.url.path.startswith("/mfa/"):
-
             return True
-
+        elif request.url.path.startswith("/auth/") and request.url.path.rstrip("/").endswith("/callback"):
+            return True
         return False
 
     async def _is_public_route(self, request: Request) -> bool:
