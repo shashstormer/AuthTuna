@@ -5,7 +5,7 @@ with open("readme.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="authtuna",
-    version="0.1.0",
+    version="0.1.1",
     author="shashstormer",
     author_email="shashanka5398@gmail.com",
     description="A high-performance, framework-agnostic authorization and session management library for Python",
@@ -13,8 +13,11 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/shashstormer/authtuna",
     packages=find_packages(),
+    package_data={
+        'authtuna': ['templates/email/*.html', 'templates/pages/*.html'],
+    },
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
@@ -41,7 +44,8 @@ setup(
         "authlib>=1.0.0",
         "ua-parser>=0.10.0",
         "bcrypt>=4.0.0",
-        "python-dotenv>=1.0.0"
+        "python-dotenv>=1.0.0",
+        "qrcode>=7.4.2",
     ],
     extras_require={
         "fastapi": [
