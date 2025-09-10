@@ -430,14 +430,11 @@ class AuthTunaAsync:
             totp_method = next((m for m in user_with_mfa.mfa_methods if m.method_type == 'totp'), None)
             if not totp_method or not totp_method.secret:
                 raise InvalidTokenError("TOTP secret not found.")
-            print(totp_method.secret)
             totp = pyotp.TOTP(totp_method.secret)
             is_valid_code = totp.verify(code)
-            print(is_valid_code)
             is_valid_recovery = False
             if not is_valid_code:
                 is_valid_recovery = await self.mfa.verify_recovery_code(user, code)
-            print(is_valid_recovery)
             if not is_valid_code and not is_valid_recovery:
                 raise InvalidTokenError("Invalid MFA code.")
 

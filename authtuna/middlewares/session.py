@@ -8,15 +8,14 @@ import logging
 import time
 from typing import Callable, Set, Union
 
-from fastapi import Request, Response
-from sqlalchemy import select
-from starlette.middleware.base import BaseHTTPMiddleware
-
 from authtuna.core.config import settings
-from authtuna.core.database import db_manager
 from authtuna.core.database import Session as DBSession
+from authtuna.core.database import db_manager
 from authtuna.core.encryption import encryption_utils
 from authtuna.helpers import get_device_data, get_remote_address
+from fastapi import Request
+from sqlalchemy import select
+from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +31,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
     - Injects request.state.user_id and request.state.session_id for downstream dependencies.
     - Handles public routes and FastAPI docs as unauthenticated by default.
     """
+
     def __init__(
             self,
             app,
@@ -62,18 +62,19 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             "/auth/logout", "/auth/verify",
         }
         if public_routes is None:
-            # Default set of public routes for convenience
-            self.public_routes = self.default_public_routes
+            self.public_routes = self.default_public_routes_function
         else:
             self.public_routes = set(public_routes) if isinstance(public_routes, list) else public_routes
 
-    async def default_public_routes_function(self, request: Request) -> bool:
+    def default_public_routes_function(self, request: Request) -> bool:
         if request.url.path in self.default_public_routes:
-            return True
-        elif request.url.path.startswith(("/mfa/")):
-            return True
-        return False
 
+            return True
+        elif request.url.path.startswith("/mfa/"):
+
+            return True
+
+        return False
 
     async def _is_public_route(self, request: Request) -> bool:
         """
@@ -85,6 +86,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             return True
         if callable(self.public_routes):
             return self.public_routes(request)
+
         return path in self.public_routes
 
     async def dispatch(self, request: Request, call_next):
@@ -95,7 +97,8 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         request.state.user_id = None
         request.state.session_id = None
         request.state.device_data = await get_device_data(request, region_kwargs=self.region_kwargs)
-        request.state.user_ip_address = await get_remote_address(request)  # For now im just using cf ip, afterwards ill add params to config it one day.
+        request.state.user_ip_address = await get_remote_address(
+            request)  # For now im just using cf ip, afterwards ill add params to config it one day.
         if await self._is_public_route(request):
             return await call_next(request)
 
