@@ -129,6 +129,9 @@ async def login_user(
             device=request.state.device_data["device"]
         )
 
+        if isinstance(session, Token):
+            return {"mfa_required": True, "mfa_token": session.id}
+
         response.set_cookie(
             key=settings.SESSION_TOKEN_NAME,
             value=session.get_cookie_string(),
@@ -245,14 +248,17 @@ async def verify_email(
 
 
 @router.get("/reset-password", response_class=HTMLResponse)
-async def show_reset_page(token: str, request: Request, db: AsyncSession = Depends(db_manager.get_db)):
+async def show_reset_page(token: str, request: Request,
+                          # db: AsyncSession = Depends(db_manager.get_db)
+                          ):
     """
     Render the reset password page if the token is valid, otherwise show an error page.
     """
-    stmt = select(Token).where(Token.id == token, Token.purpose == "password_reset")
-    result = await db.execute(stmt)
-    token_obj = result.unique().scalar_one_or_none()
+    async with db_manager.get_db() as db:
+        stmt = select(Token).where(Token.id == token, Token.purpose == "password_reset")
+        result = await db.execute(stmt)
+        token_obj = result.unique().scalar_one_or_none()
 
-    if not token_obj or not token_obj.is_valid():
-        return templates.TemplateResponse("error.html", {"request": request, "message": "Invalid or expired token."})
-    return templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
+        if not token_obj or not token_obj.is_valid():
+            return templates.TemplateResponse("error.html", {"request": request, "message": "Invalid or expired token."})
+        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token})

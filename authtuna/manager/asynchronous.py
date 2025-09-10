@@ -1,6 +1,7 @@
 import time
 from typing import Optional, Tuple, List, Dict, Any
 
+import pyotp
 from sqlalchemy import or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -8,7 +9,7 @@ from sqlalchemy.orm import joinedload
 from authtuna.core.config import settings
 from authtuna.core.database import (
     DatabaseManager, User, Role, Permission, DeletedUser,
-    Session as DBSession, Token, user_roles_association, role_permissions_association
+    Session as DBSession, Token, user_roles_association, role_permissions_association, Session
 )
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.exceptions import (
@@ -16,6 +17,7 @@ from authtuna.core.exceptions import (
     InvalidTokenError, TokenExpiredError, RateLimitError, UserNotFoundError,
     SessionNotFoundError, RoleNotFoundError, PermissionNotFoundError
 )
+from authtuna.core.mfa import MFAManager
 
 
 class UserManager:
@@ -24,7 +26,13 @@ class UserManager:
     def __init__(self, db_manager: DatabaseManager):
         self._db_manager = db_manager
 
-    async def get_by_id(self, user_id: str, with_relations: bool = True) -> Optional[User]:
+    async def get_by_id(self, user_id: str, with_relations: bool = True, db: AsyncSession = None) -> Optional[User]:
+        if db:
+            stmt = select(User).where(User.id == user_id)
+            if with_relations:
+                stmt = stmt.options(joinedload(User.roles).joinedload(Role.permissions))
+            result = await db.execute(stmt)
+            return result.unique().scalar_one_or_none()
         async with self._db_manager.get_db() as db:
             stmt = select(User).where(User.id == user_id)
             if with_relations:
@@ -287,6 +295,15 @@ class SessionManager:
                                                    {"except": except_session_id}, db=db)
             await db.commit()
 
+    async def get_all_for_user(self, user_id: str, session_id: str) -> List[DBSession]:
+        async with self._db_manager.get_db() as db:
+            stmt = select(DBSession).where(DBSession.user_id == user_id)
+            all_sessions = (await db.execute(stmt)).scalars().all()
+            for session in all_sessions:
+                if session.session_id == session_id:
+                    session.active = True
+                    break
+            return all_sessions
 
 class TokenManager:
     def __init__(self, db_manager: DatabaseManager):
@@ -303,11 +320,10 @@ class TokenManager:
             return token
 
     async def validate(self, db: AsyncSession, token_id: str, purpose: str, ip_address: str) -> User:
-        stmt = select(Token).where(Token.id == token_id, Token.purpose == purpose)
+        stmt = select(Token).where(Token.id == token_id, Token.purpose == purpose).options(joinedload(Token.user).joinedload(User.mfa_methods))
         token_obj = (await db.execute(stmt)).unique().scalar_one_or_none()
         if not token_obj: raise InvalidTokenError("Invalid token.")
         if token_obj.used: raise InvalidTokenError("Token has already been used.")
-
         user_stmt = select(User).where(User.id == token_obj.user_id)
         user = (await db.execute(user_stmt)).unique().scalar_one_or_none()
         if not user: raise InvalidTokenError("Token is not associated with a valid user.")
@@ -315,7 +331,7 @@ class TokenManager:
         if not token_obj.is_valid():
             new_token = await self.create(user.id, purpose)
             await token_obj.mark_used(ip_address, self._db_manager, db)
-            raise TokenExpiredError("Token expired. A new one has been generated.", new_token_id=new_token.id)
+            raise TokenExpiredError("Token expired. Reload Page.", new_token_id=new_token.id)
 
         await token_obj.mark_used(ip_address, self._db_manager, db)
         return user
@@ -331,6 +347,7 @@ class AuthTunaAsync:
         self.permissions = PermissionManager(db_manager)
         self.sessions = SessionManager(db_manager)
         self.tokens = TokenManager(db_manager)
+        self.mfa = MFAManager(db_manager)
 
     async def signup(self, username: str, email: str, password: str, ip_address: str) -> Tuple[User, Optional[Token]]:
         user = await self.users.create(
@@ -342,24 +359,27 @@ class AuthTunaAsync:
             token = await self.tokens.create(user.id, "email_verification")
         return user, token
 
-    async def login(self, username_or_email: str, password: str, ip_address: str, region: str, device: str) -> Tuple[
-        User, DBSession]:
+    async def login(self, username_or_email: str, password: str, ip_address: str, region: str, device: str) -> tuple[
+                                                                                                                   Any, Token] | \
+                                                                                                               tuple[
+                                                                                                                   Any, Session]:
         async with self.db_manager.get_db() as db:
-            stmt = select(User).where(
-                (User.email == username_or_email) | (User.username == username_or_email)
-            )
+            stmt = select(User).where((User.email == username_or_email) | (User.username == username_or_email))
             user = (await db.execute(stmt)).unique().scalar_one_or_none()
             password_valid = await user.check_password(password, ip_address, self.db_manager, db)
-            if not user:
-                if password_valid is False:
-                    raise InvalidCredentialsError("Incorrect username/email or password.")
-                if password_valid is None:
-                    raise EmailNotVerifiedError("Email Not Verified.")
-
+            if not user or password_valid is False:
+                raise InvalidCredentialsError("Incorrect username/email or password.")
+            elif password_valid is None:
+                raise EmailNotVerifiedError("Email Not Verified.")
+            elif password_valid is True:
+                pass
+            else:
+                raise InvalidCredentialsError("Incorrect username/email or password (config error).")
             await db.commit()
-
-            session = await self.sessions.create(user.id, ip_address, region, device)
-            return user, session
+            if user.mfa_enabled:
+                return user, await self.tokens.create(user.id, "mfa_validation", expiry_seconds=300)
+            else:
+                return user, await self.sessions.create(user.id, ip_address, region, device)
 
     async def request_password_reset(self, email: str) -> Optional[Token]:
         async with self.db_manager.get_db() as db:
@@ -394,4 +414,36 @@ class AuthTunaAsync:
                 user.email_verified = True
             await db.commit()
             return user
+
+    async def validate_mfa_login(self, mfa_token: str, code: str, ip_address: str, device_data: dict) -> DBSession:
+        """
+        Handles the second step of an MFA login within a single transaction.
+        """
+        async with self.db_manager.get_db() as db:
+            user = await self.tokens.validate(db, mfa_token, "mfa_validation", ip_address)
+
+            user_with_mfa = await self.users.get_by_id(user.id, with_relations=True, db=db)
+            if not user_with_mfa or not user_with_mfa.mfa_methods:
+                raise InvalidTokenError("MFA is not configured correctly for this user.")
+
+            # Assuming one TOTP method for now
+            totp_method = next((m for m in user_with_mfa.mfa_methods if m.method_type == 'totp'), None)
+            if not totp_method or not totp_method.secret:
+                raise InvalidTokenError("TOTP secret not found.")
+            print(totp_method.secret)
+            totp = pyotp.TOTP(totp_method.secret)
+            is_valid_code = totp.verify(code)
+            print(is_valid_code)
+            is_valid_recovery = False
+            if not is_valid_code:
+                is_valid_recovery = await self.mfa.verify_recovery_code(user, code)
+            print(is_valid_recovery)
+            if not is_valid_code and not is_valid_recovery:
+                raise InvalidTokenError("Invalid MFA code.")
+
+            await db.commit()
+        session = await self.sessions.create(
+                user.id, ip_address, device_data["region"], device_data["device"]
+        )
+        return session
 

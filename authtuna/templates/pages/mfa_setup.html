@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Setup 2-Factor Authentication</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-start: hsla(202, 71%, 27%, 1);
+            --bg-end: hsla(176, 45%, 66%, 1);
+        }
+        .dark {
+            --bg-start: hsla(252, 40%, 29%, 1);
+            --bg-end: hsla(270, 77%, 71%, 1);
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(90deg, var(--bg-start), var(--bg-end));
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
+        }
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .bg-card {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .dark .bg-card { background-color: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.15); }
+        .light .bg-card { background-color: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.25); }
+        .form-input {
+            border: 1px solid transparent;
+            transition: all 0.2s ease-in-out;
+        }
+        .dark .form-input { background-color: rgba(0, 0, 0, 0.25); border-color: rgba(100, 100, 100, 0.4); }
+        .light .form-input { background-color: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.4); }
+    </style>
+    <script>
+        // Theme toggling logic
+        function setTheme(theme) {
+            document.documentElement.classList.toggle('dark', theme === 'dark');
+            localStorage.setItem('theme', theme);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const storedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            setTheme(storedTheme || (prefersDark ? 'dark' : 'light'));
+        });
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.contains('dark');
+            setTheme(isDark ? 'light' : 'dark');
+        }
+    </script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 text-gray-800 dark:text-gray-100">
+    <div class="bg-card shadow-2xl rounded-3xl p-8 w-full max-w-md relative">
+        <button onclick="toggleTheme()" class="absolute top-4 right-4 p-2 rounded-full text-white/70 hover:text-white hover:bg-white/20 dark:hover:bg-black/20 transition-colors duration-200">
+            <!-- Theme toggle SVG -->
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 7.625A.75.75 0 018.25 7.5h.75a.75.75 0 01.75.75v.75a.75.75 0 01-.75.75h-.75A.75.75 0 017.5 8.375v-.75zM15 7.5a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zM17.65 6.33a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0L17.65 7.39a.75.75 0 010-1.06zM6.34 17.65a.75.75 0 010-1.06l1.06-1.06a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0zM12 17.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V18a.75.75 0 01.75-.75zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM18 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5h-2.25a.75.75 0 01-.75-.75zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" /></svg>
+        </button>
+
+        {% if mfa_already_enabled %}
+        <div id="enabled-view" class="text-center">
+            <h1 class="text-3xl font-semibold text-white/95">2-Factor Authentication is Active</h1>
+            <p class="text-white/70 mt-2">Your account is already protected by an authenticator app.</p>
+            <p class="text-white/60 text-sm mt-4">To disable MFA, please go to your account settings.</p>
+             <a href="/" class="mt-6 inline-block w-full max-w-xs py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+                Go to Dashboard
+            </a>
+        </div>
+        {% else %}
+        <div id="setup-view">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-semibold text-white/95">Set Up 2-Factor Authentication</h1>
+                <p class="text-white/70 mt-2">Scan the QR code with your authenticator app.</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl w-48 h-48 mx-auto flex items-center justify-center">
+                <!-- Correctly call the QR code generation endpoint -->
+                <img id="qr-code-img" src="/mfa/qr-code?uri={{ qr_code_uri | urlencode }}" alt="QR Code for MFA Setup">
+            </div>
+            <form id="verify-form" class="mt-8 space-y-6">
+                <input type="hidden" id="setup-token" value="{{ setup_token }}">
+                <div>
+                    <label for="mfa-code" class="block text-sm font-medium text-white/80 mb-2">Verification Code</label>
+                    <input id="mfa-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required class="form-input block w-full px-5 py-3 rounded-xl text-white text-center tracking-widest text-lg">
+                </div>
+                <div id="message-box" class="text-center text-sm font-medium hidden"></div>
+                <button type="submit" class="w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 transition-all">
+                    Verify & Enable
+                </button>
+            </form>
+        </div>
+
+        <div id="recovery-view" class="hidden">
+            <div class="text-center">
+                <h1 class="text-3xl font-semibold text-white/95">MFA Enabled Successfully!</h1>
+                <p class="text-white/70 mt-2 font-semibold text-amber-300">IMPORTANT: Save these recovery codes in a safe place.</p>
+                <div id="recovery-codes-list" class="my-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-white/90 bg-black/20 p-4 rounded-lg font-mono text-lg">
+                    <!-- Recovery codes will be injected here -->
+                </div>
+                <button id="copy-codes-btn" class="mb-4 w-full max-w-xs py-2 px-4 rounded-md font-semibold text-gray-800 bg-gray-200 hover:bg-gray-300 transition-all">
+                    Copy Codes
+                </button>
+                <p class="text-white/60 text-sm">You will need these if you lose access to your device.</p>
+                <a href="/" class="mt-6 inline-block w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+                    Go to Dashboard
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        const verifyForm = document.getElementById('verify-form');
+        const messageBox = document.getElementById('message-box');
+
+        if (verifyForm) {
+            verifyForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const token = document.getElementById('setup-token').value;
+                const code = document.getElementById('mfa-code').value;
+
+                try {
+                    // Corrected endpoint URL
+                    const response = await fetch('/mfa/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ setup_token: token, code: code })
+                    });
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        // On success, show recovery codes
+                        document.getElementById('setup-view').classList.add('hidden');
+                        const recoveryView = document.getElementById('recovery-view');
+                        const recoveryList = document.getElementById('recovery-codes-list');
+
+                        recoveryList.innerHTML = ''; // Clear previous codes
+                        data.recovery_codes.forEach(code => {
+                            const codeEl = document.createElement('div');
+                            codeEl.textContent = code;
+                            recoveryList.appendChild(codeEl);
+                        });
+
+                        recoveryView.classList.remove('hidden');
+
+                    } else {
+                        messageBox.textContent = data.detail || 'Verification failed.';
+                        messageBox.className = 'text-center text-sm font-medium text-red-300/90';
+                        messageBox.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    messageBox.textContent = 'Network error. Please try again.';
+                    messageBox.className = 'text-center text-sm font-medium text-red-300/90';
+                    messageBox.classList.remove('hidden');
+                }
+            });
+        }
+
+        const copyBtn = document.getElementById('copy-codes-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const recoveryList = document.getElementById('recovery-codes-list');
+                const codes = Array.from(recoveryList.children).map(el => el.textContent).join('\\n');
+
+                // Use execCommand for broader compatibility within iframes
+                const textArea = document.createElement("textarea");
+                textArea.value = codes;
+                textArea.style.position="fixed"; //avoid scrolling to bottom
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => { copyBtn.textContent = 'Copy Codes'; }, 2000);
+                } catch (err) {
+                    console.error('Fallback: Oops, unable to copy', err);
+                }
+                document.body.removeChild(textArea);
+            });
+        }
+    </script>
+</body>
+</html>
+

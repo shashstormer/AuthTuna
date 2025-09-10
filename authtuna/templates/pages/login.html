@@ -12,13 +12,11 @@
             --bg-start: hsla(202, 71%, 27%, 1);
             --bg-end: hsla(176, 45%, 66%, 1);
         }
-
         .dark {
             /* Dark Mode Gradient (Purple) */
             --bg-start: hsla(252, 40%, 29%, 1);
             --bg-end: hsla(270, 77%, 71%, 1);
         }
-
         body {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(90deg, var(--bg-start), var(--bg-end));
@@ -26,20 +24,17 @@
             animation: gradientAnimation 15s ease infinite;
             transition: background 0.5s ease-in-out, color 0.5s ease-in-out;
         }
-
         @keyframes gradientAnimation {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-
         /* Glassmorphism card effect */
         .bg-card {
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             background-clip: padding-box;
         }
-
         .dark .bg-card {
             background-color: rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.15);
@@ -48,7 +43,6 @@
             background-color: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.25);
         }
-
         /* Input field styling */
         .form-input {
             border: 1px solid transparent;
@@ -72,29 +66,11 @@
             box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
             background-color: rgba(255, 255, 255, 0.3);
         }
-        /* Placeholder color */
         .dark .form-input::placeholder { color: rgba(156, 163, 175, 0.6); }
         .light .form-input::placeholder { color: rgba(255, 255, 255, 0.7); }
-
-        .social-btn {
-            background-color: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.2s ease-in-out;
-        }
-        .social-btn:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-        .dark .social-btn {
-             background-color: rgba(0, 0, 0, 0.15);
-             border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .dark .social-btn:hover {
-            background-color: rgba(0, 0, 0, 0.25);
-        }
-
     </style>
     <script>
+        // Theme toggling logic
         function setTheme(theme) {
             document.documentElement.classList.toggle('dark', theme === 'dark');
             localStorage.setItem('theme', theme);
@@ -110,188 +86,214 @@
         }
     </script>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4
-             text-gray-800 dark:text-gray-100">
+<body class="min-h-screen flex items-center justify-center p-4 text-gray-800 dark:text-gray-100">
 
     <div class="bg-card shadow-2xl rounded-3xl p-8 w-full max-w-sm relative">
-        <button onclick="toggleTheme()" class="absolute top-4 right-4 p-2 rounded-full
-                                               text-white/70 hover:text-white
-                                               hover:bg-white/20 dark:hover:bg-black/20 transition-colors duration-200">
+        <button onclick="toggleTheme()" class="absolute top-4 right-4 p-2 rounded-full text-white/70 hover:text-white hover:bg-white/20 dark:hover:bg-black/20 transition-colors duration-200">
+            <!-- Theme toggle SVG -->
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 7.625A.75.75 0 018.25 7.5h.75a.75.75 0 01.75.75v.75a.75.75 0 01-.75.75h-.75A.75.75 0 017.5 8.375v-.75zM15 7.5a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zM17.65 6.33a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0L17.65 7.39a.75.75 0 010-1.06zM6.34 17.65a.75.75 0 010-1.06l1.06-1.06a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0zM12 17.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V18a.75.75 0 01.75-.75zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM18 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5h-2.25a.75.75 0 01-.75-.75zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" /></svg>
         </button>
-        <div class="text-center mb-8">
-            <div class="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
+        <div id="card-header" class="text-center mb-8">
+            <div id="card-icon" class="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
                 🔒
             </div>
-            <h1 class="text-4xl font-semibold text-gray-800/90 dark:text-white/95 leading-tight transition-colors duration-500">Welcome Back</h1>
-            <p class="text-md text-gray-700/80 dark:text-white/70 mt-1 transition-colors duration-500">Sign in to your account</p>
+            <h1 id="card-title" class="text-4xl font-semibold text-gray-800/90 dark:text-white/95 leading-tight transition-colors duration-500">Welcome Back</h1>
+            <p id="card-subtitle" class="text-md text-gray-700/80 dark:text-white/70 mt-1 transition-colors duration-500">Sign in to your account</p>
         </div>
 
-        <form id="login-form" class="space-y-6">
+        <div id="message-box" class="mb-4 text-center text-sm font-medium hidden"></div>
+
+        <!-- Form 1: Password Login -->
+        <form id="password-form" class="space-y-6">
             <div>
-                <label for="username_or_email" class="block text-sm font-medium text-gray-700/90 dark:text-white/80 mb-2 transition-colors duration-500">Username or Email</label>
-                <input id="username_or_email" name="username_or_email" type="text" required
-                    class="form-input block w-full px-5 py-3 rounded-xl text-gray-800 dark:text-white placeholder-gray-500/70 dark:placeholder-gray-400/60">
-                <p id="username-error" class="text-xs text-red-500 dark:text-red-300/80 mt-1 hidden">
-                    Must be at least 3 characters, no spaces, alphanumeric with `_` or `-`, and at least 3 letters.
+                <label for="username_or_email" class="block text-sm font-medium text-gray-700/90 dark:text-white/80 mb-2">Username or Email</label>
+                <input id="username_or_email" name="username_or_email" type="text" required class="form-input block w-full px-5 py-3 rounded-xl text-gray-800 dark:text-white">
+                 <p id="username-error" class="text-xs text-red-400 dark:text-red-300/80 mt-1 hidden">
+                    Invalid username or email format.
                 </p>
             </div>
             <div>
-                <label for="password" class="block text-sm font-medium text-gray-700/90 dark:text-white/80 mb-2 transition-colors duration-500">Password</label>
-                <input id="password" name="password" type="password" autocomplete="current-password" required
-                    class="form-input block w-full px-5 py-3 rounded-xl text-gray-800 dark:text-white placeholder-gray-500/70 dark:placeholder-gray-400/60">
+                <label for="password" class="block text-sm font-medium text-gray-700/90 dark:text-white/80 mb-2">Password</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" required class="form-input block w-full px-5 py-3 rounded-xl text-gray-800 dark:text-white">
                 <p id="password-error" class="text-xs text-red-400 dark:text-red-300/80 mt-1 hidden">
-                    Password must be at least 8 characters.
+                    Password must be at least 8 chars with uppercase & lowercase.
                 </p>
             </div>
-
-            <div id="message-box" class="mt-4 text-center text-sm font-medium hidden"></div>
-
-            <div class="flex items-center justify-between text-sm mt-6">
-                <a href="/auth/forgot-password" class="font-medium text-purple-300 hover:text-purple-200 light:text-cyan-200 light:hover:text-white transition-colors duration-200">Forgot password?</a>
-                <a href="/auth/signup" class="font-medium text-purple-300 hover:text-purple-200 light:text-cyan-200 light:hover:text-white transition-colors duration-200">Create account</a>
+            <div class="flex items-center justify-between text-sm">
+                <a href="/auth/forgot-password" class="font-medium text-purple-300 hover:text-purple-200 light:text-cyan-200 light:hover:text-white">Forgot password?</a>
+                <a href="/auth/signup" class="font-medium text-purple-300 hover:text-purple-200 light:text-cyan-200 light:hover:text-white">Create account</a>
             </div>
-
-            <button type="submit"
-                class="w-full py-3 px-4 rounded-xl font-semibold text-white text-lg
-                       bg-gradient-to-r from-indigo-600 to-purple-600
-                       hover:from-indigo-700 hover:to-purple-700
-                       focus:ring-4 focus:ring-indigo-300 dark:focus:ring-purple-700
-                       shadow-xl hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-0.5">
+            <button type="submit" class="w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:ring-4 focus:ring-indigo-300 dark:focus:ring-purple-700 shadow-xl transition-all duration-300 ease-in-out">
                 Sign In
             </button>
         </form>
 
+        <!-- Form 2: MFA Login (hidden by default) -->
+        <form id="mfa-form" class="space-y-6 hidden">
+            <input type="hidden" id="mfa-token-input" name="mfa_token">
+            <div>
+                <label for="mfa-code" class="block text-sm font-medium text-gray-700/90 dark:text-white/80 mb-2">6-Digit Verification Code</label>
+                <input id="mfa-code" name="mfa_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required class="form-input block w-full px-5 py-3 rounded-xl text-gray-800 dark:text-white text-center text-2xl tracking-[.5em]">
+            </div>
+            <button type="submit" class="w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 focus:ring-4 focus:ring-teal-300 dark:focus:ring-cyan-700 shadow-xl transition-all duration-300 ease-in-out">
+                Verify
+            </button>
+        </form>
+
         <!-- Social Login Section -->
-        {% if google_login_enabled or github_login_enabled %}
-        <div class="mt-6">
-            <div class="relative">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-white/20"></div>
-                </div>
-                <div class="relative flex justify-center text-sm">
-                    <span class="px-2 bg-white/10 dark:bg-black/20 text-gray-600 dark:text-white/70 rounded-full backdrop-blur-sm transition-colors duration-500">Or continue with</span>
+        <div id="social-login-section">
+            {% if google_login_enabled or github_login_enabled %}
+            <div class="mt-6">
+                <div class="relative"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/20"></div></div><div class="relative flex justify-center text-sm"><span class="px-2 bg-white/10 dark:bg-black/20 text-gray-600 dark:text-white/70 rounded-full">Or continue with</span></div></div>
+                <div class="mt-6 grid grid-cols-1 gap-4">
+                    {% if google_login_enabled %}
+                    <a href="/auth/google/login" class="social-btn w-full inline-flex justify-center py-3 px-4 rounded-xl shadow-md text-sm font-medium text-gray-800 dark:text-white"><svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 48 48"><path d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></svg>Google</a>
+                    {% endif %}
+                    {% if github_login_enabled %}
+                    <a href="/auth/github/login" class="social-btn w-full inline-flex justify-center py-3 px-4 rounded-xl shadow-md text-sm font-medium text-gray-800 dark:text-white"><svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.168 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.378.203 2.398.1 2.651.64.7 1.03 1.595 1.03 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd"/></svg>GitHub</a>
+                    {% endif %}
                 </div>
             </div>
-
-            <div class="mt-6 grid grid-cols-1 gap-4">
-                {% if google_login_enabled %}
-                <a href="/auth/google/login" class="social-btn w-full inline-flex justify-center py-3 px-4 rounded-xl shadow-md text-sm font-medium text-gray-800 dark:text-white transition-colors duration-500">
-                    <span class="sr-only">Sign in with Google</span>
-                    <svg class="w-5 h-5 mr-2" aria-hidden="true" fill="currentColor" viewBox="0 0 48 48">
-                        <path d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
-                    </svg>
-                    Google
-                </a>
-                {% endif %}
-
-                {% if github_login_enabled %}
-                <a href="/auth/github/login" class="social-btn w-full inline-flex justify-center py-3 px-4 rounded-xl shadow-md text-sm font-medium text-gray-800 dark:text-white transition-colors duration-500">
-                    <span class="sr-only">Sign in with GitHub</span>
-                    <svg class="w-5 h-5 mr-2" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
-                        <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.168 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.378.203 2.398.1 2.651.64.7 1.03 1.595 1.03 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd"/>
-                    </svg>
-                    GitHub
-                </a>
-                {% endif %}
-            </div>
+            {% endif %}
         </div>
-        {% endif %}
-
     </div>
     <script>
-    const form = document.getElementById('login-form');
+    // --- DOM Elements ---
+    const passwordForm = document.getElementById('password-form');
+    const mfaForm = document.getElementById('mfa-form');
     const messageBox = document.getElementById('message-box');
+
     const usernameInput = document.getElementById('username_or_email');
     const passwordInput = document.getElementById('password');
     const usernameError = document.getElementById('username-error');
     const passwordError = document.getElementById('password-error');
+    const mfaTokenInput = document.getElementById('mfa-token-input');
+    const mfaCodeInput = document.getElementById('mfa-code');
 
-    // Client-side validation logic
+    // --- Validation Logic ---
     function validateUsernameOrEmail(input) {
-        // Simple check: if it contains '@', treat it as an email, otherwise a username.
         if (input.includes('@')) {
-            // Basic email regex
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
-        } else {
-            // Username validation
-            if (input.length < 3) return false;
-            if (input.includes(" ")) return false;
-            const alphanumericOrHyphenUnderscore = /^[a-zA-Z0-9_-]+$/.test(input);
-            if (!alphanumericOrHyphenUnderscore) return false;
-            const hasThreeAlphabets = (input.match(/[a-zA-Z]/g) || []).length >= 3;
-            if (!hasThreeAlphabets) return false;
         }
-        return true;
+        if (input.length < 3) return false;
+        if (input.includes(" ")) return false;
+        const alphanumericOrHyphenUnderscore = /^[a-zA-Z0-9_-]+$/.test(input);
+        if (!alphanumericOrHyphenUnderscore) return false;
+        return (input.match(/[a-zA-Z]/g) || []).length >= 3;
     }
 
     function validatePassword(password) {
         if (password.length < 8) return false;
         if (!/[a-z]/.test(password)) return false;
-        if (!/[A-Z]/.test(password)) return false;
-        return true;
+        return /[A-Z]/.test(password);
     }
 
+    // --- UI Functions ---
     function showMessage(text, colorClass) {
       messageBox.textContent = text;
-      messageBox.className = `mt-4 text-center text-sm font-medium ${colorClass}`;
-      messageBox.style.display = 'block';
+      messageBox.className = `mb-4 text-center text-sm font-medium ${colorClass}`;
+      messageBox.classList.remove('hidden');
     }
 
-    usernameInput.addEventListener('input', () => {
-        if (validateUsernameOrEmail(usernameInput.value)) {
-            usernameError.classList.add('hidden');
-        } else {
+    function switchToMfaStep(token) {
+        mfaTokenInput.value = token;
+        passwordForm.classList.add('hidden');
+        document.getElementById('social-login-section').classList.add('hidden');
+        mfaForm.classList.remove('hidden');
+
+        document.getElementById('card-icon').textContent = '🛡️';
+        document.getElementById('card-title').textContent = 'Verification Required';
+        document.getElementById('card-subtitle').textContent = 'Enter the 6-digit code from your authenticator app.';
+        mfaCodeInput.focus();
+    }
+
+    // --- API Handlers ---
+    async function handlePasswordSubmit(event) {
+        event.preventDefault();
+        const button = event.target.querySelector('button[type="submit"]');
+        button.disabled = true;
+        showMessage('', 'hidden'); // Clear previous messages
+
+        if (!validateUsernameOrEmail(usernameInput.value)) {
             usernameError.classList.remove('hidden');
+            button.disabled = false;
+            return;
         }
+        if (!validatePassword(passwordInput.value)) {
+            passwordError.classList.remove('hidden');
+            button.disabled = false;
+            return;
+        }
+
+        try {
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username_or_email: usernameInput.value, password: passwordInput.value })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                if (data.mfa_required && data.mfa_token) {
+                    switchToMfaStep(data.mfa_token);
+                } else {
+                    showMessage(data.message, 'text-green-400');
+                    setTimeout(() => window.location.href = '/', 1500);
+                }
+            } else {
+                showMessage(data.detail || 'Invalid credentials.', 'text-red-400');
+            }
+        } catch (error) {
+            showMessage('Network error. Please try again.', 'text-red-400');
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    async function handleMfaSubmit(event) {
+        event.preventDefault();
+        const button = event.target.querySelector('button[type="submit"]');
+        button.disabled = true;
+        showMessage('', 'hidden');
+
+        const code = mfaCodeInput.value;
+        if (!/^\d{6}$/.test(code)) {
+             showMessage('Please enter a valid 6-digit code.', 'text-red-400');
+             button.disabled = false;
+             return;
+        }
+
+        try {
+            const response = await fetch('/mfa/validate-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mfa_token: mfaTokenInput.value, code: code })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                showMessage(data.message, 'text-green-400');
+                setTimeout(() => window.location.href = '/', 1500);
+            } else {
+                showMessage(data.detail || 'Invalid code.', 'text-red-400');
+                mfaCodeInput.value = '';
+            }
+        } catch (error) {
+            showMessage('Network error. Please try again.', 'text-red-400');
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    // --- Event Listeners ---
+    usernameInput.addEventListener('input', () => {
+        usernameError.classList.toggle('hidden', validateUsernameOrEmail(usernameInput.value));
     });
 
     passwordInput.addEventListener('input', () => {
-        if (validatePassword(passwordInput.value)) {
-            passwordError.classList.add('hidden');
-        } else {
-            passwordError.classList.remove('hidden');
-        }
+        passwordError.classList.toggle('hidden', validatePassword(passwordInput.value));
     });
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const usernameOrEmail = usernameInput.value;
-      const password = passwordInput.value;
-
-      if (!validateUsernameOrEmail(usernameOrEmail) || !validatePassword(password)) {
-          showMessage('Please fix the validation errors.', 'text-red-500 dark:text-red-300');
-          return;
-      }
-
-      const passwordErrorEl = document.getElementById('password-error');
-      if(password.length < 8) {
-          passwordErrorEl.textContent = 'Password must be at least 8 characters.';
-          passwordErrorEl.classList.remove('hidden');
-          return;
-      } else {
-          passwordErrorEl.classList.add('hidden');
-      }
-
-
-      try {
-        const response = await fetch('/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username_or_email: usernameOrEmail, password: password })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          showMessage(data.message, 'text-green-500 dark:text-green-300');
-          setTimeout(() => window.location.href = '/', 1500);
-        } else {
-          showMessage(data.detail || 'Invalid username or password.', 'text-red-500 dark:text-red-300');
-        }
-      } catch {
-        showMessage('Network error. Please try again.', 'text-red-500 dark:text-red-300');
-      }
-    });
+    passwordForm.addEventListener('submit', handlePasswordSubmit);
+    mfaForm.addEventListener('submit', handleMfaSubmit);
     </script>
 </body>
 </html>
