@@ -2,20 +2,20 @@ import time
 from typing import Optional, Tuple, List, Dict, Any
 
 import pyotp
-from sqlalchemy import or_, select, func
+from sqlalchemy import or_, select, func, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from authtuna.core.config import settings
 from authtuna.core.database import (
     DatabaseManager, User, Role, Permission, DeletedUser,
-    Session as DBSession, Token, user_roles_association, role_permissions_association, Session
+    Session as DBSession, Token, user_roles_association, role_permissions_association, Session, AuditEvent
 )
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.exceptions import (
     UserAlreadyExistsError, InvalidCredentialsError, EmailNotVerifiedError,
     InvalidTokenError, TokenExpiredError, RateLimitError, UserNotFoundError,
-    SessionNotFoundError, RoleNotFoundError, PermissionNotFoundError
+    SessionNotFoundError, RoleNotFoundError, PermissionNotFoundError, OperationForbiddenError
 )
 from authtuna.core.mfa import MFAManager
 
@@ -122,6 +122,33 @@ class UserManager:
             await user.set_password(new_password, ip_address, self._db_manager, db)
             await db.commit()
 
+    async def suspend_user(self, user_id: str, admin_id: str, reason: str = "No reason provided.") -> User:
+        """NEW: Suspends a user, preventing them from logging in."""
+        async with self._db_manager.get_db() as db:
+            user = await db.get(User, user_id)
+            if not user: raise UserNotFoundError("User not found.")
+            user.is_active = False
+            await self._db_manager.log_audit_event(
+                user_id, "USER_SUSPENDED", "system", {"by": admin_id, "reason": reason}, db=db
+            )
+            await db.commit()
+            await db.refresh(user)
+            return user
+
+    async def unsuspend_user(self, user_id: str, admin_id: str, reason: str = "No reason provided.") -> User:
+        """NEW: Reactivates a suspended user."""
+        async with self._db_manager.get_db() as db:
+            user = await db.get(User, user_id)
+            if not user: raise UserNotFoundError("User not found.")
+            user.is_active = True
+            await self._db_manager.log_audit_event(
+                user_id, "USER_UNSUSPENDED", "system", {"by": admin_id, "reason": reason}, db=db
+            )
+            await db.commit()
+            await db.refresh(user)
+            return user
+
+
 
 class RoleManager:
     def __init__(self, db_manager: DatabaseManager):
@@ -220,6 +247,29 @@ class RoleManager:
                 )
             result = (await db.execute(stmt)).first()
             return result is not None
+
+    async def revoke_user_role_by_scope(self, user_id: str, role_name: str, scope: str):
+        """NEW: Revokes a specific role from a user within a specific scope."""
+        async with self._db_manager.get_db() as db:
+            role = await self.get_by_name(role_name)
+            if not role: raise RoleNotFoundError(f"Role '{role_name}' not found.")
+
+            stmt = delete(user_roles_association).where(
+                user_roles_association.c.user_id == user_id,
+                user_roles_association.c.role_id == role.id,
+                user_roles_association.c.scope == scope
+            )
+            result = await db.execute(stmt)
+            await db.commit()
+            return result.rowcount > 0
+
+    async def revoke_all_for_scope(self, scope: str):
+        """NEW: Deletes all role assignments for a specific scope."""
+        async with self._db_manager.get_db() as db:
+            stmt = delete(user_roles_association).where(user_roles_association.c.scope == scope)
+            result = await db.execute(stmt)
+            await db.commit()
+            return result.rowcount
 
 
 class PermissionManager:
@@ -336,6 +386,23 @@ class TokenManager:
         await token_obj.mark_used(ip_address, self._db_manager, db)
         return user
 
+class AuditManager:
+    """Manages querying the audit trail for security and administrative purposes."""
+    def __init__(self, db_manager: DatabaseManager):
+        self._db_manager = db_manager
+
+    async def get_events_for_user(self, user_id: str, skip: int = 0, limit: int = 25) -> List[AuditEvent]:
+        async with self._db_manager.get_db() as db:
+            stmt = select(AuditEvent).where(AuditEvent.user_id == user_id).order_by(desc(AuditEvent.timestamp)).offset(skip).limit(limit)
+            result = await db.execute(stmt)
+            return list(result.scalars().all())
+
+    async def get_events_by_type(self, event_type: str, skip: int = 0, limit: int = 100) -> List[AuditEvent]:
+        async with self._db_manager.get_db() as db:
+            stmt = select(AuditEvent).where(AuditEvent.event_type == event_type).order_by(desc(AuditEvent.timestamp)).offset(skip).limit(limit)
+            result = await db.execute(stmt)
+            return list(result.scalars().all())
+
 
 class AuthTunaAsync:
     """High-level facade for all authentication and authorization operations."""
@@ -348,6 +415,7 @@ class AuthTunaAsync:
         self.sessions = SessionManager(db_manager)
         self.tokens = TokenManager(db_manager)
         self.mfa = MFAManager(db_manager)
+        self.audit = AuditManager(db_manager)
 
     async def signup(self, username: str, email: str, password: str, ip_address: str) -> Tuple[User, Optional[Token]]:
         user = await self.users.create(
@@ -366,6 +434,12 @@ class AuthTunaAsync:
         async with self.db_manager.get_db() as db:
             stmt = select(User).where((User.email == username_or_email) | (User.username == username_or_email))
             user = (await db.execute(stmt)).unique().scalar_one_or_none()
+            if not user.is_active:
+                await self._db_manager.log_audit_event(
+                    user.id, "LOGIN_FAILED", ip_address, {"reason": "user_suspended"}, db=db
+                )
+                await db.commit()
+                raise OperationForbiddenError("This account has been suspended.")
             password_valid = await user.check_password(password, ip_address, self.db_manager, db)
             if not user or password_valid is False:
                 raise InvalidCredentialsError("Incorrect username/email or password.")

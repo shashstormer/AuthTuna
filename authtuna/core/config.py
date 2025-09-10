@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     SESSION_SAME_SITE: str = "LAX"
     SESSION_SECURE: bool = True  # obvio its gon be httponly coz it auth bruh
     SESSION_TOKEN_NAME: str = "session_token"
+    SESSION_COOKIE_DOMAIN: Optional[str] = None
 
     # Email settings (disabled by default)
     EMAIL_ENABLED: bool = False

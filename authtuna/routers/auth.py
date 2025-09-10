@@ -138,7 +138,8 @@ async def login_user(
             samesite=settings.SESSION_SAME_SITE,
             secure=settings.SESSION_SECURE,
             httponly=True,
-            max_age=settings.SESSION_ABSOLUTE_LIFETIME_SECONDS
+            max_age=settings.SESSION_ABSOLUTE_LIFETIME_SECONDS,
+            domain=settings.SESSION_COOKIE_DOMAIN,
         )
 
         if settings.EMAIL_ENABLED:

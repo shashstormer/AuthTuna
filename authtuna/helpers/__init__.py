@@ -170,7 +170,9 @@ async def create_session_and_set_cookie(user: User, request: Request, response: 
         value=new_session.get_cookie_string(),
         samesite=settings.SESSION_SAME_SITE,
         secure=settings.SESSION_SECURE,
-        httponly=True
+        httponly=True,
+        max_age=settings.SESSION_ABSOLUTE_LIFETIME_SECONDS,
+        domain=settings.SESSION_COOKIE_DOMAIN,
     )
 
 

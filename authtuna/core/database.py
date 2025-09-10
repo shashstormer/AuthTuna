@@ -145,7 +145,7 @@ class User(Base):
                       unique=True, nullable=False, index=True)
     email = Column(CaseInsensitiveText(120, collation='NOCASE' if engine.dialect.name == 'sqlite' else None),
                    unique=True, nullable=False, index=True)
-
+    is_active = Column(Boolean, default=True, nullable=False)
     password_hash = Column(String(256), nullable=True)
     email_verified = Column(Boolean, default=False, nullable=False)
     requires_password_reset = Column(Boolean, default=False, nullable=False)
