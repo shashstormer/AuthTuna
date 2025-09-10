@@ -67,13 +67,17 @@
                 🛡️
             </div>
             <h1 class="text-3xl font-semibold text-white/95">Verification Required</h1>
-            <p class="text-white/70 mt-2">Enter the 6-digit code from your authenticator app to complete your login.</p>
+            <p class="text-white/70 mt-2">Enter your verification code to complete your login.</p>
         </div>
 
         <form id="mfa-challenge-form" class="space-y-6">
             <div>
-                <label for="mfa-code" class="sr-only">6-Digit Verification Code</label>
-                <input id="mfa-code" name="mfa-code" type="text" inputmode="numeric" required class="form-input block w-full px-5 py-3 rounded-xl text-white text-center tracking-widest text-2xl">
+                <label for="mfa-code" class="sr-only">Verification Code</label>
+                <input id="mfa-code" name="mfa-code" type="text" required placeholder="123456 or ABC-DEF-GHI"
+                       class="form-input block w-full px-5 py-3 rounded-xl text-white text-center tracking-wider text-xl">
+                 <p class="text-xs text-center text-white/60 mt-2">
+                    Lost your device? <a href="#" class="font-semibold text-purple-300 hover:text-purple-200">Use a recovery code.</a>
+                </p>
             </div>
             <div id="message-box" class="text-center text-sm font-medium hidden"></div>
             <button type="submit" class="w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 transition-all">
@@ -85,18 +89,27 @@
     <script>
         const mfaForm = document.getElementById('mfa-challenge-form');
         const messageBox = document.getElementById('message-box');
+        const mfaCodeInput = document.getElementById('mfa-code');
 
         mfaForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const button = e.target.querySelector('button[type="submit"]');
+            button.disabled = true;
+
             const urlParams = new URLSearchParams(window.location.search);
             const mfaToken = urlParams.get('mfa_token');
-            const code = document.getElementById('mfa-code').value;
+            const code = mfaCodeInput.value;
 
             if (!mfaToken) {
-                messageBox.textContent = 'MFA token missing from URL.';
-                messageBox.className = 'text-center text-sm font-medium text-red-300/90';
-                messageBox.style.display = 'block';
+                showMessage('MFA token missing from URL.', 'text-red-300/90');
+                button.disabled = false;
                 return;
+            }
+
+            if (!code || code.length < 6) {
+                 showMessage('Please enter a valid code.', 'text-red-300/90');
+                 button.disabled = false;
+                 return;
             }
 
             try {
@@ -108,21 +121,24 @@
 
                 const data = await response.json();
                 if (response.ok) {
-                    messageBox.textContent = data.message;
-                    messageBox.className = 'text-center text-sm font-medium text-green-300/90';
-                    messageBox.style.display = 'block';
+                    showMessage(data.message, 'text-green-300/90');
                     setTimeout(() => window.location.href = '/', 2000);
                 } else {
-                    messageBox.textContent = data.detail || 'Verification failed.';
-                    messageBox.className = 'text-center text-sm font-medium text-red-300/90';
-                    messageBox.style.display = 'block';
+                    showMessage(data.detail || 'Verification failed.', 'text-red-300/90');
                 }
             } catch (error) {
-                messageBox.textContent = 'Network error. Please try again.';
-                messageBox.className = 'text-center text-sm font-medium text-red-300/90';
-                messageBox.style.display = 'block';
+                showMessage('Network error. Please try again.', 'text-red-300/90');
+            } finally {
+                button.disabled = false;
             }
         });
+
+        function showMessage(text, colorClass) {
+            messageBox.textContent = text;
+            messageBox.className = `text-center text-sm font-medium ${colorClass}`;
+            messageBox.style.display = 'block';
+        }
     </script>
 </body>
 </html>
+

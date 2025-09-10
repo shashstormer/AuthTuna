@@ -28,7 +28,7 @@ class MFAValidationPayload(BaseModel):
 
 class MFALoginValidate(BaseModel):
     mfa_token: str
-    code: str = Field(..., min_length=6, max_length=6)
+    code: str = Field(..., min_length=6, max_length=11)
 
 
 @router.post("/setup")

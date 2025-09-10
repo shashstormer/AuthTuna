@@ -100,17 +100,27 @@ class MFAManager:
 
         return plain_codes
 
-    async def verify_recovery_code(self, user: User, code: str) -> bool:
+    async def verify_recovery_code(self, user: User, code: str, db: AsyncSession) -> bool:
         """
         Verifies a recovery code. If valid, it marks the code as used.
 
         Returns:
             True if the code is valid, False otherwise.
         """
+        if db:
+            stmt = select(MFARecoveryCode).where(MFARecoveryCode.user_id == user.id, MFARecoveryCode.is_used == False)
+            active_codes = (await db.execute(stmt)).scalars().all()
+            for recovery_code in active_codes:
+                if encryption_utils.verify_password(code, recovery_code.hashed_code):
+                    recovery_code.is_used = True
+                    recovery_code.actived_at = time.time()
+                    db.add(recovery_code)
+                    await db.commit()
+                    return True
+
         async with self._db_manager.get_db() as db:
             stmt = select(MFARecoveryCode).where(MFARecoveryCode.user_id == user.id, MFARecoveryCode.is_used == False)
             active_codes = (await db.execute(stmt)).scalars().all()
-
             for recovery_code in active_codes:
                 if encryption_utils.verify_password(code, recovery_code.hashed_code):
                     recovery_code.is_used = True

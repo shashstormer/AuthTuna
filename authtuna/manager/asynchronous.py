@@ -434,7 +434,7 @@ class AuthTunaAsync:
             is_valid_code = totp.verify(code)
             is_valid_recovery = False
             if not is_valid_code:
-                is_valid_recovery = await self.mfa.verify_recovery_code(user, code)
+                is_valid_recovery = await self.mfa.verify_recovery_code(user, code, db)
             if not is_valid_code and not is_valid_recovery:
                 raise InvalidTokenError("Invalid MFA code.")
 

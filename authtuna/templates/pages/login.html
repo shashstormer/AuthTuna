@@ -132,8 +132,12 @@
         <form id="mfa-form" class="space-y-6 hidden">
             <input type="hidden" id="mfa-token-input" name="mfa_token">
             <div>
-                <label for="mfa-code" class="block text-sm font-medium text-gray-700/90 dark:text-white/80 mb-2">6-Digit Verification Code</label>
-                <input id="mfa-code" name="mfa_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required class="form-input block w-full px-5 py-3 rounded-xl text-gray-800 dark:text-white text-center text-2xl tracking-[.5em]">
+                <label for="mfa-code" class="block text-sm font-medium text-gray-700/90 dark:text-white/80 mb-2">Verification Code</label>
+                <input id="mfa-code" name="mfa_code" type="text" autocomplete="one-time-code" required placeholder="123456 or ABC-DEF-GHI"
+                       class="form-input block w-full px-5 py-3 rounded-xl text-gray-800 dark:text-white text-center text-xl tracking-wider">
+                <p class="text-xs text-center text-white/60 mt-2">
+                    Lost your device? <a href="#" class="font-semibold text-purple-300 hover:text-purple-200">Use a recovery code.</a>
+                </p>
             </div>
             <button type="submit" class="w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 focus:ring-4 focus:ring-teal-300 dark:focus:ring-cyan-700 shadow-xl transition-all duration-300 ease-in-out">
                 Verify
@@ -203,7 +207,7 @@
 
         document.getElementById('card-icon').textContent = '🛡️';
         document.getElementById('card-title').textContent = 'Verification Required';
-        document.getElementById('card-subtitle').textContent = 'Enter the 6-digit code from your authenticator app.';
+        document.getElementById('card-subtitle').textContent = 'Enter your verification code.';
         mfaCodeInput.focus();
     }
 
@@ -256,8 +260,8 @@
         showMessage('', 'hidden');
 
         const code = mfaCodeInput.value;
-        if (!/^\d{6}$/.test(code)) {
-             showMessage('Please enter a valid 6-digit code.', 'text-red-400');
+        if (!code || code.length < 6) {
+             showMessage('Please enter a valid code.', 'text-red-400');
              button.disabled = false;
              return;
         }
