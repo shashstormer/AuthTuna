@@ -10,7 +10,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 import asyncio
-from sqlalchemy import Column, event, Table, ForeignKey, text, AsyncAdaptedQueuePool
+from sqlalchemy import Column, event, Table, ForeignKey, text, AsyncAdaptedQueuePool, VARCHAR
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -118,7 +118,9 @@ user_roles_association = Table(
     Column('user_id', String(64), ForeignKey('users.id'), primary_key=True),
     Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
     Column('scope', String(255), primary_key=True, default='none', nullable=False),
-    Column('given_by_id', String(64), ForeignKey('users.id'), nullable=False),
+    Column('given_by_id', VARCHAR(64),
+           # ForeignKey('users.id'),
+           nullable=False),
     Column('given_at', Float, nullable=False, default=time.time),
 )
 

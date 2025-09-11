@@ -1,13 +1,13 @@
 import datetime
 import logging
 from authtuna.core.config import settings
-from authtuna.core.database import db_manager, Token
+from authtuna.core.database import db_manager, Token, User
 from authtuna.core.exceptions import (UserAlreadyExistsError, InvalidCredentialsError,
                                       EmailNotVerifiedError, InvalidTokenError,
                                       TokenExpiredError, RateLimitError)
 from authtuna.helpers import create_session_and_set_cookie
 from authtuna.helpers.mail import email_manager
-from authtuna.integrations.fastapi_integration import auth_service
+from authtuna.integrations.fastapi_integration import auth_service, get_current_user
 from fastapi import (APIRouter, Depends, status, Response, Request,
                      HTTPException, BackgroundTasks)
 from fastapi.templating import Jinja2Templates
@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import HTMLResponse
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,21 @@ class PasswordUpdate(BaseModel):
 
 class TokenValidation(BaseModel):
     token: str
+
+class RoleInfo(BaseModel):
+    """Defines the structure for a user's role and its scope."""
+    role_name: str
+    scope: str
+
+class UserInfoResponse(BaseModel):
+    """The complete, secure, and useful user information payload."""
+    user_id: str
+    username: str
+    email: str
+    is_active: bool
+    email_verified: bool
+    mfa_enabled: bool
+    roles: List[RoleInfo]
 
 
 @router.get("/signup", response_class=HTMLResponse)
@@ -118,7 +134,7 @@ async def login_user(
     Returns a message indicating the result.
     """
     try:
-        ip_address = request.scope['client'][0]
+        ip_address = request.state.user_ip_address
         user, session = await auth_service.login(
             username_or_email=login_data.username_or_email,
             password=login_data.password,
@@ -262,3 +278,31 @@ async def show_reset_page(token: str, request: Request,
             return templates.TemplateResponse("error.html", {"request": request, "message": "Invalid or expired token."})
         return templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
 
+
+# @router.api_route("/user-info", methods=["GET", "POST"], response_model=dict[str, str],)
+# async def get_current_user_info(user: User = Depends(get_current_user)):
+#     return {
+#         "email": user.email,
+#         "username": user.username,
+#         "user_id": user.id,
+#     }
+
+@router.api_route("/user-info", methods=["GET", "POST"], response_model=UserInfoResponse)
+async def get_current_user_info(
+    user: User = Depends(get_current_user)
+):
+    """
+    Returns a comprehensive, secure overview of the currently authenticated user,
+    including their status and all their roles with scopes.
+    """
+    roles_with_scope = await auth_service.roles.get_user_roles_with_scope(user.id)
+
+    return UserInfoResponse(
+        user_id=user.id,
+        username=user.username,
+        email=user.email,
+        is_active=user.is_active,
+        email_verified=user.email_verified,
+        mfa_enabled=user.mfa_enabled,
+        roles=[RoleInfo(**role) for role in roles_with_scope]
+    )

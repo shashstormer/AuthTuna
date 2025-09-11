@@ -434,14 +434,10 @@ class AuthTunaAsync:
         async with self.db_manager.get_db() as db:
             stmt = select(User).where((User.email == username_or_email) | (User.username == username_or_email))
             user = (await db.execute(stmt)).unique().scalar_one_or_none()
-            if not user.is_active:
-                await self._db_manager.log_audit_event(
-                    user.id, "LOGIN_FAILED", ip_address, {"reason": "user_suspended"}, db=db
-                )
-                await db.commit()
-                raise OperationForbiddenError("This account has been suspended.")
+            if not user:
+                raise InvalidCredentialsError("Incorrect username/email or password.")
             password_valid = await user.check_password(password, ip_address, self.db_manager, db)
-            if not user or password_valid is False:
+            if password_valid is False:
                 raise InvalidCredentialsError("Incorrect username/email or password.")
             elif password_valid is None:
                 raise EmailNotVerifiedError("Email Not Verified.")
@@ -449,6 +445,12 @@ class AuthTunaAsync:
                 pass
             else:
                 raise InvalidCredentialsError("Incorrect username/email or password (config error).")
+            if not user.is_active:
+                await self.db_manager.log_audit_event(
+                    user.id, "LOGIN_FAILED", ip_address, {"reason": "user_suspended"}, db=db
+                )
+                await db.commit()
+                raise OperationForbiddenError("This account has been suspended.")
             await db.commit()
             if user.mfa_enabled:
                 return user, await self.tokens.create(user.id, "mfa_validation", expiry_seconds=300)

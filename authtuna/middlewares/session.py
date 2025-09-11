@@ -71,7 +71,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             return True
         elif request.url.path.startswith("/mfa/"):
             return True
-        elif request.url.path.startswith("/auth/") and request.url.path.rstrip("/").endswith("/callback"):
+        elif request.url.path.startswith("/auth/") and (request.url.path.rstrip("/").endswith("/callback") or request.url.path.endswith("/login")):
             return True
         return False
 

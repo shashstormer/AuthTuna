@@ -4,7 +4,7 @@ from fastapi import Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from ua_parser import user_agent_parser
 from authtuna.core.config import settings
-from authtuna.core.database import Session as DBSession, User
+from authtuna.core.database import Session as DBSession, User, DatabaseManager
 from authtuna.core.encryption import encryption_utils
 
 
@@ -149,32 +149,36 @@ async def is_password_valid(password):
     return {}
 
 
-async def create_session_and_set_cookie(user: User, request: Request, response: Response, db: AsyncSession):
+async def create_session_and_set_cookie(user: User, request: Request, response: Response, db: DatabaseManager):
     """
     Helper function to create a new database session, save it, and set the session cookie.
     """
-    device_data = await get_device_data(request)
-    new_session = DBSession(
-        session_id=encryption_utils.gen_random_string(32),
-        user_id=user.id,
-        region=device_data["region"],
-        device=device_data["device"],
-        create_ip=await get_remote_address(request),
-        last_ip=await get_remote_address(request)
-    )
-    db.add(new_session)
-    await db.commit()
+    # if isinstance(db, DatabaseManager):
+    if True:
+        async with db as db:
+            device_data = await get_device_data(request)
+            new_session = DBSession(
+                session_id=encryption_utils.gen_random_string(32),
+                user_id=user.id,
+                region=device_data["region"],
+                device=device_data["device"],
+                create_ip=await get_remote_address(request),
+                last_ip=await get_remote_address(request)
+            )
+            db.add(new_session)
+            await db.commit()
 
-    response.set_cookie(
-        key=settings.SESSION_TOKEN_NAME,
-        value=new_session.get_cookie_string(),
-        samesite=settings.SESSION_SAME_SITE,
-        secure=settings.SESSION_SECURE,
-        httponly=True,
-        max_age=settings.SESSION_ABSOLUTE_LIFETIME_SECONDS,
-        domain=settings.SESSION_COOKIE_DOMAIN,
-    )
-
+            response.set_cookie(
+                key=settings.SESSION_TOKEN_NAME,
+                value=new_session.get_cookie_string(),
+                samesite=settings.SESSION_SAME_SITE,
+                secure=settings.SESSION_SECURE,
+                httponly=True,
+                max_age=settings.SESSION_ABSOLUTE_LIFETIME_SECONDS,
+                domain=settings.SESSION_COOKIE_DOMAIN,
+            )
+    else:
+        raise ValueError(f"db must be an instance of DatabaseManager, got {type(db)}")
 
 def sanitize_username(username: str) -> str:
     """

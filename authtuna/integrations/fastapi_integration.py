@@ -1,9 +1,9 @@
 from typing import Optional, Literal
 
 from fastapi import Depends, HTTPException, status, Request
-from authtuna.core.database import User, db_manager, Role
-from authtuna.manager.asynchronous import AuthTunaAsync
 
+from authtuna.core.database import User, db_manager
+from authtuna.manager.asynchronous import AuthTunaAsync
 
 # The primary asynchronous service used by FastAPI dependencies.
 auth_service = AuthTunaAsync(db_manager)
