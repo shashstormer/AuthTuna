@@ -59,7 +59,7 @@ class UserInfoResponse(BaseModel):
     is_active: bool
     email_verified: bool
     mfa_enabled: bool
-    roles: List[RoleInfo]
+    # roles: List[RoleInfo]
 
 
 @router.get("/signup", response_class=HTMLResponse)
@@ -295,7 +295,7 @@ async def get_current_user_info(
     Returns a comprehensive, secure overview of the currently authenticated user,
     including their status and all their roles with scopes.
     """
-    roles_with_scope = await auth_service.roles.get_user_roles_with_scope(user.id)
+    # roles_with_scope = await auth_service.roles.get_user_roles_with_scope(user.id)
 
     return UserInfoResponse(
         user_id=user.id,
@@ -304,5 +304,5 @@ async def get_current_user_info(
         is_active=user.is_active,
         email_verified=user.email_verified,
         mfa_enabled=user.mfa_enabled,
-        roles=[RoleInfo(**role) for role in roles_with_scope]
+        # roles=[RoleInfo(**role) for role in roles_with_scope]
     )
