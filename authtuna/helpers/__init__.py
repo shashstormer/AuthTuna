@@ -3,8 +3,9 @@ import string
 from fastapi import Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from ua_parser import user_agent_parser
+
 from authtuna.core.config import settings
-from authtuna.core.database import Session as DBSession, User, DatabaseManager
+from authtuna.core.database import Session as DBSession, User
 from authtuna.core.encryption import encryption_utils
 
 
@@ -149,7 +150,7 @@ async def is_password_valid(password):
     return {}
 
 
-async def create_session_and_set_cookie(user: User, request: Request, response: Response, db: DatabaseManager):
+async def create_session_and_set_cookie(user: User, request: Request, response: Response, db: AsyncSession):
     """
     Helper function to create a new database session, save it, and set the session cookie.
     """

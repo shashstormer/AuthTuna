@@ -148,6 +148,62 @@ class UserManager:
             await db.refresh(user)
             return user
 
+    # function to search users with filtering by email or username or roles he has or scopes he has
+    async def search_users(
+            self,
+            *,
+            identity: Optional[str] = None,
+            role: Optional[str] = None,
+            scope: Optional[str] = None,
+            is_active: Optional[bool] = None,
+            skip: int = 0,
+            limit: int = 100
+    ) -> List[User]:
+        """
+        Provides advanced, flexible filtering for users based on specific criteria.
+        All filter parameters are optional and are combined with AND logic.
+        """
+        async with self._db_manager.get_db() as db:
+            stmt = select(User)
+            filters = []
+
+            if identity:
+                filters.append(or_(
+                    User.email == identity,
+                    User.username.ilike(f"%{identity}%")
+                ))
+            if is_active is not None:
+                filters.append(User.is_active == is_active)
+
+            if role or scope:
+                stmt = stmt.join(user_roles_association).join(Role)
+                if role:
+                    filters.append(Role.name.ilike(f"%{role}%"))
+                if scope:
+                    filters.append(user_roles_association.c.scope.ilike(f"%{scope}%"))
+
+            if filters:
+                stmt = stmt.where(*filters)
+
+            stmt = stmt.offset(skip).limit(limit).distinct()
+            result = await db.execute(stmt)
+            return list(result.unique().scalars().all())
+
+    async def basic_search_users(self, *, identity: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Dict[str, str]]:
+        """
+        Provides basic filtering for users based on username or email.
+        This function readcts the email for privacy and gives only username and userid.
+        This function can be used to implement a search user route in your codebase.
+        """
+        users = await self.search_users(identity=identity, skip=skip, limit=limit)
+        basic_users = []
+        if users:
+            for user in users:
+                basic_users.append({
+                    "user_id": user.id,
+                    "username": user.username,
+                })
+        return basic_users
 
 
 class RoleManager:

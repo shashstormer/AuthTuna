@@ -1,8 +1,8 @@
 # authtuna/routers/admin.py
 # NEW: A dedicated, secure router for administrative tasks.
 
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
 
 from authtuna.core.database import User
@@ -42,7 +42,76 @@ class AssignRoleToUser(BaseModel):
     scope: str = Field("global", description="The scope in which the role is granted (e.g., 'global', 'timeline:123').")
 
 
+class UserSearchResult(BaseModel):
+    id: str
+    username: str
+    email: str
+    is_active: bool
+    mfa_enabled: bool
+
+    class Config:
+        from_attributes = True
+
+
+class UserSuspend(BaseModel):
+    reason: str = Field("No reason provided.", description="The reason for suspending the user.")
+
+
+class AuditEventResponse(BaseModel):
+    event_type: str
+    timestamp: float
+    ip_address: Optional[str]
+    details: Optional[dict]
+
+    class Config:
+        from_attributes = True
+
+
 # --- Admin Endpoints ---
+@router.get("/users/search", response_model=List[UserSearchResult], summary="Search and Filter Users")
+async def search_users_endpoint(
+        identity: Optional[str] = Query(None,
+                                        description="Search by email or username (case-insensitive, partial match)."),
+        role: Optional[str] = Query(None, description="Filter by a role the user has."),
+        scope: Optional[str] = Query(None, description="Filter by a scope the user has a role in."),
+        is_active: Optional[bool] = Query(None, description="Filter by user's active status."),
+        skip: int = 0,
+        limit: int = 50
+):
+    """Provides advanced, flexible filtering for users."""
+    users = await auth_service.users.search_users(
+        identity=identity, role=role, scope=scope,
+        is_active=is_active, skip=skip, limit=limit
+    )
+    return users
+
+
+@router.post("/users/{user_id}/suspend", response_model=UserSearchResult, summary="Suspend a User Account")
+async def suspend_user(user_id: str, payload: UserSuspend, admin_user: User = Depends(get_current_user)):
+    """Suspends a user, preventing them from logging in."""
+    try:
+        user = await auth_service.users.suspend_user(user_id, admin_id=admin_user.id, reason=payload.reason)
+        return user
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post("/users/{user_id}/unsuspend", response_model=UserSearchResult, summary="Unsuspend a User Account")
+async def unsuspend_user(user_id: str, payload: UserSuspend, admin_user: User = Depends(get_current_user)):
+    """Reactivates a previously suspended user."""
+    try:
+        user = await auth_service.users.unsuspend_user(user_id, admin_id=admin_user.id, reason=payload.reason)
+        return user
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/users/{user_id}/audit-log", response_model=List[AuditEventResponse], summary="Get User Audit Log")
+async def get_user_audit_log(user_id: str, skip: int = 0, limit: int = 25):
+    """Retrieves the security audit trail for a specific user."""
+    events = await auth_service.audit.get_events_for_user(user_id, skip=skip, limit=limit)
+    return events
+
 
 @router.post("/roles", status_code=status.HTTP_201_CREATED)
 async def create_role(role_data: RoleCreate):
@@ -58,14 +127,16 @@ async def create_role(role_data: RoleCreate):
 async def create_permission(permission_data: PermissionCreate):
     """Creates a new permission in the system."""
     try:
-        await auth_service.permissions.get_or_create(permission_data.name, defaults={"description": permission_data.description})
+        await auth_service.permissions.get_or_create(permission_data.name,
+                                                     defaults={"description": permission_data.description})
         return {"message": f"Permission '{permission_data.name}' created successfully."}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
 
 @router.post("/roles/{role_name}/permissions")
-async def add_permission_to_role(role_name: str, payload: AssignPermissionToRole, admin_user: User = Depends(get_current_user)):
+async def add_permission_to_role(role_name: str, payload: AssignPermissionToRole,
+                                 admin_user: User = Depends(get_current_user)):
     """Assigns an existing permission to an existing role."""
     try:
         await auth_service.roles.add_permission_to_role(role_name, payload.permission_name, admin_user.id)
@@ -99,7 +170,9 @@ async def revoke_role_from_user(payload: AssignRoleToUser):
             scope=payload.scope
         )
         if not success:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role assignment not found for the given user, role, and scope.")
-        return {"message": f"Role '{payload.role_name}' revoked from user {payload.user_id} in scope '{payload.scope}'."}
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="Role assignment not found for the given user, role, and scope.")
+        return {
+            "message": f"Role '{payload.role_name}' revoked from user {payload.user_id} in scope '{payload.scope}'."}
     except RoleNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

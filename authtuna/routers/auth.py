@@ -1,5 +1,14 @@
 import datetime
 import logging
+
+from fastapi import (APIRouter, Depends, status, Response, Request,
+                     HTTPException, BackgroundTasks)
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import HTMLResponse
+
 from authtuna.core.config import settings
 from authtuna.core.database import db_manager, Token, User
 from authtuna.core.exceptions import (UserAlreadyExistsError, InvalidCredentialsError,
@@ -8,14 +17,6 @@ from authtuna.core.exceptions import (UserAlreadyExistsError, InvalidCredentials
 from authtuna.helpers import create_session_and_set_cookie
 from authtuna.helpers.mail import email_manager
 from authtuna.integrations.fastapi_integration import auth_service, get_current_user
-from fastapi import (APIRouter, Depends, status, Response, Request,
-                     HTTPException, BackgroundTasks)
-from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.responses import HTMLResponse
-from typing import List
 
 logger = logging.getLogger(__name__)
 
