@@ -370,28 +370,66 @@ class RoleManager:
         async with self._db_manager.get_db() as db:
             return await _check(db)
 
-    async def revoke_user_role_by_scope(self, user_id: str, role_name: str, scope: str):
-        """Revokes a specific role from a user within a specific scope."""
+    async def revoke_user_role_by_scope(self, user_id: str, role_name: str, scope: str, revoker_id: str):
+        """
+        Revokes a specific role from a user within a specific scope, with authorization checks.
+        """
         async with self._db_manager.get_db() as db:
-            role = await self.get_by_name(role_name)
-            if not role: raise RoleNotFoundError(f"Role '{role_name}' not found.")
+            # 1. Fetch necessary objects
+            user_manager = UserManager(self._db_manager)
+            revoker = await user_manager.get_by_id(revoker_id, with_relations=True, db=db)
+            if not revoker:
+                raise UserNotFoundError("Revoker user not found.")
 
+            role_to_revoke = await self.get_by_name(role_name)
+            if not role_to_revoke:
+                raise RoleNotFoundError(f"Role '{role_name}' not found.")
+
+            # 2. Authorization Check
+            required_permission = f"roles:revoke:{role_name}"
+            has_permission_override = await self.has_permission(revoker_id, required_permission, db=db)
+
+            has_sufficient_level = False
+            if revoker.roles:
+                revoker_max_level = max(role.level for role in revoker.roles if role.level is not None)
+                if role_to_revoke.level is not None and revoker_max_level > role_to_revoke.level:
+                    has_sufficient_level = True
+
+            if not (has_permission_override or has_sufficient_level):
+                raise OperationForbiddenError(
+                    "You lack the required permission or a sufficient role level to revoke this role."
+                )
+
+            # 3. If authorized, proceed with revocation
             stmt = delete(user_roles_association).where(
                 user_roles_association.c.user_id == user_id,
-                user_roles_association.c.role_id == role.id,
+                user_roles_association.c.role_id == role_to_revoke.id,
                 user_roles_association.c.scope == scope
             )
             result = await db.execute(stmt)
             await db.commit()
             return result.rowcount > 0
 
-    async def revoke_all_for_scope(self, scope: str):
-        """Deletes all role assignments for a specific scope."""
+    async def delete_role(self, role_name: str, deleter_id: str):
+        """
+        Deletes a role entirely from the system, with authorization checks.
+        """
         async with self._db_manager.get_db() as db:
-            stmt = delete(user_roles_association).where(user_roles_association.c.scope == scope)
-            result = await db.execute(stmt)
+            # Authorization Check: Must have 'admin:manage:roles' permission
+            if not await self.has_permission(deleter_id, "admin:manage:roles", db=db):
+                raise OperationForbiddenError("You lack the required permission to delete roles.")
+
+            role_to_delete = await self.get_by_name(role_name)
+            if not role_to_delete:
+                raise RoleNotFoundError(f"Role '{role_name}' not found.")
+
+            # Prevent deletion of system roles
+            if role_to_delete.system:
+                raise OperationForbiddenError("System roles cannot be deleted.")
+
+            await db.delete(role_to_delete)
             await db.commit()
-            return result.rowcount
+
 
 
 class PermissionManager:

@@ -182,21 +182,38 @@ async def assign_role_to_user(payload: AssignRoleToUser, admin_user: User = Depe
 
 
 @router.post("/users/roles/revoke")
-async def revoke_role_from_user(payload: AssignRoleToUser):
-    """Revokes a role from a user within a specific scope."""
+async def revoke_role_from_user(payload: AssignRoleToUser, admin_user: User = Depends(get_current_user)):
+    """Revokes a role from a user within a specific scope, now with authorization."""
     try:
         success = await auth_service.roles.revoke_user_role_by_scope(
             user_id=payload.user_id,
             role_name=payload.role_name,
-            scope=payload.scope
+            scope=payload.scope,
+            revoker_id=admin_user.id,
         )
         if not success:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="Role assignment not found for the given user, role, and scope.")
-        return {
-            "message": f"Role '{payload.role_name}' revoked from user {payload.user_id} in scope '{payload.scope}'."}
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role assignment not found for the given user, role, and scope.")
+        return {"message": f"Role '{payload.role_name}' revoked from user {payload.user_id} in scope '{payload.scope}'."}
+    except (RoleNotFoundError, UserNotFoundError) as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except OperationForbiddenError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
+
+@router.delete("/roles/{role_name}")
+async def delete_role(role_name: str, admin_user: User = Depends(get_current_user)):
+    """Deletes a role from the system, now with authorization."""
+    try:
+        await auth_service.roles.delete_role(
+            role_name=role_name,
+            deleter_id=admin_user.id
+        )
+        return {"message": f"Role '{role_name}' has been deleted."}
     except RoleNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except OperationForbiddenError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
 
 
 @router.post("/roles/grants/assign-role", status_code=status.HTTP_201_CREATED)
