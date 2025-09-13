@@ -42,6 +42,11 @@ async def get_current_user(request: Request) -> User:
         )
 
 
+def get_user_ip(request: Request) -> str:
+    """
+    """
+    return request.state.user_ip_address
+
 class PermissionChecker:
     """
     A dependency factory class for checking user permissions. This class relies on the

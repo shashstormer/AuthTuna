@@ -331,7 +331,7 @@ class RoleManager:
             relationship_list = getattr(granter_role, relationship_attr)
             if grantable_item not in relationship_list:
                 relationship_list.append(grantable_item)
-                db.add(granter_role)
+                await db.merge(granter_role)
                 await db.commit()
             return granter_role, grantable_item
         if db_override:
@@ -370,7 +370,7 @@ class RoleManager:
         async with self._db_manager.get_db() as db:
             return await _check(db)
 
-    async def revoke_user_role_by_scope(self, user_id: str, role_name: str, scope: str, revoker_id: str):
+    async def revoke_user_role_by_scope(self, user_id: str, role_name: str, scope: str, revoker_id: str, ip_address: str = "system"):
         """
         Revokes a specific role from a user within a specific scope, with authorization checks.
         """
@@ -407,6 +407,10 @@ class RoleManager:
                 user_roles_association.c.scope == scope
             )
             result = await db.execute(stmt)
+            await self._db_manager.log_audit_event(
+                user_id, "ROLE_REVOKED", ip_address,
+                {"role": role_name, "scope": scope, "by": revoker_id}, db=db
+            )
             await db.commit()
             return result.rowcount > 0
 

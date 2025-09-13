@@ -302,6 +302,7 @@ class Session(Base):
     last_ip = Column(String(45))
     user = relationship('User', back_populates='sessions')
     random_string = Column(String(255), nullable=False, default=encryption_utils.gen_random_string, onupdate=encryption_utils.gen_random_string)
+    previous_random_strings = Column(JsonType, nullable=False, default=list)
 
     def is_expired(self):
         return time.time() > self.etime or time.time() > self.e_abs_time
@@ -320,11 +321,16 @@ class Session(Base):
                 await db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip, {"reason": "device_mismatch"}, db=db)
                 await self.terminate(self.last_ip, db=db)
                 return False
-            if self.random_string == random_string:
+            is_token_valid = (self.random_string == random_string or
+                              any(entry['value'] == random_string for entry in self.previous_random_strings))
+
+            if is_token_valid:
                 return True
             else:
-                await db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip, {"reason": "random_string_mismatch"}, db=db)
+                await db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip,
+                                                 {"reason": "random_string_mismatch"}, db=db)
                 await self.terminate(self.last_ip, db=db)
+                return False
         return False
 
     async def update_last_ip(self, ip: str, db_manager_custom=None, db: AsyncSession = None):
@@ -354,8 +360,17 @@ class Session(Base):
         """
         Rotates the per-request random_string to mitigate replay attacks.
         """
+        now = time.time()
+
+        new_history = [{'value': self.random_string, 'timestamp': now}]
+
+        grace_period = settings.SESSION_DB_VERIFICATION_INTERVAL + 5
+        for entry in self.previous_random_strings:
+            if now - entry.get('timestamp', 0) < grace_period:
+                new_history.append(entry)
+        self.previous_random_strings = new_history
         self.random_string = encryption_utils.gen_random_string()
-        self.mtime = time.time()
+        self.mtime = now
         return self.random_string
 
     async def terminate(self, ip: str, db_manager_custom=None, db: AsyncSession = None):

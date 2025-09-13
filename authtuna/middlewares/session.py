@@ -131,9 +131,9 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                                 request.state.user_id = db_session.user_id
                                 request.state.session_id = db_session.session_id
                                 session_cookie = db_session.get_cookie_string()
-                                await db.commit()
                             else:
                                 session_cookie = None
+                            await db.commit()
                     else:
                         request.state.user_id = session_data.get("user_id")
                         request.state.session_id = session_data.get("session")
