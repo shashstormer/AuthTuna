@@ -5,8 +5,9 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
 
-from authtuna.core.database import User
-from authtuna.core.exceptions import RoleNotFoundError, PermissionNotFoundError, UserNotFoundError
+from authtuna.core.database import User, db_manager
+from authtuna.core.exceptions import RoleNotFoundError, PermissionNotFoundError, UserNotFoundError, \
+    OperationForbiddenError
 from authtuna.integrations.fastapi_integration import get_current_user, auth_service, PermissionChecker
 
 # --- Router Setup ---
@@ -25,6 +26,7 @@ router = APIRouter(
 class RoleCreate(BaseModel):
     name: str = Field(..., description="The unique name for the new role.")
     description: Optional[str] = Field(None, description="A brief description of the role's purpose.")
+    level: Optional[int] = Field(None, description="An optional integer hierarchy level for the role.")
 
 
 class PermissionCreate(BaseModel):
@@ -65,6 +67,14 @@ class AuditEventResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class GrantRoleAssignPermission(BaseModel):
+    assigner_role_name: str
+    assignable_role_name: str
+
+class GrantPermissionGrantPermission(BaseModel):
+    granter_role_name: str
+    grantable_permission_name: str
 
 
 # --- Admin Endpoints ---
@@ -115,12 +125,17 @@ async def get_user_audit_log(user_id: str, skip: int = 0, limit: int = 25):
 
 @router.post("/roles", status_code=status.HTTP_201_CREATED)
 async def create_role(role_data: RoleCreate):
-    """Creates a new role in the system."""
+    """Creates a new role in the system with an optional level."""
     try:
-        await auth_service.roles.get_or_create(role_data.name, defaults={"description": role_data.description})
+        await auth_service.roles.create(
+            name=role_data.name,
+            description=role_data.description,
+            level=role_data.level
+        )
         return {"message": f"Role '{role_data.name}' created successfully."}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
 
 
 @router.post("/permissions", status_code=status.HTTP_201_CREATED)
@@ -147,7 +162,10 @@ async def add_permission_to_role(role_name: str, payload: AssignPermissionToRole
 
 @router.post("/users/roles/assign")
 async def assign_role_to_user(payload: AssignRoleToUser, admin_user: User = Depends(get_current_user)):
-    """Assigns a role to a user within a specific scope."""
+    """
+    Assigns a role to a user. The core manager now handles all complex authorization checks
+    (level, direct grant, or permission override) internally.
+    """
     try:
         await auth_service.roles.assign_to_user(
             user_id=payload.user_id,
@@ -158,6 +176,9 @@ async def assign_role_to_user(payload: AssignRoleToUser, admin_user: User = Depe
         return {"message": f"Role '{payload.role_name}' assigned to user {payload.user_id} in scope '{payload.scope}'."}
     except (UserNotFoundError, RoleNotFoundError) as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except OperationForbiddenError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+
 
 
 @router.post("/users/roles/revoke")
@@ -176,3 +197,49 @@ async def revoke_role_from_user(payload: AssignRoleToUser):
             "message": f"Role '{payload.role_name}' revoked from user {payload.user_id} in scope '{payload.scope}'."}
     except RoleNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post("/roles/grants/assign-role", status_code=status.HTTP_201_CREATED)
+async def grant_role_assignment_permission(payload: GrantRoleAssignPermission,
+                                           admin_user: User = Depends(get_current_user)):
+    """
+    Authorizes a role to be able to assign another role.
+    Requires 'admin:manage:roles' permission.
+    """
+    if not await auth_service.roles.has_permission(admin_user.id, "admin:manage:roles"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Missing required permission: 'admin:manage:roles'")
+
+    try:
+        granter_role, assignable_role = await auth_service.roles.grant_relationship(
+                granter_role_name=payload.assigner_role_name,
+                grantable_name=payload.assignable_role_name,
+                grantable_manager=auth_service.roles,
+                relationship_attr="can_assign_roles"
+            )
+        return {"message": f"Role '{granter_role.name}' can now assign role '{assignable_role.name}'."}
+    except (RoleNotFoundError, PermissionNotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/roles/grants/grant-permission", status_code=status.HTTP_201_CREATED)
+async def grant_permission_granting_permission(payload: GrantPermissionGrantPermission,
+                                               admin_user: User = Depends(get_current_user)):
+    """
+    Authorizes a role to be able to add a specific permission to other roles.
+    Requires 'admin:manage:permissions' permission.
+    """
+    if not await auth_service.roles.has_permission(admin_user.id, "admin:manage:permissions"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Missing required permission: 'admin:manage:permissions'")
+
+    try:
+        granter_role, permission = await auth_service.roles.grant_relationship(
+                granter_role_name=payload.granter_role_name,
+                grantable_name=payload.grantable_permission_name,
+                grantable_manager=auth_service.permissions,
+                relationship_attr="can_grant_permissions"
+            )
+        return {"message": f"Role '{granter_role.name}' can now grant permission '{permission.name}'."}
+    except (RoleNotFoundError, PermissionNotFoundError) as e:
+        raise HTTPException(status_code=404, detail=str(e))

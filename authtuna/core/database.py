@@ -133,6 +133,20 @@ role_permissions_association = Table(
 )
 
 
+role_assign_permissions = Table(
+    'role_assign_permissions', Base.metadata,
+    Column('assigner_role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('assignable_role_id', Integer, ForeignKey('roles.id'), primary_key=True)
+)
+
+
+role_grant_permissions = Table(
+    'role_grant_permissions', Base.metadata,
+    Column('granter_role_id', Integer, ForeignKey('roles.id'), primary_key=True),
+    Column('grantable_permission_id', Integer, ForeignKey('permissions.id'), primary_key=True)
+)
+
+
 # --- ORM Models ---
 
 class User(Base):
@@ -225,6 +239,8 @@ class Role(Base):
     name = Column(String(80), unique=True, nullable=False)
     description = Column(String(255))
     system = Column(Boolean, default=False, nullable=False)
+    level = Column(Integer, nullable=True)
+
     users = relationship(
         "User", secondary=user_roles_association, back_populates="roles",
         primaryjoin=lambda: Role.id == user_roles_association.c.role_id,
@@ -232,6 +248,23 @@ class Role(Base):
     )
     permissions = relationship("Permission", secondary=role_permissions_association, back_populates="roles", lazy="joined")
 
+    can_assign_roles = relationship(
+        "Role",
+        secondary=role_assign_permissions,
+        primaryjoin=id == role_assign_permissions.c.assigner_role_id,
+        secondaryjoin=id == role_assign_permissions.c.assignable_role_id,
+        backref="assignable_by_roles",
+        lazy="joined"
+    )
+
+    can_grant_permissions = relationship(
+        "Permission",
+        secondary=role_grant_permissions,
+        primaryjoin=id == role_grant_permissions.c.granter_role_id,
+        secondaryjoin=lambda: Permission.id == role_grant_permissions.c.grantable_permission_id,
+        backref="grantable_by_roles",
+        lazy="joined"
+    )
     def __repr__(self):
         return f"<Role {self.name}>"
 

@@ -4,14 +4,14 @@ from typing import Optional, Tuple, List, Dict, Any
 import pyotp
 from sqlalchemy import or_, select, func, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
+from authtuna.core import encryption_utils
 from authtuna.core.config import settings
 from authtuna.core.database import (
     DatabaseManager, User, Role, Permission, DeletedUser,
     Session as DBSession, Token, user_roles_association, role_permissions_association, Session, AuditEvent
 )
-from authtuna.core.encryption import encryption_utils
 from authtuna.core.exceptions import (
     UserAlreadyExistsError, InvalidCredentialsError, EmailNotVerifiedError,
     InvalidTokenError, TokenExpiredError, RateLimitError, UserNotFoundError,
@@ -27,18 +27,20 @@ class UserManager:
         self._db_manager = db_manager
 
     async def get_by_id(self, user_id: str, with_relations: bool = True, db: AsyncSession = None) -> Optional[User]:
+        async def _get(session: AsyncSession):
+            stmt = select(User).where(User.id == user_id)
+            if with_relations:
+                stmt = stmt.options(
+                    selectinload(User.roles).selectinload(Role.permissions),
+                    selectinload(User.roles).selectinload(Role.can_assign_roles)
+                )
+            result = await session.execute(stmt)
+            return result.unique().scalar_one_or_none()
+
         if db:
-            stmt = select(User).where(User.id == user_id)
-            if with_relations:
-                stmt = stmt.options(joinedload(User.roles).joinedload(Role.permissions))
-            result = await db.execute(stmt)
-            return result.unique().scalar_one_or_none()
+            return await _get(db)
         async with self._db_manager.get_db() as db:
-            stmt = select(User).where(User.id == user_id)
-            if with_relations:
-                stmt = stmt.options(joinedload(User.roles).joinedload(Role.permissions))
-            result = await db.execute(stmt)
-            return result.unique().scalar_one_or_none()
+            return await _get(db)
 
     async def get_by_email(self, email: str) -> Optional[User]:
         async with self._db_manager.get_db() as db:
@@ -123,7 +125,7 @@ class UserManager:
             await db.commit()
 
     async def suspend_user(self, user_id: str, admin_id: str, reason: str = "No reason provided.") -> User:
-        """NEW: Suspends a user, preventing them from logging in."""
+        """Suspends a user, preventing them from logging in."""
         async with self._db_manager.get_db() as db:
             user = await db.get(User, user_id)
             if not user: raise UserNotFoundError("User not found.")
@@ -136,7 +138,7 @@ class UserManager:
             return user
 
     async def unsuspend_user(self, user_id: str, admin_id: str, reason: str = "No reason provided.") -> User:
-        """NEW: Reactivates a suspended user."""
+        """Reactivates a suspended user."""
         async with self._db_manager.get_db() as db:
             user = await db.get(User, user_id)
             if not user: raise UserNotFoundError("User not found.")
@@ -212,34 +214,69 @@ class RoleManager:
 
     async def assign_to_user(self, user_id: str, role_name: str, assigner_id: str, scope: str = 'global'):
         async with self._db_manager.get_db() as db:
-            user_stmt = select(User).where(User.id == user_id)
-            user = (await db.execute(user_stmt)).unique().scalar_one_or_none()
-            if not user: raise UserNotFoundError("User not found.")
+            # Step 1: Fetch all necessary objects
+            user_manager = UserManager(self._db_manager)
+            assigner = await user_manager.get_by_id(assigner_id, with_relations=True, db=db)
+            if not assigner:
+                raise UserNotFoundError("Assigner user not found.")
 
-            role_stmt = select(Role).where(Role.name == role_name)
-            role = (await db.execute(role_stmt)).unique().scalar_one_or_none()
-            if not role: raise RoleNotFoundError(f"Role '{role_name}' not found.")
+            role_to_assign = await self.get_by_name(role_name)
+            if not role_to_assign:
+                raise RoleNotFoundError(f"Role '{role_name}' not found.")
+
+            # Step 2: Perform the 3-pathway 'OR' authorization check
+
+            # Pathway 1: Check for specific permission override
+            required_permission = f"roles:assign:{role_name}"
+            has_permission_override = await self.has_permission(assigner_id, required_permission, db=db)
+
+            # Pathway 2: Check for direct role assignment grant
+            has_direct_grant = False
+            for assigner_role in assigner.roles:
+                if any(assignable.id == role_to_assign.id for assignable in assigner_role.can_assign_roles):
+                    has_direct_grant = True
+                    break
+
+            # Pathway 3: Check role level hierarchy
+            has_sufficient_level = False
+            if assigner.roles:
+                assigner_max_level = max(role.level for role in assigner.roles if role.level is not None)
+
+                if role_to_assign.level is not None and assigner_max_level > role_to_assign.level:
+                    has_sufficient_level = True
+
+            # Final Authorization Gate
+            if not (has_permission_override or has_direct_grant or has_sufficient_level):
+                raise OperationForbiddenError(
+                    "You lack the required permission, direct grant, or sufficient role level to assign this role."
+                )
+
+            # Step 3: If authorized, proceed with the assignment
+            target_user = await user_manager.get_by_id(user_id, db=db)
+            if not target_user: raise UserNotFoundError("Target user not found.")
 
             assoc_stmt = select(user_roles_association).where(
                 user_roles_association.c.user_id == user_id,
-                user_roles_association.c.role_id == role.id,
+                user_roles_association.c.role_id == role_to_assign.id,
                 user_roles_association.c.scope == scope
             )
             if (await db.execute(assoc_stmt)).first():
-                return
+                return  # Already assigned
 
             insert_stmt = user_roles_association.insert().values(
-                user_id=user.id, role_id=role.id, scope=scope,
+                user_id=target_user.id, role_id=role_to_assign.id, scope=scope,
                 given_by_id=assigner_id, given_at=time.time()
             )
             await db.execute(insert_stmt)
-            await self._db_manager.log_audit_event(user_id, "ROLE_ASSIGNED", "system",
-                                                   {"role": role_name, "scope": scope, "by": assigner_id}, db=db)
+            await self._db_manager.log_audit_event(
+                user_id, "ROLE_ASSIGNED", "system",
+                {"role": role_name, "scope": scope, "by": assigner_id}, db=db
+            )
             await db.commit()
 
     async def get_by_name(self, name: str) -> Optional[Role]:
         async with self._db_manager.get_db() as db:
-            stmt = select(Role).where(Role.name == name)
+            stmt = select(Role).where(Role.name == name).options(selectinload(Role.can_assign_roles))
             return (await db.execute(stmt)).unique().scalar_one_or_none()
 
     async def get_or_create(self, name: str, defaults: dict = None) -> Tuple[Role, bool]:
@@ -248,11 +285,11 @@ class RoleManager:
         new_role = await self.create(name, **(defaults or {}))
         return new_role, True
 
-    async def create(self, name: str, description: str = "", system: bool = False) -> Role:
+    async def create(self, name: str, description: str = "", system: bool = False, level: Optional[int] = None) -> Role:
         async with self._db_manager.get_db() as db:
             if await self.get_by_name(name):
                 raise ValueError(f"Role with name '{name}' already exists.")
-            new_role = Role(name=name, description=description, system=system)
+            new_role = Role(name=name, description=description, system=system, level=level)
             db.add(new_role)
             await db.commit()
             await db.refresh(new_role)
@@ -279,6 +316,29 @@ class RoleManager:
             await db.execute(insert_stmt)
             await db.commit()
 
+    async def grant_relationship(self, granter_role_name: str, grantable_name: str,
+                                  grantable_manager, relationship_attr: str, db_override: AsyncSession = None):
+        async def _action(db: AsyncSession):
+            granter_role = await self.get_by_name(granter_role_name)
+            if not granter_role:
+                raise RoleNotFoundError(f"Granter role '{granter_role_name}' not found.")
+
+            grantable_item = await grantable_manager.get_by_name(grantable_name)
+            if not grantable_item:
+                item_type = "Role" if relationship_attr == "can_assign_roles" else "Permission"
+                raise RoleNotFoundError(f"{item_type} '{grantable_name}' not found.")
+
+            relationship_list = getattr(granter_role, relationship_attr)
+            if grantable_item not in relationship_list:
+                relationship_list.append(grantable_item)
+                db.add(granter_role)
+                await db.commit()
+            return granter_role, grantable_item
+        if db_override:
+            return await _action(db_override)
+        async with self._db_manager.get_db() as _db:
+            return await _action(_db)
+
     async def get_user_roles_with_scope(self, user_id: str) -> List[dict]:
         async with self._db_manager.get_db() as db:
             stmt = select(Role.name, user_roles_association.c.scope).join_from(
@@ -287,8 +347,9 @@ class RoleManager:
             results = (await db.execute(stmt)).all()
             return [{"role_name": row[0], "scope": row[1]} for row in results]
 
-    async def has_permission(self, user_id: str, permission_name: str, scope_prefix: Optional[str] = None) -> bool:
-        async with self._db_manager.get_db() as db:
+    async def has_permission(self, user_id: str, permission_name: str, scope_prefix: Optional[str] = None,
+                             db: AsyncSession = None) -> bool:
+        async def _check(session: AsyncSession):
             stmt = select(Permission.id).join(
                 role_permissions_association, Permission.id == role_permissions_association.c.permission_id
             ).join(
@@ -301,11 +362,16 @@ class RoleManager:
                     or_(user_roles_association.c.scope == 'global',
                         user_roles_association.c.scope.startswith(scope_prefix))
                 )
-            result = (await db.execute(stmt)).first()
+            result = (await session.execute(stmt)).first()
             return result is not None
 
+        if db:
+            return await _check(db)
+        async with self._db_manager.get_db() as db:
+            return await _check(db)
+
     async def revoke_user_role_by_scope(self, user_id: str, role_name: str, scope: str):
-        """NEW: Revokes a specific role from a user within a specific scope."""
+        """Revokes a specific role from a user within a specific scope."""
         async with self._db_manager.get_db() as db:
             role = await self.get_by_name(role_name)
             if not role: raise RoleNotFoundError(f"Role '{role_name}' not found.")
@@ -320,7 +386,7 @@ class RoleManager:
             return result.rowcount > 0
 
     async def revoke_all_for_scope(self, scope: str):
-        """NEW: Deletes all role assignments for a specific scope."""
+        """Deletes all role assignments for a specific scope."""
         async with self._db_manager.get_db() as db:
             stmt = delete(user_roles_association).where(user_roles_association.c.scope == scope)
             result = await db.execute(stmt)
