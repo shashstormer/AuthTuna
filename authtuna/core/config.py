@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     ENCRYPTION_SECONDARY_KEYS: List[SecretStr] = []
     FERNET_KEYS: List[SecretStr] = []
 
+    DEFAULT_SUPERADMIN_PASSWORD: SecretStr | None = None
+    DEFAULT_ADMIN_PASSWORD: SecretStr | None = None
+    DEFAULT_SUPERADMIN_EMAIL: str = "superadmin@example.com"
+    DEFAULT_ADMIN_EMAIL: str = "admin@example.com"
     # Database settings
     DEFAULT_DATABASE_URI: str = "sqlite+aiosqlite:///./authtuna_dev.db"  # JUST PROVIDE SYNC URI and set async to true if you want to use async db
     DATABASE_USE_ASYNC_ENGINE: bool = True  # WILL replace sqlite with sqlite+aiosqlite and asyncpg with asyncpg+asyncpg (if true)

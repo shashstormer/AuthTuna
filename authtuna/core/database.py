@@ -474,6 +474,9 @@ class DatabaseManager:
 
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        from authtuna.core.defaults import provision_defaults
+        async with self.AsyncSessionLocal() as session:
+            await provision_defaults(session)
 
     @asynccontextmanager
     async def get_context_manager_db(self) -> AsyncGenerator[AsyncSession, None]:
