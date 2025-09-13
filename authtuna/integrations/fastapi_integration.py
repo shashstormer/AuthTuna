@@ -61,7 +61,7 @@ class PermissionChecker:
         self.scope_from_path = scope_from_path
 
     async def __call__(self, request: Request, user: User = Depends(get_current_user)):
-        scope = None
+        scope = "global"
         if self.scope_from_path:
             path_param_value = request.path_params.get(self.scope_from_path)
             if not path_param_value:
