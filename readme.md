@@ -1,32 +1,34 @@
 # AuthTuna 🐟
 
-AuthTuna is an async-first, high-performance authorization, session, and user management library for Python, with first-class FastAPI support.
+**The Modern Async Security Framework for FastAPI**
 
-> **Note:** While the core is framework-agnostic, FastAPI is the officially supported and actively maintained integration. Other adapters may be added in the future.
+AuthTuna is a battle-tested, async-first security framework for Python that provides a complete, production-ready foundation for authentication, authorization, and session management. Stop reinventing the wheel and start shipping secure applications faster.
 
-AuthTuna provides a robust, multi-layered security foundation for modern web applications. It is designed for developers who need to build complex, multi-tenant systems without compromising on security or performance. The library combines a powerful hierarchical permission model with advanced, stateful session management to actively defend against a wide range of modern threats.
-
----
-
-## 🚦 Core Concepts
-
-- **Hierarchical RBAC:** Multi-level, context-aware permissions (Organization → Project → Team → Resource).
-- **Object-Level Security:** Fine-grained, resource-based permissions (e.g., "users can edit their own posts").
-- **Advanced Session Management:** Dual-state, server-side sessions with hijack detection and full control.
-- **Async SQLAlchemy:** All DB operations are async (PostgreSQL/asyncpg, SQLite/aiosqlite).
-- **Framework-Agnostic Core:** Pure Python engine, with adapters for FastAPI.
+Designed for developers who need to build complex, multi-tenant systems with zero compromise on security or performance, AuthTuna combines a powerful hierarchical permission model with advanced, stateful session management to actively defend against a wide range of modern threats.
 
 ---
 
-## ✨ Features
+## Why AuthTuna?
 
-- **FastAPI-first integration:** Ready-to-use dependencies (`get_current_user`, `PermissionChecker`, `RoleChecker`) and session middleware.
-- **Async SQLAlchemy models:** Users, Roles, Permissions, Sessions, Tokens, MFA, Social Accounts.
-- **Dual-state session model:** Server-side sessions + JWT cookie with rotating random_string and periodic DB verification.
-- **Session hijack detection:** Region/device fingerprint checks, IP tracking, automatic invalidation.
-- **Email flows:** Verification, password reset, MFA notifications (Jinja templates included).
-- **Extensible RBAC:** Scoped permissions (e.g., `project:read` with `scope_from_path`).
-- **SQL-first design:** PostgreSQL and SQLite support only.
+🛡️ **Production-Grade Security, Out of the Box:** From hijack detection to granular, object-level permissions, get the features of an enterprise-grade auth system without the complexity.
+
+🚀 **Blazing-Fast & Async-First:** Built on asyncio and SQLAlchemy 2.0, AuthTuna is designed for high-concurrency environments and won't block your event loop.
+
+🧩 **Batteries-Included, But Pluggable:** Use our pre-built routers and templates to get started in minutes, or integrate the core engine into your existing architecture.
+
+👨‍💻 **Unbeatable Developer Experience:** With first-class FastAPI support, ready-to-use dependencies, and clear, Pydantic-based models, securing your API has never been easier.
+
+---
+
+## Features & Philosophy
+
+Robust security should be accessible, not an afterthought. AuthTuna provides the tools to manage complex authorization logic in a way that is both intuitive and highly secure.
+
+- ⚔️ **Granular, Hierarchical RBAC:** Go beyond simple roles. Implement multi-level, context-aware permissions (e.g., Organization → Project → Resource) and resource-based rules (e.g., "users can only edit their own posts").
+- 🔒 **Advanced Session Management:** Our unique dual-state, server-side session model provides the security of server-side validation with the performance of JWTs. Features full programmatic control, hijack detection, and automatic invalidation.
+- ⚡ **High-Performance Async Core:** All database operations are fully asynchronous using the latest SQLAlchemy features with asyncpg for PostgreSQL and aiosqlite for SQLite.
+- 📧 **Built-in Email Flows:** Ready-to-use and customizable flows for email verification, password resets, and MFA notifications with included Jinja templates.
+- 🌐 **Social & Passwordless Login:** Optional, pre-built routers for common social providers (Google, GitHub, etc.) and passwordless authentication.
 
 ---
 
@@ -40,21 +42,20 @@ pip install authtuna
 
 ## ⚙️ Configuration
 
-AuthTuna is configured through environment variables. You can set these in your environment or in a `.env` file. Key variables include:
+AuthTuna is configured through environment variables, making it perfect for containerized deployments. Key variables include:
 
-- `DEFAULT_DATABASE_URI`: Async DB URL (e.g., `postgresql+asyncpg://user:pass@host/db` or `sqlite+aiosqlite:///./authtuna.db`)
-- `SESSION_TOKEN_NAME`: Cookie name for session (default: `session_token`)
-- `SESSION_LIFETIME_SECONDS` / `SESSION_ABSOLUTE_LIFETIME_SECONDS`: Session lifetimes
-- `SESSION_DB_VERIFICATION_INTERVAL`: Seconds between DB checks for session validity
-- `EMAIL_ENABLED` / SMTP settings for email flows
+- `DEFAULT_DATABASE_URI`: Your async database URL (e.g., `postgresql+asyncpg://user:pass@host/db`)
+- `SESSION_TOKEN_NAME`: The cookie name for your session (default: `session_token`)
+- `SESSION_LIFETIME_SECONDS`: The duration of an active session.
+- `EMAIL_ENABLED` / SMTP settings for email flows.
 
-For a full list of options and defaults, see [`authtuna/core/config.py`](authtuna/core/config.py).
+For a full list of options, see the documentation or [`authtuna/core/config.py`](authtuna/core/config.py).
 
 ---
 
 ## 🚀 Quick Start
 
-Here's how to set up AuthTuna with FastAPI:
+Secure your FastAPI application in under 20 lines of code.
 
 ```python
 from fastapi import FastAPI, Depends
@@ -62,13 +63,16 @@ from authtuna.middlewares.session import DatabaseSessionMiddleware
 from authtuna.integrations.fastapi_integration import get_current_user, PermissionChecker, RoleChecker
 from authtuna.core.database import User
 
+# Initialize the FastAPI app and add the session middleware
 app = FastAPI()
 app.add_middleware(DatabaseSessionMiddleware)
 
+# A simple protected route that requires a valid session
 @app.get("/me")
 async def whoami(user: User = Depends(get_current_user)):
     return {"id": user.id, "username": user.username, "email": user.email}
 
+# Protect a route with a specific, scoped permission
 @app.get("/projects/{project_id}")
 async def read_project(
     project_id: str,
@@ -76,6 +80,7 @@ async def read_project(
 ):
     return {"project_id": project_id, "user": user.id}
 
+# Protect a route with a simple role check
 @app.get("/admin")
 async def admin_area(user: User = Depends(RoleChecker("admin", "moderator"))):
     return {"message": f"Welcome, {user.username}"}
@@ -83,9 +88,9 @@ async def admin_area(user: User = Depends(RoleChecker("admin", "moderator"))):
 
 ---
 
-## 🛠️ Built-in Routers & Templates
+## 🛠️ Batteries-Included: Pre-built Routers
 
-AuthTuna ships with optional routers for authentication, social login, and administration, as well as a set of Jinja templates to get started quickly.
+AuthTuna ships with optional, pre-built routers for common authentication, social login, and administration tasks to get you started even faster.
 
 ```python
 from fastapi import FastAPI
@@ -95,25 +100,23 @@ from authtuna.middlewares.session import DatabaseSessionMiddleware
 app = FastAPI()
 app.add_middleware(DatabaseSessionMiddleware)
 
-app.include_router(auth_router.router, prefix="/auth", tags=["auth"])
-app.include_router(social_router.router, prefix="/auth", tags=["social"])
-app.include_router(admin_router.router, prefix="/admin", tags=["admin"])
+# Mount the pre-built routers
+app.include_router(auth_router.router, prefix="/auth", tags=["Authentication"])
+app.include_router(social_router.router, prefix="/auth", tags=["Social Login"])
+app.include_router(admin_router.router, prefix="/admin", tags=["Administration"])
 ```
 
 ---
 
-## 💡 Philosophy
+## 🤝 Community & Support
 
-Robust security should be accessible, not an afterthought. AuthTuna provides the tools to manage complex authorization logic in a way that is both intuitive and highly secure.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+- 🤝 **Contributing:** Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get started.
+- 🛡️ **Security:** If you discover a security vulnerability, please see our [security policy](SECURITY.md) for how to report it.
 
 ---
 
-## 🛡️ Security
+## 🐟 AuthTuna: Secure, Fast, and Actually Fun to Use
 
-If you discover a security vulnerability, please see [SECURITY.md](SECURITY.md) for our security policy and how to report it.
+AuthTuna is built by developers who care about security, performance, and developer happiness. We believe you shouldn't have to choose between robust security and a great developer experience. Try AuthTuna and see how easy secure can be.
+
+*No hype, no snake oil—just a modern, async security framework that works. (And yes, we eat our own dogfood!)*
