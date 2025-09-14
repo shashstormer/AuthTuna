@@ -1,3 +1,10 @@
+[![PyPI version](https://img.shields.io/pypi/v/authtuna.svg?style=flat-square)](https://pypi.org/project/authtuna/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/authtuna.svg?style=flat-square)](https://pypi.org/project/authtuna/)
+[![License](https://img.shields.io/github/license/shashstormer/authtuna?style=flat-square)](LICENSE.txt)
+[![CI](https://github.com/shashstormer/authtuna/actions/workflows/ci.yml/badge.svg)](https://github.com/shashstormer/authtuna/actions)
+[![Coverage Status](https://img.shields.io/codecov/c/github/shashstormer/authtuna?style=flat-square&token=auto)](https://codecov.io/gh/shashstormer/authtuna)
+[![Downloads](https://static.pepy.tech/badge/authtuna)](https://pepy.tech/project/authtuna)
+
 # AuthTuna 🐟
 
 **The Modern Async Security Framework for FastAPI**

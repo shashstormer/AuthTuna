@@ -60,6 +60,7 @@ setup(
             "flake8>=6.0.0",
             "mypy>=1.0.0",
             "httpx>=0.28.1"
+            "pytest-cov"
         ],
     },
     include_package_data=True,

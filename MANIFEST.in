@@ -3,6 +3,7 @@ include readme.md
 include SECURITY.md
 include CONTRIBUTING.md
 include LICENSE.txt
+include coverage.xml
 include authtuna/templates/email/authorize_confirm.html
 include authtuna/templates/email/mfa_added.html
 include authtuna/templates/email/mfa_failed.html

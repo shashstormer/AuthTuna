@@ -56,6 +56,7 @@ if __name__ == "__main__":
         f.write("include SECURITY.md\n")
         f.write("include CONTRIBUTING.md\n")
         f.write("include LICENSE.txt\n")
+        f.write("include coverage.xml\n")
         for filepath in files_to_include:
             if filepath.startswith('./authtuna/'):
                 f.write(f"include {filepath[2:]}\n")
