@@ -1,5 +1,5 @@
 import time
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, Tuple, List, Dict, Any, Union
 
 import pyotp
 from sqlalchemy import or_, select, func, delete, desc
@@ -591,10 +591,7 @@ class AuthTunaAsync:
             token = await self.tokens.create(user.id, "email_verification")
         return user, token
 
-    async def login(self, username_or_email: str, password: str, ip_address: str, region: str, device: str) -> Tuple[
-                                                                                                                   Any, Token] | \
-                                                                                                               Tuple[
-                                                                                                                   Any, Session]:
+    async def login(self, username_or_email: str, password: str, ip_address: str, region: str, device: str) -> Union[Tuple[Any, Token], Tuple[Any, Session]]:
         async with self.db_manager.get_db() as db:
             stmt = select(User).where((User.email == username_or_email) | (User.username == username_or_email))
             user = (await db.execute(stmt)).unique().scalar_one_or_none()
