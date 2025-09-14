@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     ENCRYPTION_SECONDARY_KEYS: List[SecretStr] = []
     FERNET_KEYS: List[SecretStr] = []
 
-    DEFAULT_SUPERADMIN_PASSWORD: SecretStr | None = None
-    DEFAULT_ADMIN_PASSWORD: SecretStr | None = None
+    DEFAULT_SUPERADMIN_PASSWORD: Optional[SecretStr] = None
+    DEFAULT_ADMIN_PASSWORD: Optional[SecretStr] = None
     DEFAULT_SUPERADMIN_EMAIL: str = "superadmin@example.com"
     DEFAULT_ADMIN_EMAIL: str = "admin@example.com"
     # Database settings
