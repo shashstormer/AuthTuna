@@ -59,6 +59,7 @@ setup(
             "isort>=5.12.0",
             "flake8>=6.0.0",
             "mypy>=1.0.0",
+            "httpx>=0.28.1"
         ],
     },
     include_package_data=True,
