@@ -8,7 +8,7 @@ import json
 import logging
 import time
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 import asyncio
 from sqlalchemy import Column, event, Table, ForeignKey, text, AsyncAdaptedQueuePool, VARCHAR
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
@@ -16,7 +16,6 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.types import TypeDecorator, TEXT, String, Text, Boolean, Integer, Float
-
 from authlib.integrations.sqla_oauth2 import OAuth2ClientMixin
 from authtuna.core.config import settings
 from authtuna.core.encryption import encryption_utils
@@ -195,7 +194,7 @@ class User(Base):
             {"had_old_password": bool(old_hash)}, db=db,
         )
 
-    async def check_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None) -> bool | None:
+    async def check_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None) -> Optional[bool]:
         """
         Asynchronously checks the password and logs login attempts.
         Returns True if valid, False otherwise.
