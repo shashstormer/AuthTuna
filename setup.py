@@ -46,10 +46,10 @@ setup(
         "bcrypt>=4.0.0",
         "python-dotenv>=1.0.0",
         "qrcode>=7.4.2",
-        "aiosqlite>=0.21.0"
+        "aiosqlite>=0.21.0",
         "fastapi>=0.100.0",
         "starlette>=0.27.0",
-        "Jinja2>=3.0.0"
+        "Jinja2>=3.0.0",
     ],
     extras_require={
         "dev": [
