@@ -3,9 +3,9 @@ name: Publish Package on setup.py change
 on:
   push:
     branches:
-      - "main" # Only run on pushes to the main branch
+      - "master"
     paths:
-      - "setup.py" # Only run if setup.py is changed
+      - "setup.py"
 
 jobs:
   pypi-publish:
