@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     SESSION_ABSOLUTE_LIFETIME_SECONDS: int = 31536000
     SESSION_LIFETIME_FROM: str = "last_activity"  # "last_activity" or "creation"
     SESSION_SAME_SITE: str = "LAX"
-    SESSION_SECURE: bool = True  # obvio its gon be httponly coz it auth bruh
+    SESSION_SECURE: bool = True  # obvio its gon be httponly coz it auth bruh so not letting anyone config dat.
     SESSION_TOKEN_NAME: str = "session_token"
     SESSION_COOKIE_DOMAIN: Optional[str] = None
 
