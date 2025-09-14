@@ -4,3 +4,4 @@ __pycache__
 authtuna.egg-info
 build
 dist
+*.db
