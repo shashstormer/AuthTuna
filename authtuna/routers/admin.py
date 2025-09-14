@@ -1,27 +1,23 @@
-# authtuna/routers/admin.py
-# NEW: A dedicated, secure router for administrative tasks.
-
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
 
-from authtuna.core.database import User, db_manager
+from authtuna.core.database import User
 from authtuna.core.exceptions import RoleNotFoundError, PermissionNotFoundError, UserNotFoundError, \
     OperationForbiddenError
 from authtuna.integrations.fastapi_integration import get_current_user, auth_service, PermissionChecker
 
 # --- Router Setup ---
-# All routes in this file will be prefixed with /admin and tagged for documentation.
-# A router-level dependency ensures that ONLY users with the 'admin:manage:system'
-# permission can access any of these endpoints.
+# A router-level dependency ensures that users have basic admin panel access.
+# Specific, more powerful permissions are checked on each endpoint individually.
 router = APIRouter(
     prefix="/admin",
     tags=["Administration"],
-    dependencies=[Depends(PermissionChecker("admin:manage:system"))],
+    dependencies=[Depends(PermissionChecker("admin:access:panel"))], # CHANGED: Base permission for all admin routes
 )
 
 
-# --- Pydantic Models for Admin Operations ---
+# --- Pydantic Models (Unchanged) ---
 
 class RoleCreate(BaseModel):
     name: str = Field(..., description="The unique name for the new role.")
@@ -78,10 +74,14 @@ class GrantPermissionGrantPermission(BaseModel):
 
 
 # --- Admin Endpoints ---
-@router.get("/users/search", response_model=List[UserSearchResult], summary="Search and Filter Users")
+@router.get(
+    "/users/search",
+    response_model=List[UserSearchResult],
+    summary="Search and Filter Users",
+    dependencies=[Depends(PermissionChecker("admin:manage:users"))] # ADDED: Specific permission
+)
 async def search_users_endpoint(
-        identity: Optional[str] = Query(None,
-                                        description="Search by email or username (case-insensitive, partial match)."),
+        identity: Optional[str] = Query(None, description="Search by email or username."),
         role: Optional[str] = Query(None, description="Filter by a role the user has."),
         scope: Optional[str] = Query(None, description="Filter by a scope the user has a role in."),
         is_active: Optional[bool] = Query(None, description="Filter by user's active status."),
@@ -96,7 +96,12 @@ async def search_users_endpoint(
     return users
 
 
-@router.post("/users/{user_id}/suspend", response_model=UserSearchResult, summary="Suspend a User Account")
+@router.post(
+    "/users/{user_id}/suspend",
+    response_model=UserSearchResult,
+    summary="Suspend a User Account",
+    dependencies=[Depends(PermissionChecker("admin:manage:users"))] # ADDED: Specific permission
+)
 async def suspend_user(user_id: str, payload: UserSuspend, admin_user: User = Depends(get_current_user)):
     """Suspends a user, preventing them from logging in."""
     try:
@@ -106,7 +111,12 @@ async def suspend_user(user_id: str, payload: UserSuspend, admin_user: User = De
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.post("/users/{user_id}/unsuspend", response_model=UserSearchResult, summary="Unsuspend a User Account")
+@router.post(
+    "/users/{user_id}/unsuspend",
+    response_model=UserSearchResult,
+    summary="Unsuspend a User Account",
+    dependencies=[Depends(PermissionChecker("admin:manage:users"))] # ADDED: Specific permission
+)
 async def unsuspend_user(user_id: str, payload: UserSuspend, admin_user: User = Depends(get_current_user)):
     """Reactivates a previously suspended user."""
     try:
@@ -116,14 +126,23 @@ async def unsuspend_user(user_id: str, payload: UserSuspend, admin_user: User = 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.get("/users/{user_id}/audit-log", response_model=List[AuditEventResponse], summary="Get User Audit Log")
+@router.get(
+    "/users/{user_id}/audit-log",
+    response_model=List[AuditEventResponse],
+    summary="Get User Audit Log",
+    dependencies=[Depends(PermissionChecker("admin:manage:users"))] # ADDED: Specific permission
+)
 async def get_user_audit_log(user_id: str, skip: int = 0, limit: int = 25):
     """Retrieves the security audit trail for a specific user."""
     events = await auth_service.audit.get_events_for_user(user_id, skip=skip, limit=limit)
     return events
 
 
-@router.post("/roles", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/roles",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(PermissionChecker("admin:manage:roles"))] # ADDED: Specific permission
+)
 async def create_role(role_data: RoleCreate):
     """Creates a new role in the system with an optional level."""
     try:
@@ -137,8 +156,11 @@ async def create_role(role_data: RoleCreate):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
 
-
-@router.post("/permissions", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/permissions",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(PermissionChecker("admin:manage:permissions"))] # ADDED: Specific permission
+)
 async def create_permission(permission_data: PermissionCreate):
     """Creates a new permission in the system."""
     try:
@@ -149,7 +171,10 @@ async def create_permission(permission_data: PermissionCreate):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
 
-@router.post("/roles/{role_name}/permissions")
+@router.post(
+    "/roles/{role_name}/permissions",
+    dependencies=[Depends(PermissionChecker("admin:manage:roles"))] # ADDED: Specific permission
+)
 async def add_permission_to_role(role_name: str, payload: AssignPermissionToRole,
                                  admin_user: User = Depends(get_current_user)):
     """Assigns an existing permission to an existing role."""
@@ -160,12 +185,12 @@ async def add_permission_to_role(role_name: str, payload: AssignPermissionToRole
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.post("/users/roles/assign")
+@router.post(
+    "/users/roles/assign",
+    dependencies=[Depends(PermissionChecker("admin:manage:roles"))] # ADDED: Specific permission
+)
 async def assign_role_to_user(payload: AssignRoleToUser, admin_user: User = Depends(get_current_user)):
-    """
-    Assigns a role to a user. The core manager now handles all complex authorization checks
-    (level, direct grant, or permission override) internally.
-    """
+    """Assigns a role to a user."""
     try:
         await auth_service.roles.assign_to_user(
             user_id=payload.user_id,
@@ -180,10 +205,12 @@ async def assign_role_to_user(payload: AssignRoleToUser, admin_user: User = Depe
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
 
-
-@router.post("/users/roles/revoke")
+@router.post(
+    "/users/roles/revoke",
+    dependencies=[Depends(PermissionChecker("admin:manage:roles"))] # ADDED: Specific permission
+)
 async def revoke_role_from_user(payload: AssignRoleToUser, admin_user: User = Depends(get_current_user)):
-    """Revokes a role from a user within a specific scope, now with authorization."""
+    """Revokes a role from a user within a specific scope."""
     try:
         success = await auth_service.roles.revoke_user_role_by_scope(
             user_id=payload.user_id,
@@ -192,22 +219,22 @@ async def revoke_role_from_user(payload: AssignRoleToUser, admin_user: User = De
             revoker_id=admin_user.id,
         )
         if not success:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role assignment not found for the given user, role, and scope.")
-        return {"message": f"Role '{payload.role_name}' revoked from user {payload.user_id} in scope '{payload.scope}'."}
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role assignment not found.")
+        return {"message": f"Role '{payload.role_name}' revoked from user {payload.user_id}."}
     except (RoleNotFoundError, UserNotFoundError) as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except OperationForbiddenError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
 
-@router.delete("/roles/{role_name}")
+@router.delete(
+    "/roles/{role_name}",
+    dependencies=[Depends(PermissionChecker("admin:manage:roles"))] # ADDED: Specific permission
+)
 async def delete_role(role_name: str, admin_user: User = Depends(get_current_user)):
-    """Deletes a role from the system, now with authorization."""
+    """Deletes a role from the system."""
     try:
-        await auth_service.roles.delete_role(
-            role_name=role_name,
-            deleter_id=admin_user.id
-        )
+        await auth_service.roles.delete_role(role_name=role_name, deleter_id=admin_user.id)
         return {"message": f"Role '{role_name}' has been deleted."}
     except RoleNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -215,18 +242,13 @@ async def delete_role(role_name: str, admin_user: User = Depends(get_current_use
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
 
-
-@router.post("/roles/grants/assign-role", status_code=status.HTTP_201_CREATED)
-async def grant_role_assignment_permission(payload: GrantRoleAssignPermission,
-                                           admin_user: User = Depends(get_current_user)):
-    """
-    Authorizes a role to be able to assign another role.
-    Requires 'admin:manage:roles' permission.
-    """
-    if not await auth_service.roles.has_permission(admin_user.id, "admin:manage:roles"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Missing required permission: 'admin:manage:roles'")
-
+@router.post(
+    "/roles/grants/assign-role",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(PermissionChecker("admin:manage:roles"))] # ADDED: Specific permission
+)
+async def grant_role_assignment_permission(payload: GrantRoleAssignPermission):
+    """Authorizes a role to be able to assign another role."""
     try:
         granter_role, assignable_role = await auth_service.roles.grant_relationship(
                 granter_role_name=payload.assigner_role_name,
@@ -239,17 +261,13 @@ async def grant_role_assignment_permission(payload: GrantRoleAssignPermission,
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.post("/roles/grants/grant-permission", status_code=status.HTTP_201_CREATED)
-async def grant_permission_granting_permission(payload: GrantPermissionGrantPermission,
-                                               admin_user: User = Depends(get_current_user)):
-    """
-    Authorizes a role to be able to add a specific permission to other roles.
-    Requires 'admin:manage:permissions' permission.
-    """
-    if not await auth_service.roles.has_permission(admin_user.id, "admin:manage:permissions"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Missing required permission: 'admin:manage:permissions'")
-
+@router.post(
+    "/roles/grants/grant-permission",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(PermissionChecker("admin:manage:permissions"))] # ADDED: Specific permission
+)
+async def grant_permission_granting_permission(payload: GrantPermissionGrantPermission):
+    """Authorizes a role to grant a specific permission to other roles."""
     try:
         granter_role, permission = await auth_service.roles.grant_relationship(
                 granter_role_name=payload.granter_role_name,

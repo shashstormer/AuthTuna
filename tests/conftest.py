@@ -1,8 +1,10 @@
 import pytest
+from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 import asyncio
 import os
+from fastapi import FastAPI
 os.environ["API_BASE_URL"] = "http://127.0.0.1:8000"
 os.environ["FERNET_KEYS"] = f'["wZOUdnRNAbwg2CMn0J5akHdqVTxl64d-Hexi1HlGYQk="]'
 os.environ["JWT_SECRET_KEY"] = "test-secret"
@@ -49,3 +51,22 @@ def auth_tuna_async(dbsession):
         dbsession.bind, class_=AsyncSession, expire_on_commit=False
     )
     return AuthTunaAsync(db_manager)
+
+@pytest.fixture(scope="session")
+def app():
+    """Define a minimal FastAPI app for testing."""
+    from authtuna.routers import admin, auth
+    from authtuna.middlewares import DatabaseSessionMiddleware
+    app = FastAPI()
+    app.add_middleware(DatabaseSessionMiddleware)
+    app.include_router(auth.router, tags=["auth"])
+    app.include_router(admin.router, tags=["admin"])
+
+    return app
+
+@pytest.fixture
+async def fastapi_client(app):
+    """Provide an AsyncClient for testing the FastAPI app."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
