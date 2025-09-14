@@ -46,6 +46,7 @@ setup(
         "bcrypt>=4.0.0",
         "python-dotenv>=1.0.0",
         "qrcode>=7.4.2",
+        "aiosqlite>=0.21.0"
     ],
     extras_require={
         "fastapi": [
