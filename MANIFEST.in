@@ -1,0 +1,24 @@
+# This file is auto-generated. Review before committing.
+include readme.md
+include SECURITY.md
+include CONTRIBUTING.md
+include LICENSE.txt
+include authtuna/templates/email/authorize_confirm.html
+include authtuna/templates/email/mfa_added.html
+include authtuna/templates/email/mfa_failed.html
+include authtuna/templates/email/mfa_removed.html
+include authtuna/templates/email/new_login.html
+include authtuna/templates/email/new_social_account_connected.html
+include authtuna/templates/email/password_change.html
+include authtuna/templates/email/password_reset.html
+include authtuna/templates/email/verification.html
+include authtuna/templates/email/welcome.html
+include authtuna/templates/pages/authorize_action.html
+include authtuna/templates/pages/error.html
+include authtuna/templates/pages/forgot_password.html
+include authtuna/templates/pages/login.html
+include authtuna/templates/pages/mfa_challenge.html
+include authtuna/templates/pages/mfa_setup.html
+include authtuna/templates/pages/reset_password.html
+include authtuna/templates/pages/signup.html
+include authtuna/templates/pages/verify_email.html
