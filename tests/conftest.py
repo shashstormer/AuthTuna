@@ -10,6 +10,10 @@ os.environ["FERNET_KEYS"] = f'["wZOUdnRNAbwg2CMn0J5akHdqVTxl64d-Hexi1HlGYQk="]'
 os.environ["JWT_SECRET_KEY"] = "test-secret"
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 os.environ["DEFAULT_DATABASE_URI"] = TEST_DATABASE_URL
+os.environ["GITHUB_CLIENT_ID"] = "test-github-client-id"
+os.environ["GITHUB_CLIENT_SECRET"] = "test-github-client-secret"
+os.environ["GOOGLE_CLIENT_ID"] = "test-google-client-id"
+os.environ["GOOGLE_CLIENT_SECRET"] = "test-google-client-secret"
 from authtuna.core.database import Base, db_manager
 from authtuna.manager.asynchronous import AuthTunaAsync
 

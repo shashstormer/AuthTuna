@@ -5,7 +5,6 @@ def test_get_social_provider_valid():
     # These providers may or may not be registered depending on settings, but the function should not error
     for provider in ["google", "github"]:
         client = get_social_provider(provider)
-        # Should return a client or None, but not raise
         assert client is None or hasattr(client, 'authorize_redirect')
 
 def test_get_social_provider_invalid():
