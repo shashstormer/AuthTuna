@@ -89,17 +89,13 @@ async def provision_defaults(db: AsyncSession):
             db.add(new_user)
             await db.flush()
 
-            # ** THE FIX IS HERE **
-            # Manually create the association records with 'given_by_id' set to 'system'
             for role_name in user_data["roles"]:
                 role = (await db.execute(select(Role).where(Role.name == role_name))).unique().scalar_one()
-
-                # Use a direct insert into the association table
                 stmt = user_roles_association.insert().values(
                     user_id=new_user.id,
                     role_id=role.id,
-                    scope='global',  # Default scope for initial setup
-                    given_by_id='system',  # Set the giver as the system itself
+                    scope='global',
+                    given_by_id='system',
                     given_at=time.time()
                 )
                 await db.execute(stmt)

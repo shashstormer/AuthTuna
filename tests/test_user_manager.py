@@ -1,5 +1,5 @@
 import pytest
-from authtuna.core.exceptions import UserAlreadyExistsError
+from authtuna.core.exceptions import UserAlreadyExistsError, UserNotFoundError, InvalidCredentialsError
 
 @pytest.mark.asyncio
 async def test_create_user(auth_tuna_async):

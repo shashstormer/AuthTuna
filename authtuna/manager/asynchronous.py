@@ -212,7 +212,7 @@ class RoleManager:
     def __init__(self, db_manager: DatabaseManager):
         self._db_manager = db_manager
 
-    async def assign_to_user(self, user_id: str, role_name: str, assigner_id: str, scope: str = 'global'):
+    async def assign_to_user(self, user_id: str, role_name: str, assigner_id: str, scope: str = 'none'):
         async with self._db_manager.get_db() as db:
             # Step 1: Fetch all necessary objects
             user_manager = UserManager(self._db_manager)
@@ -274,9 +274,74 @@ class RoleManager:
             )
             await db.commit()
 
+    async def remove_from_user(self, user_id: str, role_name: str, remover_id: str, scope: str = 'none'):
+        async with self._db_manager.get_db() as db:
+            # Step 1: Fetch all necessary objects
+            user_manager = UserManager(self._db_manager)
+            assigner = await user_manager.get_by_id(remover_id, with_relations=True, db=db)
+            if not assigner:
+                raise UserNotFoundError("Assigner user not found.")
+
+            role_to_assign = await self.get_by_name(role_name)
+            if not role_to_assign:
+                raise RoleNotFoundError(f"Role '{role_name}' not found.")
+
+            # Step 2: Perform the 3-pathway 'OR' authorization check
+
+            # Pathway 1: Check for specific permission override
+            required_permission = f"roles:assign:{role_name}"
+            has_permission_override = await self.has_permission(remover_id, required_permission, db=db)
+
+            # Pathway 2: Check for direct role assignment grant
+            has_direct_grant = False
+            for assigner_role in assigner.roles:
+                if any(assignable.id == role_to_assign.id for assignable in assigner_role.can_assign_roles):
+                    has_direct_grant = True
+                    break
+
+            # Pathway 3: Check role level hierarchy
+            has_sufficient_level = False
+            if assigner.roles:
+                assigner_max_level = max(role.level for role in assigner.roles if role.level is not None)
+
+                if role_to_assign.level is not None and assigner_max_level > role_to_assign.level:
+                    has_sufficient_level = True
+
+            # Final Authorization Gate
+            if not (has_permission_override or has_direct_grant or has_sufficient_level):
+                raise OperationForbiddenError(
+                    "You lack the required permission, direct grant, or sufficient role level to assign this role."
+                )
+            target_user = await user_manager.get_by_id(user_id, db=db)
+            if not target_user: raise UserNotFoundError("Target user not found.")
+            assoc_stmt = select(user_roles_association).where(
+                user_roles_association.c.user_id == user_id,
+                user_roles_association.c.role_id == role_to_assign.id,
+                user_roles_association.c.scope == scope,
+            )
+            if (await db.execute(assoc_stmt)).first():
+                delete_stmt = user_roles_association.delete().where(
+                    user_roles_association.c.user_id == user_id,
+                    user_roles_association.c.role_id == role_to_assign.id,
+                    user_roles_association.c.scope == scope,
+                )
+                await db.execute(delete_stmt)
+                await self._db_manager.log_audit_event(
+                    user_id, "ROLE_REMOVED", "system",
+                    {"role": role_name, "scope": scope, "by": remover_id}, db=db
+                )
+                await db.commit()
+            else:
+                raise RoleNotFoundError(f"Role '{role_name}' not found for this user.")
+
     async def get_by_name(self, name: str) -> Optional[Role]:
         async with self._db_manager.get_db() as db:
             stmt = select(Role).where(Role.name == name).options(selectinload(Role.can_assign_roles))
+            return (await db.execute(stmt)).unique().scalar_one_or_none()
+
+    async def get_by_id(self, role_id: str) -> Optional[Role]:
+        async with self._db_manager.get_db() as db:
+            stmt = select(Role).where(Role.id == role_id).options(selectinload(Role.can_assign_roles))
             return (await db.execute(stmt)).unique().scalar_one_or_none()
 
     async def get_or_create(self, name: str, defaults: dict = None) -> Tuple[Role, bool]:

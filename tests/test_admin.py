@@ -13,7 +13,7 @@ async def test_search_users_as_admin(auth_tuna_async, fastapi_client: AsyncClien
         password="password123",
         ip_address="127.0.0.1"
     )
-    await auth_tuna_async.roles.assign_to_user(admin_user.id, "Admin", "system")
+    await auth_tuna_async.roles.assign_to_user(admin_user.id, "Admin", "system", "global")
     await auth_tuna_async.permissions.create("admin:manage:system", "perm req to access admin router")
     await auth_tuna_async.roles.add_permission_to_role("Admin", "admin:manage:system")
 
