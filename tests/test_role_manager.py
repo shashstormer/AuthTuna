@@ -1,5 +1,5 @@
 import pytest
-from authtuna.core.exceptions import RoleNotFoundError, UserNotFoundError
+from authtuna.core.exceptions import UserNotFoundError
 
 @pytest.mark.asyncio
 async def test_create_role(auth_tuna_async):
@@ -44,14 +44,13 @@ async def test_delete_role(auth_tuna_async):
 async def test_assign_same_role_twice(auth_tuna_async):
     """Test assigning the same role to a user twice."""
     user = await auth_tuna_async.users.create(
-        email="test7@example.com",
-        username="testuser7",
+        email="test10@example.com",
+        username="testuser10",
         password="password123",
         ip_address="127.0.0.1"
     )
     role = await auth_tuna_async.roles.create(name="Test-Duplicate", description="Dup role", level=1)
     await auth_tuna_async.roles.assign_to_user(user.id, role.name, "system")
-    # Should not raise or duplicate
     await auth_tuna_async.roles.assign_to_user(user.id, role.name, "system")
     user_with_roles = await auth_tuna_async.users.get_by_id(user.id)
     assert [r.name for r in user_with_roles.roles].count("Test-Duplicate") == 1
@@ -60,8 +59,8 @@ async def test_assign_same_role_twice(auth_tuna_async):
 async def test_remove_role_from_user(auth_tuna_async):
     """Test removing a role from a user."""
     user = await auth_tuna_async.users.create(
-        email="test5@example.com",
-        username="testuser5",
+        email="test11@example.com",
+        username="testuser11",
         password="password123",
         ip_address="127.0.0.1"
     )
@@ -75,8 +74,8 @@ async def test_remove_role_from_user(auth_tuna_async):
 async def test_list_user_roles(auth_tuna_async):
     """Test listing all roles for a user."""
     user = await auth_tuna_async.users.create(
-        email="test6@example.com",
-        username="testuser6",
+        email="test12@example.com",
+        username="testuser12",
         password="password123",
         ip_address="127.0.0.1"
     )
