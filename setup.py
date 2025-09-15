@@ -5,7 +5,7 @@ with open("readme.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="authtuna",
-    version="0.1.4",
+    version="0.1.5",
     author="shashstormer",
     author_email="shashanka5398@gmail.com",
     description="A high-performance, framework-agnostic authorization and session management library for Python",
@@ -22,7 +22,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
