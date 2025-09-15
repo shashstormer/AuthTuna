@@ -1,5 +1,5 @@
 import pytest
-from authtuna.core.exceptions import UserNotFoundError
+from authtuna.core.exceptions import UserNotFoundError, OperationForbiddenError, RoleNotFoundError
 
 @pytest.mark.asyncio
 async def test_create_role(auth_tuna_async):
@@ -94,3 +94,77 @@ async def test_assign_role_to_nonexistent_user(auth_tuna_async):
     with pytest.raises(UserNotFoundError):
         await auth_tuna_async.roles.assign_to_user("nonexistent-id", role.name, "system")
 
+@pytest.mark.asyncio
+async def test_get_or_create_role(auth_tuna_async):
+    role, created = await auth_tuna_async.roles.get_or_create("Test-GetOrCreate", defaults={"description": "desc", "level": 1})
+    assert created is True
+    role2, created2 = await auth_tuna_async.roles.get_or_create("Test-GetOrCreate")
+    assert created2 is False
+    assert role.id == role2.id
+
+@pytest.mark.asyncio
+async def test_add_permission_to_role(auth_tuna_async):
+    role = await auth_tuna_async.roles.create(name="Test-AddPerm", description="desc", level=1)
+    perm = await auth_tuna_async.permissions.create(name="perm:add", description="desc")
+    await auth_tuna_async.roles.add_permission_to_role(role.name, perm.name)
+    # Should not raise if added again
+    await auth_tuna_async.roles.add_permission_to_role(role.name, perm.name)
+
+@pytest.mark.asyncio
+async def test_grant_relationship(auth_tuna_async):
+    role1 = await auth_tuna_async.roles.create(name="Test-Grant1", description="desc", level=2)
+    role2 = await auth_tuna_async.roles.create(name="Test-Grant2", description="desc", level=1)
+    await auth_tuna_async.roles.grant_relationship(role1.name, role2.name, auth_tuna_async.roles, "can_assign_roles")
+    # Should not raise if granted again
+    await auth_tuna_async.roles.grant_relationship(role1.name, role2.name, auth_tuna_async.roles, "can_assign_roles")
+
+@pytest.mark.asyncio
+async def test_has_permission(auth_tuna_async):
+    role = await auth_tuna_async.roles.create(name="Test-HasPerm", description="desc", level=1)
+    perm = await auth_tuna_async.permissions.create(name="perm:has", description="desc")
+    await auth_tuna_async.roles.add_permission_to_role(role.name, perm.name)
+    user = await auth_tuna_async.users.create(email="test13@example.com", username="testuser13", password="pw", ip_address="1.1.1.1")
+    await auth_tuna_async.roles.assign_to_user(user.id, role.name, "system")
+    assert await auth_tuna_async.roles.has_permission(user.id, perm.name)
+    assert not await auth_tuna_async.roles.has_permission(user.id, "notaperm")
+
+@pytest.mark.asyncio
+async def test_revoke_user_role_by_scope(auth_tuna_async):
+    role = await auth_tuna_async.roles.create(name="Test-Revoke", description="desc", level=2)
+    user = await auth_tuna_async.users.create(email="test14@example.com", username="testuser14", password="pw", ip_address="1.1.1.1")
+    admin = await auth_tuna_async.users.create(email="admin1@example.com", username="adminuser1", password="pw", ip_address="1.1.1.1")
+    await auth_tuna_async.roles.assign_to_user(admin.id, role.name, "system", scope="global")
+    await auth_tuna_async.roles.assign_to_user(admin.id, "Admin", "system", scope="global")
+    await auth_tuna_async.roles.assign_to_user(user.id, role.name, admin.id)
+    assert await auth_tuna_async.roles.revoke_user_role_by_scope(user.id, role.name, "none", admin.id)
+    with pytest.raises(OperationForbiddenError):
+        await auth_tuna_async.roles.revoke_user_role_by_scope(user.id, role.name, "none", user.id)
+
+@pytest.mark.asyncio
+async def test_delete_role_errors(auth_tuna_async):
+    role = await auth_tuna_async.roles.create(name="Test-DeleteErr", description="desc", level=1)
+    admin = await auth_tuna_async.users.create(email="admin2@example.com", username="adminuser2", password="pw", ip_address="1.1.1.1")
+    # Should fail if user lacks permission
+    with pytest.raises(OperationForbiddenError):
+        await auth_tuna_async.roles.delete_role(role.name, admin.id)
+    # Should fail for system role
+    sysrole = await auth_tuna_async.roles.create(name="Test-System", description="desc", system=True, level=1)
+    # Grant admin permission to delete roles
+    perm, new = await auth_tuna_async.permissions.get_or_create(name="admin:manage:roles", defaults={"description": "desc"})
+    assert new is False
+    await auth_tuna_async.roles.add_permission_to_role(sysrole.name, perm.name)
+    await auth_tuna_async.roles.assign_to_user(admin.id, sysrole.name, "system")
+    with pytest.raises(OperationForbiddenError):
+        await auth_tuna_async.roles.delete_role(sysrole.name, admin.id)
+
+@pytest.mark.asyncio
+async def test_remove_from_user_errors(auth_tuna_async):
+    user = await auth_tuna_async.users.create(email="test15@example.com", username="testuser15", password="pw", ip_address="1.1.1.1")
+    admin = await auth_tuna_async.users.create(email="admin3@example.com", username="adminuser3", password="pw", ip_address="1.1.1.1")
+    role = await auth_tuna_async.roles.create(name="Test-RemoveErr", description="desc", level=1)
+    with pytest.raises(UserNotFoundError):
+        await auth_tuna_async.roles.remove_from_user(user.id, role.name, "notfound")
+    with pytest.raises(RoleNotFoundError):
+        await auth_tuna_async.roles.remove_from_user(user.id, "notarole", admin.id)
+    with pytest.raises(RoleNotFoundError):
+        await auth_tuna_async.roles.remove_from_user(user.id, role.name, "default-admin")

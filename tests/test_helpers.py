@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import Mock
 from authtuna.helpers import (
     get_remote_address,
@@ -7,9 +6,7 @@ from authtuna.helpers import (
     is_password_valid,
     sanitize_username,
 )
-
 import pytest
-from authtuna.helpers import is_username_valid, is_password_valid, sanitize_username
 
 
 @pytest.mark.asyncio
@@ -50,6 +47,8 @@ async def test_is_username_valid():
     assert "error" in await is_username_valid("sh")
     assert "error" in await is_username_valid("with space")
     assert "error" in await is_username_valid("invalid!")
+    assert {} == await is_username_valid("axa_y")
+
 
 @pytest.mark.asyncio
 async def test_is_password_valid():
@@ -57,6 +56,7 @@ async def test_is_password_valid():
     assert "error" in await is_password_valid("short")
     assert "error" in await is_password_valid("nouppercase")
     assert "error" in await is_password_valid("NOLOWERCASE")
+    assert "error" in await is_password_valid("")
 
 def test_sanitize_username():
     assert sanitize_username(" User With Spaces ") == "Userwithspaces"

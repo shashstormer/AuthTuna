@@ -44,3 +44,37 @@ def test_token_validity_and_repr():
     assert token.is_valid() is True
     assert "tok" == token.id
 
+import pytest
+
+@pytest.mark.asyncio
+async def test_permission_manager_crud(auth_tuna_async):
+    perm, created = await auth_tuna_async.permissions.get_or_create("perm:test", defaults={"description": "desc"})
+    assert created is True
+    perm2, created2 = await auth_tuna_async.permissions.get_or_create("perm:test")
+    assert created2 is False
+    assert perm.id == perm2.id
+    found = await auth_tuna_async.permissions.get_by_name("perm:test")
+    assert found.id == perm.id
+    with pytest.raises(ValueError):
+        await auth_tuna_async.permissions.create("perm:test")
+
+@pytest.mark.asyncio
+async def test_session_manager_crud(auth_tuna_async):
+    user = await auth_tuna_async.users.create(email="sess@example.com", username="sessuser", password="pw", ip_address="1.1.1.1")
+    session = await auth_tuna_async.sessions.create(user.id, "1.1.1.1", "region", "device")
+    found = await auth_tuna_async.sessions.get_by_id(session.session_id)
+    assert found.session_id == session.session_id
+    all_sessions = await auth_tuna_async.sessions.get_all_for_user(user.id, session.session_id)
+    assert any(s.session_id == session.session_id for s in all_sessions)
+    await auth_tuna_async.sessions.terminate(session.session_id, "1.1.1.1")
+    # Terminate non-existent session (should return False)
+    assert not await auth_tuna_async.sessions.terminate("notfound", "1.1.1.1")
+    # Terminate all for user (should not error)
+    await auth_tuna_async.sessions.terminate_all_for_user(user.id, "1.1.1.1")
+
+@pytest.mark.asyncio
+async def test_token_manager_create(auth_tuna_async):
+    user = await auth_tuna_async.users.create(email="tok@example.com", username="tokuser", password="pw", ip_address="1.1.1.1")
+    token = await auth_tuna_async.tokens.create(user.id, "test-purpose", expiry_seconds=60)
+    assert token.purpose == "test-purpose"
+    assert token.is_valid()

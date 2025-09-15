@@ -57,7 +57,7 @@ class UserManager:
     async def list(self, skip: int = 0, limit: int = 100) -> List[User]:
         async with self._db_manager.get_db() as db:
             stmt = select(User).offset(skip).limit(limit)
-            result = await db.execute(stmt)
+            result = (await db.execute(stmt)).unique()
             return list(result.scalars().all())
 
     async def create(self, email: str, username: str, password: Optional[str] = None, ip_address: str = 'system',
@@ -113,7 +113,7 @@ class UserManager:
             db.add(archived_user)
 
             await db.delete(user)
-            await self._db_manager.log_audit_event(user_id, "USER_DELETED", ip_address, {"archived": True}, db=db)
+            await self._db_manager.log_audit_event("system", "USER_DELETED", ip_address, {"archived": True}, db=db)
             await db.commit()
 
     async def set_password(self, user_id: str, new_password: str, ip_address: str):
