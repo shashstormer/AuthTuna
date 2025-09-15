@@ -35,6 +35,8 @@ async def get_current_user(request: Request) -> User:
             )
         request.state.user_object = user
         return user
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
