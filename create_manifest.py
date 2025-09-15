@@ -55,6 +55,7 @@ if __name__ == "__main__":
         f.write("include readme.md\n")
         f.write("include SECURITY.md\n")
         f.write("include CONTRIBUTING.md\n")
+        f.write("include pytest.ini\n")
         f.write("include LICENSE.txt\n")
         f.write("include coverage.xml\n")
         for filepath in files_to_include:

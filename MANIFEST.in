@@ -2,6 +2,7 @@
 include readme.md
 include SECURITY.md
 include CONTRIBUTING.md
+include pytest.ini
 include LICENSE.txt
 include coverage.xml
 include authtuna/templates/email/authorize_confirm.html
