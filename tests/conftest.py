@@ -1,8 +1,16 @@
+import sys
+import asyncio
+if sys.version_info < (3, 9):
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
 import pytest
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-import asyncio
 import os
 from fastapi import FastAPI
 os.environ["API_BASE_URL"] = "http://127.0.0.1:8000"
