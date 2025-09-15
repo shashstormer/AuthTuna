@@ -17,14 +17,14 @@ async def test_create_user(auth_tuna_async):
 async def test_create_duplicate_user(auth_tuna_async):
     """Test that creating a user with a duplicate email or username raises an error."""
     await auth_tuna_async.users.create(
-        email="test2@example.com",
-        username="testuser2",
+        email="test24@example.com",
+        username="testuser24",
         password="password123",
         ip_address="127.0.0.1"
     )
     with pytest.raises(UserAlreadyExistsError):
         await auth_tuna_async.users.create(
-            email="test2@example.com",
+            email="test24@example.com",
             username="anotheruser",
             password="password123",
             ip_address="127.0.0.1"
