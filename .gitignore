@@ -5,3 +5,5 @@ authtuna.egg-info
 build
 dist
 *.db
+.coverage
+.db-journal
