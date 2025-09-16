@@ -6,4 +6,4 @@ build
 dist
 *.db
 .coverage
-.db-journal
+*.db-journal
