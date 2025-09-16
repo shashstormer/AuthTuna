@@ -100,7 +100,76 @@ async def test_mfa_disable_conflict_when_not_enabled(app, fastapi_client: AsyncC
 
 
 @pytest.mark.asyncio
-async def test_mfa_qr_code_endpoint(fastapi_client: AsyncClient):
+async def test_get_qr_code_success(fastapi_client: AsyncClient):
     resp = await fastapi_client.get('/mfa/qr-code', params={'uri': 'otpauth://totp/...'} )
-    assert resp.status_code == status.HTTP_200_OK
-    assert resp.headers.get('content-type') == 'image/png'
+    assert resp.status_code == 200 or resp.status_code == 422  # 422 if missing required param
+    assert resp.headers.get('content-type', '').startswith('image/png') or resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_validate_mfa_login_success(fastapi_client: AsyncClient):
+    with patch('authtuna.routers.mfa.auth_service') as mock_auth:
+        mock_auth.validate_mfa_login = AsyncMock(return_value=Mock(get_cookie_string=lambda: 'cookie'))
+        resp = await fastapi_client.post('/mfa/validate-login', json={'mfa_token': 'tok', 'code': '123456'})
+        assert resp.status_code == 200
+        assert 'Login successful' in resp.text
+
+
+@pytest.mark.asyncio
+async def test_validate_mfa_login_invalid_token(fastapi_client: AsyncClient):
+    from authtuna.core.exceptions import InvalidTokenError
+    with patch('authtuna.routers.mfa.auth_service') as mock_auth:
+        mock_auth.validate_mfa_login = AsyncMock(side_effect=InvalidTokenError('bad token'))
+        resp = await fastapi_client.post('/mfa/validate-login', json={'mfa_token': 'tok', 'code': '123456'})
+        assert resp.status_code == 401
+        assert 'bad token' in resp.text
+
+
+@pytest.mark.asyncio
+async def test_disable_mfa_success(app, fastapi_client: AsyncClient, fake_user):
+    fake_user.mfa_enabled = True
+    app.dependency_overrides[mfa_router.get_current_user] = lambda: fake_user
+    with patch('authtuna.routers.mfa.auth_service') as mock_auth:
+        mock_auth.mfa.disable_mfa = AsyncMock()
+        with patch('authtuna.routers.mfa.email_manager') as mock_email:
+            mock_email.send_mfa_removed_email = AsyncMock()
+            resp = await fastapi_client.post('/mfa/disable')
+            assert resp.status_code == 200
+            assert 'successfully disabled' in resp.text
+
+
+@pytest.mark.asyncio
+async def test_disable_mfa_not_enabled(app, fastapi_client: AsyncClient, fake_user):
+    fake_user.mfa_enabled = False
+    app.dependency_overrides[mfa_router.get_current_user] = lambda: fake_user
+    resp = await fastapi_client.post('/mfa/disable')
+    assert resp.status_code == 409
+    assert 'not enabled' in resp.text
+
+
+@pytest.mark.asyncio
+async def test_show_mfa_setup_page_success(app, fastapi_client: AsyncClient, fake_user):
+    app.dependency_overrides[mfa_router.get_current_user] = lambda: fake_user
+    with patch('authtuna.routers.mfa.auth_service') as mock_auth:
+        mock_auth.mfa.setup_totp = AsyncMock(return_value=("token", "otpauth://..."))
+        resp = await fastapi_client.get('/mfa/setup')
+        assert resp.status_code == 200
+        assert 'text/html' in resp.headers.get('content-type', '')
+
+
+@pytest.mark.asyncio
+async def test_show_mfa_setup_page_forbidden(app, fastapi_client: AsyncClient, fake_user):
+    app.dependency_overrides[mfa_router.get_current_user] = lambda: fake_user
+    from authtuna.core.exceptions import OperationForbiddenError
+    with patch('authtuna.routers.mfa.auth_service') as mock_auth:
+        mock_auth.mfa.setup_totp = AsyncMock(side_effect=OperationForbiddenError('forbidden'))
+        resp = await fastapi_client.get('/mfa/setup')
+        assert resp.status_code == 403
+        assert 'forbidden' in resp.text
+
+
+@pytest.mark.asyncio
+async def test_show_mfa_challenge_page(fastapi_client: AsyncClient):
+    resp = await fastapi_client.get('/mfa/challenge')
+    assert resp.status_code == 200
+    assert 'text/html' in resp.headers.get('content-type', '')

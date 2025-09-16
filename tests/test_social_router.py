@@ -1,8 +1,9 @@
 import pytest
-from unittest.mock import patch, AsyncMock, Mock
+from unittest.mock import patch, AsyncMock, Mock, PropertyMock
 from fastapi import status
 from httpx import AsyncClient
 from authlib.integrations.starlette_client import OAuthError
+from authtuna.core.database import User, SocialAccount
 
 
 @pytest.mark.asyncio
@@ -47,27 +48,40 @@ async def test_social_callback_oauth_error(fastapi_client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_social_login_unknown_provider(fastapi_client: AsyncClient):
+    resp = await fastapi_client.get('/auth/unknownprovider/login')
+    assert resp.status_code == 404
+    assert "not found" in resp.text.lower()
+
+
+@pytest.mark.asyncio
+async def test_social_callback_unknown_provider(fastapi_client: AsyncClient):
+    resp = await fastapi_client.get('/auth/unknownprovider/callback')
+    assert resp.status_code == 404
+    assert "not found" in resp.text.lower()
+
+
+@pytest.mark.asyncio
 async def test_social_callback_github_email_resolution(fastapi_client: AsyncClient):
-    # provider.user returns no email -> provider.get('user/emails') returns primary email
     fake_provider = Mock()
     fake_provider.authorize_access_token = AsyncMock(return_value={'access_token': 'tok', 'token_type': 'bearer'})
-    fake_provider.get = AsyncMock()
-
-    # First call: get('user')
-    user_resp = Mock()
-    user_resp.json.return_value = {'id': 12345, 'name': 'GH User', 'email': None}
-    user_resp.raise_for_status.return_value = None
-
-    # Second call: get('user/emails')
-    emails_resp = Mock()
-    emails_resp.json.return_value = [{'email': 'gh@example.com', 'primary': True}]
-    emails_resp.raise_for_status.return_value = None
-
-    fake_provider.get.side_effect = [user_resp, emails_resp]
-
+    fake_provider.userinfo = AsyncMock(return_value={'id': 'gh1', 'email': None, 'login': 'ghuser'})
+    # Mock response object for provider.get
+    class FakeResp:
+        def raise_for_status(self):
+            pass
+        def json(self):
+            return {'id': 'gh1', 'email': 'ghuser@example.com', 'login': 'ghuser'}
+    fake_provider.get = AsyncMock(return_value=FakeResp())
     with patch('authtuna.routers.social.get_social_provider', return_value=fake_provider):
         with patch('authtuna.routers.social.email_manager') as mock_email_mgr:
             mock_email_mgr.send_new_social_account_connected_email = AsyncMock()
             mock_email_mgr.send_welcome_email = AsyncMock()
-            resp = await fastapi_client.get('/auth/github/callback')
-            assert resp.status_code in (status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT)
+            with patch('authtuna.routers.social.auth_service') as mock_auth:
+                mock_auth.resolve_github_email = AsyncMock(return_value='ghuser@example.com')
+                mock_user = Mock()
+                mock_social_account = Mock(user=mock_user)
+                mock_auth.get_or_create_social_account = AsyncMock(return_value=(mock_social_account, False))
+                mock_auth.get_or_create_user_from_social = AsyncMock(return_value=mock_user)
+                resp = await fastapi_client.get('/auth/github/callback')
+                assert resp.status_code in (status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT)

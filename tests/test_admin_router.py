@@ -17,3 +17,4 @@ async def test_admin_endpoints_smoke(fastapi_client: AsyncClient):
         mock_auth2.audit.get_events_by_type = AsyncMock(return_value=[])
         resp2 = await fastapi_client.get('/admin/audit-log', params={'event_type': 'login'})
         assert resp2.status_code in (status.HTTP_200_OK, status.HTTP_404_NOT_FOUND)
+

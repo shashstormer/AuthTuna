@@ -88,3 +88,55 @@ async def test_user_info_dependency_override(app, fastapi_client: AsyncClient):
     data = resp.json()
     assert data['user_id'] == 'id'
     assert data['username'] == 'name'
+
+
+@pytest.mark.asyncio
+async def test_show_signup_page(fastapi_client: AsyncClient):
+    resp = await fastapi_client.get('/auth/signup')
+    assert resp.status_code == 200
+    assert 'text/html' in resp.headers['content-type']
+
+
+@pytest.mark.asyncio
+async def test_show_login_page(fastapi_client: AsyncClient):
+    resp = await fastapi_client.get('/auth/login')
+    assert resp.status_code == 200
+    assert 'text/html' in resp.headers['content-type']
+
+
+@pytest.mark.asyncio
+async def test_login_success(fastapi_client: AsyncClient):
+    with patch('authtuna.routers.auth.auth_service') as mock_auth:
+        mock_user = type('U', (), {'id': 'u', 'email': 'e@example.com', 'username': 'u'})()
+        mock_session = type('S', (), {'get_cookie_string': lambda self: 'cookie'})()
+        mock_auth.login = AsyncMock(return_value=(mock_user, mock_session))
+        with patch('authtuna.routers.auth.create_session_and_set_cookie', new=AsyncMock()):
+            resp = await fastapi_client.post('/auth/login', json={
+                'username_or_email': 'u', 'password': 'pw123456'
+            })
+            assert resp.status_code == 200
+            assert 'message' in resp.json() or resp.json() == {}
+
+
+@pytest.mark.asyncio
+async def test_login_invalid_credentials(fastapi_client: AsyncClient):
+    from authtuna.core.exceptions import InvalidCredentialsError
+    with patch('authtuna.routers.auth.auth_service') as mock_auth:
+        mock_auth.login = AsyncMock(side_effect=InvalidCredentialsError("Invalid credentials"))
+        resp = await fastapi_client.post('/auth/login', json={
+            'username_or_email': 'u', 'password': 'wrongpw'
+        })
+        assert resp.status_code == 401
+        assert 'Invalid credentials' in resp.text
+
+
+@pytest.mark.asyncio
+async def test_signup_user_already_exists(fastapi_client: AsyncClient):
+    from authtuna.core.exceptions import UserAlreadyExistsError
+    with patch('authtuna.routers.auth.auth_service') as mock_auth:
+        mock_auth.signup = AsyncMock(side_effect=UserAlreadyExistsError("User exists"))
+        resp = await fastapi_client.post('/auth/signup', json={
+            'username': 'u', 'email': 'e@example.com', 'password': 'pw123456'
+        })
+        assert resp.status_code == 409
+        assert 'User exists' in resp.text
