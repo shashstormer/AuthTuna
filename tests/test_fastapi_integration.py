@@ -14,9 +14,11 @@ async def test_get_current_user_authenticated():
     request.state = types.SimpleNamespace(user_id='u1')
     with patch('authtuna.integrations.fastapi_integration.auth_service.users.get_by_id', new=AsyncMock(return_value=user_obj)):
         user = await get_current_user(request)
+        test_getting_cached = await get_current_user(request)
+        assert user.id == 'u1'
         assert user is user_obj
-        # Should cache on request.state
         assert request.state.user_object is user_obj
+        assert test_getting_cached is user_obj
 
 @pytest.mark.asyncio
 async def test_get_current_user_unauthenticated():

@@ -116,6 +116,8 @@ class EncryptionUtils:
         try:
             payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
             payload = json.loads(self.decrypt_data(payload["session"]))
+            if "exp" in payload and time.time() > payload["exp"]:
+                return None
             return payload
         except JWTError as e:
             logger.debug(f"JWT decoding failed: {e}")

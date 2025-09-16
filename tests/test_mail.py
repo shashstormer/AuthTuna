@@ -1,7 +1,9 @@
-import pytest
-from authtuna.helpers.mail import EmailManager
 from unittest.mock import patch, MagicMock
-from types import SimpleNamespace
+
+import pytest
+
+from authtuna.helpers.mail import EmailManager
+
 
 class DummySettings:
     SMTP_HOST = 'smtp.example.com'

@@ -10,8 +10,7 @@ oauth = OAuth()
 
 # --- OAuth Provider Registration ---
 
-# Register Google as an OpenID Connect (OIDC) client.
-# Authlib can automatically discover the endpoints from the server metadata URL.
+
 if settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET:
     try:
         oauth.register(
@@ -26,8 +25,7 @@ if settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET:
     except OAuthError as e:
         logger.error(f"Failed to register Google OAuth client: {e}")
 
-# Register GitHub as a standard OAuth 2.0 client.
-# GitHub does not support OIDC discovery, so we must provide the API base URL.
+
 if settings.GITHUB_CLIENT_ID and settings.GITHUB_CLIENT_SECRET:
     try:
         oauth.register(
