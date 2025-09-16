@@ -75,6 +75,7 @@ def app():
     app.include_router(social_router)
     app.include_router(mfa_router)
     app.include_router(admin_router)
+    print('DEBUG ROUTES:', [route.path for route in app.routes])
     return app
 
 @pytest.fixture
