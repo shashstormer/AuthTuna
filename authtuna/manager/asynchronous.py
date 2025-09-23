@@ -191,7 +191,8 @@ class UserManager:
             result = await db.execute(stmt)
             return list(result.unique().scalars().all())
 
-    async def basic_search_users(self, *, identity: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Dict[str, str]]:
+    async def basic_search_users(self, *, identity: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[
+        Dict[str, str]]:
         """
         Provides basic filtering for users based on username or email.
         This function readcts the email for privacy and gives only username and userid.
@@ -211,6 +212,130 @@ class UserManager:
 class RoleManager:
     def __init__(self, db_manager: DatabaseManager):
         self._db_manager = db_manager
+
+    async def get_all_roles(self) -> List[Role]:
+        """Fetches all roles from the database."""
+        async with self._db_manager.get_db() as db:
+            stmt = select(Role).order_by(Role.level.desc().nullslast(), Role.name)
+            result = await db.execute(stmt)
+            return list(result.unique().scalars().all())
+
+    async def get_assignable_roles_for_user(self, target_user_id: str, assigning_user: User) -> List[Role]:
+        """
+        Determines which roles an admin can assign, preventing privilege escalation.
+        This function correctly checks all three authorization pathways:
+        1. Direct permission override (e.g., 'roles:assign:SomeRole').
+        2. Direct role-to-role assignment grants.
+        3. Role level hierarchy (admin's level must be higher).
+        """
+        async with self._db_manager.get_db() as db:
+            target_user = await db.get(User, target_user_id)
+            if not target_user:
+                raise UserNotFoundError("Target user not found.")
+            all_roles = await self.get_all_roles()
+            admin_max_level = -1
+            if assigning_user.roles:
+                admin_max_level = max(
+                    (role.level for role in assigning_user.roles if role.level is not None),
+                    default=-1
+                )
+            assignable_roles = []
+            for role_to_check in all_roles:
+                has_sufficient_level = False
+                if role_to_check.level is not None and admin_max_level > role_to_check.level:
+                    has_sufficient_level = True
+                has_direct_grant = False
+                for admin_role in assigning_user.roles:
+                    if any(assignable.id == role_to_check.id for assignable in admin_role.can_assign_roles):
+                        has_direct_grant = True
+                        break
+                required_permission = f"roles:assign:{role_to_check.name}"
+                has_permission_override = await self.has_permission(assigning_user.id, required_permission, db=db)
+                if has_sufficient_level or has_direct_grant or has_permission_override:
+                    assignable_roles.append(role_to_check)
+            return assignable_roles
+
+    async def get_permission_scopes(self, user_id: str, permission_name: str, db: AsyncSession) -> List[str]:
+        """
+        Retrieves all scopes in which a user has a specific permission.
+        """
+        stmt = select(user_roles_association.c.scope).distinct().join_from(
+            user_roles_association, Role, user_roles_association.c.role_id == Role.id
+        ).join(
+            role_permissions_association, Role.id == role_permissions_association.c.role_id
+        ).join(
+            Permission, role_permissions_association.c.permission_id == Permission.id
+        ).where(
+            user_roles_association.c.user_id == user_id,
+            Permission.name == permission_name
+        )
+        result = await db.execute(stmt)
+        return [row[0] for row in result.all()]
+
+    async def get_self_assignable_roles(self, user_id: str) -> List[Dict[str, Any]]:
+        """
+        Returns a list of roles the current user can assign to themselves,
+        including the scopes in which they can assign them.
+        """
+        async with self._db_manager.get_db() as db:
+            user = await UserManager(self._db_manager).get_by_id(user_id, with_relations=True, db=db)
+            if not user:
+                return []
+
+            all_roles = await self.get_all_roles()
+            final_assignable_roles = []
+            user_max_level = -1
+            if user.roles:
+                user_max_level = max((r.level for r in user.roles if r.level is not None), default=-1)
+
+            for role in all_roles:
+                assignable_scopes = set()
+
+                # Pathway 1: Check for specific permission override and get its scopes
+                required_permission = f"roles:assign:{role.name}"
+                permission_scopes = await self.get_permission_scopes(user.id, required_permission, db)
+                for scope in permission_scopes:
+                    assignable_scopes.add(scope)
+
+                # Pathways 2 & 3 are generally not scope-specific; they grant the ability to assign globally.
+                is_authorized_globally = False
+
+                # Pathway 2: Check for direct role assignment grant
+                for user_role in user.roles:
+                    if any(assignable.id == role.id for assignable in user_role.can_assign_roles):
+                        is_authorized_globally = True
+                        break
+
+                if not is_authorized_globally:
+                    # Pathway 3: Check role level hierarchy
+                    if role.level is not None and user_max_level > role.level:
+                        is_authorized_globally = True
+
+                # If authorized globally (by hierarchy or direct grant), add 'global' scope.
+                if is_authorized_globally:
+                    assignable_scopes.add("global")
+
+                # If we found any scopes for this role, add it to our results.
+                if assignable_scopes:
+                    final_assignable_roles.append({
+                        "name": role.name,
+                        "description": role.description,
+                        "scopes": sorted(list(assignable_scopes))  # Sort for consistent output
+                    })
+
+        return final_assignable_roles
+
+    async def get_users_for_role(self, role_name: str) -> List[Dict[str, str]]:
+        """Fetches all users who have a given role, along with the scope."""
+        async with self._db_manager.get_db() as db:
+            role = await self.get_by_name(role_name)
+            if not role:
+                return []
+            stmt = select(User.username, user_roles_association.c.scope).join_from(
+                user_roles_association, User, user_roles_association.c.user_id == User.id
+            ).where(user_roles_association.c.role_id == role.id)
+            results = (await db.execute(stmt)).all()
+            return [{"username": row[0], "scope": row[1]} for row in results]
 
     async def assign_to_user(self, user_id: str, role_name: str, assigner_id: str, scope: str = 'none'):
         async with self._db_manager.get_db() as db:
@@ -382,7 +507,7 @@ class RoleManager:
             await db.commit()
 
     async def grant_relationship(self, granter_role_name: str, grantable_name: str,
-                                  grantable_manager, relationship_attr: str, db_override: AsyncSession = None):
+                                 grantable_manager, relationship_attr: str, db_override: AsyncSession = None):
         async def _action(db: AsyncSession):
             granter_role = await self.get_by_name(granter_role_name)
             if not granter_role:
@@ -399,6 +524,7 @@ class RoleManager:
                 await db.merge(granter_role)
                 await db.commit()
             return granter_role, grantable_item
+
         if db_override:
             return await _action(db_override)
         async with self._db_manager.get_db() as _db:
@@ -435,7 +561,8 @@ class RoleManager:
         async with self._db_manager.get_db() as db:
             return await _check(db)
 
-    async def revoke_user_role_by_scope(self, user_id: str, role_name: str, scope: str, revoker_id: str, ip_address: str = "system"):
+    async def revoke_user_role_by_scope(self, user_id: str, role_name: str, scope: str, revoker_id: str,
+                                        ip_address: str = "system"):
         """
         Revokes a specific role from a user within a specific scope, with authorization checks.
         """
@@ -498,7 +625,6 @@ class RoleManager:
 
             await db.delete(role_to_delete)
             await db.commit()
-
 
 
 class PermissionManager:
@@ -584,6 +710,7 @@ class SessionManager:
                     break
             return all_sessions
 
+
 class TokenManager:
     def __init__(self, db_manager: DatabaseManager):
         self._db_manager = db_manager
@@ -599,7 +726,8 @@ class TokenManager:
             return token
 
     async def validate(self, db: AsyncSession, token_id: str, purpose: str, ip_address: str) -> User:
-        stmt = select(Token).where(Token.id == token_id, Token.purpose == purpose).options(joinedload(Token.user).joinedload(User.mfa_methods))
+        stmt = select(Token).where(Token.id == token_id, Token.purpose == purpose).options(
+            joinedload(Token.user).joinedload(User.mfa_methods))
         token_obj = (await db.execute(stmt)).unique().scalar_one_or_none()
         if not token_obj: raise InvalidTokenError("Invalid token.")
         if token_obj.used: raise InvalidTokenError("Token has already been used.")
@@ -615,20 +743,24 @@ class TokenManager:
         await token_obj.mark_used(ip_address, self._db_manager, db)
         return user
 
+
 class AuditManager:
     """Manages querying the audit trail for security and administrative purposes."""
+
     def __init__(self, db_manager: DatabaseManager):
         self._db_manager = db_manager
 
     async def get_events_for_user(self, user_id: str, skip: int = 0, limit: int = 25) -> List[AuditEvent]:
         async with self._db_manager.get_db() as db:
-            stmt = select(AuditEvent).where(AuditEvent.user_id == user_id).order_by(desc(AuditEvent.timestamp)).offset(skip).limit(limit)
+            stmt = select(AuditEvent).where(AuditEvent.user_id == user_id).order_by(desc(AuditEvent.timestamp)).offset(
+                skip).limit(limit)
             result = await db.execute(stmt)
             return list(result.scalars().all())
 
     async def get_events_by_type(self, event_type: str, skip: int = 0, limit: int = 100) -> List[AuditEvent]:
         async with self._db_manager.get_db() as db:
-            stmt = select(AuditEvent).where(AuditEvent.event_type == event_type).order_by(desc(AuditEvent.timestamp)).offset(skip).limit(limit)
+            stmt = select(AuditEvent).where(AuditEvent.event_type == event_type).order_by(
+                desc(AuditEvent.timestamp)).offset(skip).limit(limit)
             result = await db.execute(stmt)
             return list(result.scalars().all())
 
@@ -646,6 +778,32 @@ class AuthTunaAsync:
         self.mfa = MFAManager(db_manager)
         self.audit = AuditManager(db_manager)
 
+    async def get_dashboard_stats(self) -> Dict[str, Any]:
+        """Gathers all necessary statistics for the admin dashboard."""
+        async with self.db_manager.get_db() as db:
+            # Get user counts
+            total_users_count = await db.scalar(select(func.count(User.id)))
+            active_users_count = await db.scalar(select(func.count(User.id)).where(User.is_active == True))
+            unverified_users_count = await db.scalar(select(func.count(User.id)).where(User.email_verified == False))
+
+            # Get recent registrations
+            recent_users_stmt = select(User).order_by(User.created_at.desc()).limit(5)
+            recent_registrations = list((await db.execute(recent_users_stmt)).unique().scalars().all())
+
+            # Get recent login events
+            recent_logins_stmt = select(AuditEvent).where(
+                or_(AuditEvent.event_type == "LOGIN_SUCCESS", AuditEvent.event_type == "LOGIN_FAILED")
+            ).order_by(AuditEvent.timestamp.desc()).limit(10)
+            recent_logins = list((await db.execute(recent_logins_stmt)).unique().scalars().all())
+
+            return {
+                "total_users": total_users_count,
+                "active_users": active_users_count,
+                "unverified_users": unverified_users_count,
+                "recent_registrations": recent_registrations,
+                "recent_logins": recent_logins,
+            }
+
     async def signup(self, username: str, email: str, password: str, ip_address: str) -> Tuple[User, Optional[Token]]:
         user = await self.users.create(
             email=email, username=username, password=password, ip_address=ip_address,
@@ -656,7 +814,8 @@ class AuthTunaAsync:
             token = await self.tokens.create(user.id, "email_verification")
         return user, token
 
-    async def login(self, username_or_email: str, password: str, ip_address: str, region: str, device: str) -> Union[Tuple[Any, Token], Tuple[Any, Session]]:
+    async def login(self, username_or_email: str, password: str, ip_address: str, region: str, device: str) -> Union[
+        Tuple[Any, Token], Tuple[Any, Session]]:
         async with self.db_manager.get_db() as db:
             stmt = select(User).where((User.email == username_or_email) | (User.username == username_or_email))
             user = (await db.execute(stmt)).unique().scalar_one_or_none()
@@ -742,7 +901,6 @@ class AuthTunaAsync:
 
             await db.commit()
         session = await self.sessions.create(
-                user.id, ip_address, device_data["region"], device_data["device"]
+            user.id, ip_address, device_data["region"], device_data["device"]
         )
         return session
-

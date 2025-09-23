@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Role Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="container mx-auto p-8">
+        <a href="/admin/dashboard" class="text-indigo-400 hover:text-indigo-300 mb-6 inline-block">&larr; Back to Dashboard</a>
+        <h1 class="text-4xl font-bold text-white mb-8">Role Details: <span id="role-name"></span></h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-4">Role Information</h2>
+                <div class="space-y-3">
+                    <p><strong>Description:</strong> <span id="role-description"></span></p>
+                    <p><strong>Level:</strong> <span id="role-level"></span></p>
+                </div>
+
+                <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Granted Permissions</h2>
+                <ul id="role-permissions-list" class="space-y-2">
+                    </ul>
+            </div>
+
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-4">Users with this Role</h2>
+                <div class="overflow-y-auto h-96">
+                    <table class="min-w-full bg-gray-700 rounded-lg">
+                        <thead>
+                            <tr>
+                                <th class="p-3 text-left">Username</th>
+                                <th class="p-3 text-left">Scope</th>
+                            </tr>
+                        </thead>
+                        <tbody id="role-users-body">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const roleNameEl = document.getElementById('role-name');
+        const roleDescriptionEl = document.getElementById('role-description');
+        const roleLevelEl = document.getElementById('role-level');
+        const rolePermissionsList = document.getElementById('role-permissions-list');
+        const roleUsersBody = document.getElementById('role-users-body');
+
+        async function fetchRoleDetails() {
+            const roleName = decodeURIComponent(window.location.pathname.split('/').pop());
+            try {
+                const roleData = await fetch(`/admin/roles/${roleName}/details-data`).then(res => res.json());
+
+                // Populate Role Info
+                roleNameEl.textContent = roleData.name;
+                roleDescriptionEl.textContent = roleData.description || 'N/A';
+                roleLevelEl.textContent = roleData.level || 'N/A';
+
+                // Populate Permissions
+                rolePermissionsList.innerHTML = roleData.permissions.map(perm =>
+                    `<li class="bg-gray-700 p-2 rounded font-mono">${perm.name}</li>`
+                ).join('') || '<li>No permissions granted.</li>';
+
+                // Populate Users
+                roleUsersBody.innerHTML = roleData.users.map(user => `
+                    <tr class="border-b border-gray-600">
+                        <td class="p-2">${user.username}</td>
+                        <td class="p-2 font-mono">${user.scope}</td>
+                    </tr>
+                `).join('');
+
+            } catch (error) {
+                console.error("Failed to load role details:", error);
+                document.body.innerHTML = '<h1 class="text-red-500 text-center p-8">Failed to load role details.</h1>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchRoleDetails);
+    </script>
+</body>
+</html>

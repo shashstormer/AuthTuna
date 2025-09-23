@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="container mx-auto p-8">
+        <a href="/admin/dashboard" class="text-indigo-400 hover:text-indigo-300 mb-6 inline-block">&larr; Back to Dashboard</a>
+        <h1 class="text-4xl font-bold text-white mb-8">User Details: <span id="username"></span></h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-4">User Information</h2>
+                <div class="space-y-3">
+                    <p><strong>ID:</strong> <span id="user-id" class="font-mono"></span></p>
+                    <p><strong>Email:</strong> <span id="user-email"></span></p>
+                    <p><strong>Status:</strong> <span id="user-status"></span></p>
+                    <p><strong>MFA Enabled:</strong> <span id="user-mfa"></span></p>
+                </div>
+
+                <div id="action-buttons" class="mt-6 border-t border-gray-700 pt-6"></div>
+
+                <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Assigned Roles</h2>
+                <ul id="user-roles-list" class="space-y-2"></ul>
+
+                <div class="mt-8 border-t border-gray-700 pt-6">
+                    <h3 class="text-lg font-medium text-white mb-2">Assign Role (Admin Action)</h3>
+                    <p class="text-sm text-gray-400 mb-4">Assign a role to this user based on your (the admin's) permissions.</p>
+                    <div class="flex items-center space-x-2">
+                        <select id="assignable-roles-select" class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600"></select>
+                        <button onclick="handleAssignRole()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Assign</button>
+                    </div>
+                </div>
+                <div class="mt-8 border-t border-gray-700 pt-6">
+                    <h3 class="text-lg font-medium text-white mb-2">Self-Assignable Roles</h3>
+                    <p class="text-sm text-gray-400 mb-4">This shows which roles the user can grant to themselves/others and in what scope.</p>
+                    <ul id="self-assignable-roles-list" class="space-y-2">
+                        </ul>
+                </div>
+                </div>
+
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-4">Recent Activity (Audit Log)</h2>
+                <div class="overflow-y-auto h-96">
+                    <table class="min-w-full bg-gray-700 rounded-lg">
+                        <thead>
+                            <tr>
+                                <th class="p-3 text-left">Event</th>
+                                <th class="p-3 text-left">Timestamp</th>
+                                <th class="p-3 text-left">IP Address</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-log-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-8 right-8 bg-green-500 text-white py-3 px-6 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300">
+        <p id="toast-message"></p>
+    </div>
+
+    <script>
+        const usernameEl = document.getElementById('username');
+        const userIdEl = document.getElementById('user-id');
+        const userEmailEl = document.getElementById('user-email');
+        const userStatusEl = document.getElementById('user-status');
+        const userMfaEl = document.getElementById('user-mfa');
+        const userRolesList = document.getElementById('user-roles-list');
+        const selfAssignableRolesList = document.getElementById('self-assignable-roles-list'); // New element
+        const auditLogBody = document.getElementById('audit-log-body');
+        const actionButtonsContainer = document.getElementById('action-buttons');
+        const assignableRolesSelect = document.getElementById('assignable-roles-select');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+
+        const userId = window.location.pathname.split('/').pop();
+
+        async function apiRequest(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+            };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            const response = await fetch(endpoint, options);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'An API error occurred');
+            }
+            return response.status !== 204 ? await response.json() : null;
+        }
+
+        function showToast(message, isError = false) {
+            toastMessage.textContent = message;
+            toast.className = `fixed bottom-8 right-8 text-white py-3 px-6 rounded-lg shadow-lg transform transition-all duration-300 ${isError ? 'bg-red-500' : 'bg-green-500'} translate-y-0 opacity-100`;
+            setTimeout(() => {
+                toast.className = toast.className.replace('translate-y-0 opacity-100', 'translate-y-20 opacity-0');
+            }, 3000);
+        }
+
+        function renderUserDetails(userData) {
+            usernameEl.textContent = userData.username;
+            userIdEl.textContent = userData.id;
+            userEmailEl.textContent = userData.email;
+            userStatusEl.innerHTML = `<span class="${userData.is_active ? 'bg-green-500' : 'bg-red-500'} text-white text-xs font-semibold px-2.5 py-0.5 rounded-full">${userData.is_active ? 'Active' : 'Suspended'}</span>`;
+            userMfaEl.textContent = userData.mfa_enabled ? 'Yes' : 'No';
+
+            actionButtonsContainer.innerHTML = userData.is_active
+                ? `<button onclick="toggleUserSuspension(true)" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg">Suspend User</button>`
+                : `<button onclick="toggleUserSuspension(false)" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Unsuspend User</button>`;
+
+            userRolesList.innerHTML = userData.roles.map(role => `
+                <li class="bg-gray-700 p-2 rounded flex justify-between items-center">
+                    <span>${role.role_name} <span class="text-gray-400 text-sm">(${role.scope})</span></span>
+                    <button onclick="handleRemoveRole('${role.role_name}', '${role.scope}')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded">Remove</button>
+                </li>
+            `).join('') || '<li>No roles assigned.</li>';
+
+            const canAssignHtml = userData.can_assign.map(role => `
+                <li class="bg-gray-700 p-2 rounded">
+                    ${role.name}
+                    <span class="text-gray-400 text-sm">(${role.scopes.join(', ')})</span>
+                </li>
+            `).join('');
+            selfAssignableRolesList.innerHTML = canAssignHtml || '<li>This user cannot self-assign any roles.</li>';
+        }
+
+        async function fetchUserDetailsAndRoles() {
+            try {
+                const [userData, auditLog, assignableRoles] = await Promise.all([
+                    apiRequest(`/admin/users/${userId}/details-data`),
+                    apiRequest(`/admin/users/${userId}/audit-log`),
+                    apiRequest(`/admin/users/${userId}/assignable-roles`)
+                ]);
+
+                renderUserDetails(userData);
+
+                auditLogBody.innerHTML = auditLog.map(event => `
+                    <tr class="border-b border-gray-600">
+                        <td class="p-2">${event.event_type}</td>
+                        <td class="p-2">${new Date(event.timestamp * 1000).toLocaleString()}</td>
+                        <td class="p-2 font-mono">${event.ip_address || 'N/A'}</td>
+                    </tr>
+                `).join('');
+
+                assignableRolesSelect.innerHTML = assignableRoles.map(role =>
+                    `<option value="${role.name}">${role.name}</option>`
+                ).join('') || '<option disabled>No roles you can assign</option>';
+                if (assignableRoles.length === 0) {
+                    document.querySelector('#assignable-roles-select + button').disabled = true;
+                }
+
+            } catch (error) {
+                showToast(error.message, true);
+                document.body.innerHTML = `<h1 class="text-red-500 text-center p-8">${error.message}</h1>`;
+            }
+        }
+
+        async function toggleUserSuspension(shouldSuspend) {
+            const endpoint = `/admin/users/${userId}/${shouldSuspend ? 'suspend' : 'unsuspend'}`;
+            try {
+                const updatedUser = await apiRequest(endpoint, 'POST', { reason: `Action from admin detail page` });
+                fetchUserDetailsAndRoles() // Refresh all data
+                showToast(`User successfully ${shouldSuspend ? 'suspended' : 'unsuspended'}.`);
+            } catch (error) {
+                showToast(error.message, true);
+            }
+        }
+
+        async function handleRemoveRole(roleName, scope) {
+            if (!confirm(`Are you sure you want to remove the role "${roleName}" from this user?`)) return;
+            try {
+                await apiRequest('/admin/users/roles/revoke', 'POST', { user_id: userId, role_name: roleName, scope: scope });
+                showToast(`Role '${roleName}' revoked.`);
+                fetchUserDetailsAndRoles(); // Refresh everything
+            } catch (error) {
+                showToast(error.message, true);
+            }
+        }
+
+        async function handleAssignRole() {
+            const roleName = assignableRolesSelect.value;
+            if (!roleName) return;
+            try {
+                await apiRequest('/admin/users/roles/assign', 'POST', { user_id: userId, role_name: roleName, scope: 'global' });
+                showToast(`Role '${roleName}' assigned.`);
+                await fetchUserDetailsAndRoles(); // Refresh everything
+            } catch (error) {
+                showToast(error.message, true);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', fetchUserDetailsAndRoles);
+    </script>
+</body>
+</html>
