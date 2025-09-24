@@ -1,6 +1,6 @@
 import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import SecretStr, BaseSettings
+from pydantic import SecretStr
 from typing import List, Optional, Any
 
 logger = logging.getLogger(__name__)

@@ -4,6 +4,7 @@ import grpc
 import warnings
 
 import authtuna_pb2 as authtuna__pb2
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 GRPC_GENERATED_VERSION = '1.75.0'
 GRPC_VERSION = grpc.__version__
@@ -89,6 +90,101 @@ class AuthTunaServiceStub(object):
                 request_serializer=authtuna__pb2.SearchUsersRequest.SerializeToString,
                 response_deserializer=authtuna__pb2.UserListResponse.FromString,
                 _registered_method=True)
+        self.GetAllRoles = channel.unary_unary(
+                '/authtuna.AuthTunaService/GetAllRoles',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=authtuna__pb2.RoleListResponse.FromString,
+                _registered_method=True)
+        self.GetRoleByName = channel.unary_unary(
+                '/authtuna.AuthTunaService/GetRoleByName',
+                request_serializer=authtuna__pb2.RoleNameRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.RoleResponse.FromString,
+                _registered_method=True)
+        self.CreateRole = channel.unary_unary(
+                '/authtuna.AuthTunaService/CreateRole',
+                request_serializer=authtuna__pb2.Role.SerializeToString,
+                response_deserializer=authtuna__pb2.RoleResponse.FromString,
+                _registered_method=True)
+        self.AssignRoleToUser = channel.unary_unary(
+                '/authtuna.AuthTunaService/AssignRoleToUser',
+                request_serializer=authtuna__pb2.AssignRoleRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.RoleResponse.FromString,
+                _registered_method=True)
+        self.RemoveRoleFromUser = channel.unary_unary(
+                '/authtuna.AuthTunaService/RemoveRoleFromUser',
+                request_serializer=authtuna__pb2.RemoveRoleRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.RoleResponse.FromString,
+                _registered_method=True)
+        self.GetUsersForRole = channel.unary_unary(
+                '/authtuna.AuthTunaService/GetUsersForRole',
+                request_serializer=authtuna__pb2.RoleNameRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.UserListResponse.FromString,
+                _registered_method=True)
+        self.GetPermissionByName = channel.unary_unary(
+                '/authtuna.AuthTunaService/GetPermissionByName',
+                request_serializer=authtuna__pb2.PermissionNameRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.PermissionResponse.FromString,
+                _registered_method=True)
+        self.CreatePermission = channel.unary_unary(
+                '/authtuna.AuthTunaService/CreatePermission',
+                request_serializer=authtuna__pb2.Permission.SerializeToString,
+                response_deserializer=authtuna__pb2.PermissionResponse.FromString,
+                _registered_method=True)
+        self.GetSessionById = channel.unary_unary(
+                '/authtuna.AuthTunaService/GetSessionById',
+                request_serializer=authtuna__pb2.SessionIdRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.SessionResponse.FromString,
+                _registered_method=True)
+        self.CreateSession = channel.unary_unary(
+                '/authtuna.AuthTunaService/CreateSession',
+                request_serializer=authtuna__pb2.Session.SerializeToString,
+                response_deserializer=authtuna__pb2.SessionResponse.FromString,
+                _registered_method=True)
+        self.TerminateSession = channel.unary_unary(
+                '/authtuna.AuthTunaService/TerminateSession',
+                request_serializer=authtuna__pb2.SessionIdRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.SessionResponse.FromString,
+                _registered_method=True)
+        self.ListSessionsForUser = channel.unary_unary(
+                '/authtuna.AuthTunaService/ListSessionsForUser',
+                request_serializer=authtuna__pb2.UserIdRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.SessionListResponse.FromString,
+                _registered_method=True)
+        self.CreateToken = channel.unary_unary(
+                '/authtuna.AuthTunaService/CreateToken',
+                request_serializer=authtuna__pb2.Token.SerializeToString,
+                response_deserializer=authtuna__pb2.TokenResponse.FromString,
+                _registered_method=True)
+        self.ValidateToken = channel.unary_unary(
+                '/authtuna.AuthTunaService/ValidateToken',
+                request_serializer=authtuna__pb2.TokenIdRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.UserResponse.FromString,
+                _registered_method=True)
+        self.SetupTOTP = channel.unary_unary(
+                '/authtuna.AuthTunaService/SetupTOTP',
+                request_serializer=authtuna__pb2.MFASetupRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.MFASetupResponse.FromString,
+                _registered_method=True)
+        self.VerifyAndEnableTOTP = channel.unary_unary(
+                '/authtuna.AuthTunaService/VerifyAndEnableTOTP',
+                request_serializer=authtuna__pb2.MFAVerifyRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.MFAResponse.FromString,
+                _registered_method=True)
+        self.DisableMFA = channel.unary_unary(
+                '/authtuna.AuthTunaService/DisableMFA',
+                request_serializer=authtuna__pb2.UserIdRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.MFAResponse.FromString,
+                _registered_method=True)
+        self.GetEventsForUser = channel.unary_unary(
+                '/authtuna.AuthTunaService/GetEventsForUser',
+                request_serializer=authtuna__pb2.AuditUserRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.AuditEventListResponse.FromString,
+                _registered_method=True)
+        self.GetEventsByType = channel.unary_unary(
+                '/authtuna.AuthTunaService/GetEventsByType',
+                request_serializer=authtuna__pb2.AuditTypeRequest.SerializeToString,
+                response_deserializer=authtuna__pb2.AuditEventListResponse.FromString,
+                _registered_method=True)
 
 
 class AuthTunaServiceServicer(object):
@@ -163,6 +259,126 @@ class AuthTunaServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetAllRoles(self, request, context):
+        """RoleManager
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetRoleByName(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateRole(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AssignRoleToUser(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RemoveRoleFromUser(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetUsersForRole(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetPermissionByName(self, request, context):
+        """PermissionManager
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreatePermission(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetSessionById(self, request, context):
+        """SessionManager
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateSession(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def TerminateSession(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListSessionsForUser(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateToken(self, request, context):
+        """TokenManager
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ValidateToken(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SetupTOTP(self, request, context):
+        """MFAManager
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def VerifyAndEnableTOTP(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DisableMFA(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetEventsForUser(self, request, context):
+        """AuditManager
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetEventsByType(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthTunaServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -220,6 +436,101 @@ def add_AuthTunaServiceServicer_to_server(servicer, server):
                     servicer.SearchUsers,
                     request_deserializer=authtuna__pb2.SearchUsersRequest.FromString,
                     response_serializer=authtuna__pb2.UserListResponse.SerializeToString,
+            ),
+            'GetAllRoles': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetAllRoles,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=authtuna__pb2.RoleListResponse.SerializeToString,
+            ),
+            'GetRoleByName': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetRoleByName,
+                    request_deserializer=authtuna__pb2.RoleNameRequest.FromString,
+                    response_serializer=authtuna__pb2.RoleResponse.SerializeToString,
+            ),
+            'CreateRole': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateRole,
+                    request_deserializer=authtuna__pb2.Role.FromString,
+                    response_serializer=authtuna__pb2.RoleResponse.SerializeToString,
+            ),
+            'AssignRoleToUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.AssignRoleToUser,
+                    request_deserializer=authtuna__pb2.AssignRoleRequest.FromString,
+                    response_serializer=authtuna__pb2.RoleResponse.SerializeToString,
+            ),
+            'RemoveRoleFromUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.RemoveRoleFromUser,
+                    request_deserializer=authtuna__pb2.RemoveRoleRequest.FromString,
+                    response_serializer=authtuna__pb2.RoleResponse.SerializeToString,
+            ),
+            'GetUsersForRole': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetUsersForRole,
+                    request_deserializer=authtuna__pb2.RoleNameRequest.FromString,
+                    response_serializer=authtuna__pb2.UserListResponse.SerializeToString,
+            ),
+            'GetPermissionByName': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetPermissionByName,
+                    request_deserializer=authtuna__pb2.PermissionNameRequest.FromString,
+                    response_serializer=authtuna__pb2.PermissionResponse.SerializeToString,
+            ),
+            'CreatePermission': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreatePermission,
+                    request_deserializer=authtuna__pb2.Permission.FromString,
+                    response_serializer=authtuna__pb2.PermissionResponse.SerializeToString,
+            ),
+            'GetSessionById': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetSessionById,
+                    request_deserializer=authtuna__pb2.SessionIdRequest.FromString,
+                    response_serializer=authtuna__pb2.SessionResponse.SerializeToString,
+            ),
+            'CreateSession': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateSession,
+                    request_deserializer=authtuna__pb2.Session.FromString,
+                    response_serializer=authtuna__pb2.SessionResponse.SerializeToString,
+            ),
+            'TerminateSession': grpc.unary_unary_rpc_method_handler(
+                    servicer.TerminateSession,
+                    request_deserializer=authtuna__pb2.SessionIdRequest.FromString,
+                    response_serializer=authtuna__pb2.SessionResponse.SerializeToString,
+            ),
+            'ListSessionsForUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListSessionsForUser,
+                    request_deserializer=authtuna__pb2.UserIdRequest.FromString,
+                    response_serializer=authtuna__pb2.SessionListResponse.SerializeToString,
+            ),
+            'CreateToken': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateToken,
+                    request_deserializer=authtuna__pb2.Token.FromString,
+                    response_serializer=authtuna__pb2.TokenResponse.SerializeToString,
+            ),
+            'ValidateToken': grpc.unary_unary_rpc_method_handler(
+                    servicer.ValidateToken,
+                    request_deserializer=authtuna__pb2.TokenIdRequest.FromString,
+                    response_serializer=authtuna__pb2.UserResponse.SerializeToString,
+            ),
+            'SetupTOTP': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetupTOTP,
+                    request_deserializer=authtuna__pb2.MFASetupRequest.FromString,
+                    response_serializer=authtuna__pb2.MFASetupResponse.SerializeToString,
+            ),
+            'VerifyAndEnableTOTP': grpc.unary_unary_rpc_method_handler(
+                    servicer.VerifyAndEnableTOTP,
+                    request_deserializer=authtuna__pb2.MFAVerifyRequest.FromString,
+                    response_serializer=authtuna__pb2.MFAResponse.SerializeToString,
+            ),
+            'DisableMFA': grpc.unary_unary_rpc_method_handler(
+                    servicer.DisableMFA,
+                    request_deserializer=authtuna__pb2.UserIdRequest.FromString,
+                    response_serializer=authtuna__pb2.MFAResponse.SerializeToString,
+            ),
+            'GetEventsForUser': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetEventsForUser,
+                    request_deserializer=authtuna__pb2.AuditUserRequest.FromString,
+                    response_serializer=authtuna__pb2.AuditEventListResponse.SerializeToString,
+            ),
+            'GetEventsByType': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetEventsByType,
+                    request_deserializer=authtuna__pb2.AuditTypeRequest.FromString,
+                    response_serializer=authtuna__pb2.AuditEventListResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -519,6 +830,519 @@ class AuthTunaService(object):
             '/authtuna.AuthTunaService/SearchUsers',
             authtuna__pb2.SearchUsersRequest.SerializeToString,
             authtuna__pb2.UserListResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetAllRoles(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/GetAllRoles',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            authtuna__pb2.RoleListResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetRoleByName(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/GetRoleByName',
+            authtuna__pb2.RoleNameRequest.SerializeToString,
+            authtuna__pb2.RoleResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateRole(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/CreateRole',
+            authtuna__pb2.Role.SerializeToString,
+            authtuna__pb2.RoleResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AssignRoleToUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/AssignRoleToUser',
+            authtuna__pb2.AssignRoleRequest.SerializeToString,
+            authtuna__pb2.RoleResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RemoveRoleFromUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/RemoveRoleFromUser',
+            authtuna__pb2.RemoveRoleRequest.SerializeToString,
+            authtuna__pb2.RoleResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetUsersForRole(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/GetUsersForRole',
+            authtuna__pb2.RoleNameRequest.SerializeToString,
+            authtuna__pb2.UserListResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetPermissionByName(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/GetPermissionByName',
+            authtuna__pb2.PermissionNameRequest.SerializeToString,
+            authtuna__pb2.PermissionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreatePermission(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/CreatePermission',
+            authtuna__pb2.Permission.SerializeToString,
+            authtuna__pb2.PermissionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetSessionById(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/GetSessionById',
+            authtuna__pb2.SessionIdRequest.SerializeToString,
+            authtuna__pb2.SessionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateSession(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/CreateSession',
+            authtuna__pb2.Session.SerializeToString,
+            authtuna__pb2.SessionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def TerminateSession(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/TerminateSession',
+            authtuna__pb2.SessionIdRequest.SerializeToString,
+            authtuna__pb2.SessionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListSessionsForUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/ListSessionsForUser',
+            authtuna__pb2.UserIdRequest.SerializeToString,
+            authtuna__pb2.SessionListResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateToken(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/CreateToken',
+            authtuna__pb2.Token.SerializeToString,
+            authtuna__pb2.TokenResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ValidateToken(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/ValidateToken',
+            authtuna__pb2.TokenIdRequest.SerializeToString,
+            authtuna__pb2.UserResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SetupTOTP(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/SetupTOTP',
+            authtuna__pb2.MFASetupRequest.SerializeToString,
+            authtuna__pb2.MFASetupResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def VerifyAndEnableTOTP(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/VerifyAndEnableTOTP',
+            authtuna__pb2.MFAVerifyRequest.SerializeToString,
+            authtuna__pb2.MFAResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DisableMFA(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/DisableMFA',
+            authtuna__pb2.UserIdRequest.SerializeToString,
+            authtuna__pb2.MFAResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetEventsForUser(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/GetEventsForUser',
+            authtuna__pb2.AuditUserRequest.SerializeToString,
+            authtuna__pb2.AuditEventListResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetEventsByType(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/authtuna.AuthTunaService/GetEventsByType',
+            authtuna__pb2.AuditTypeRequest.SerializeToString,
+            authtuna__pb2.AuditEventListResponse.FromString,
             options,
             channel_credentials,
             insecure,

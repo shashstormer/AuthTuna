@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package authtuna;
 
+import "google/protobuf/empty.proto";
+
 service AuthTunaService {
   // Authenticate a user and return a token
   rpc Authenticate (AuthRequest) returns (AuthResponse);
@@ -288,3 +290,4 @@ message AuditEventListResponse {
   repeated AuditEvent events = 1;
   string error = 2;
 }
+
