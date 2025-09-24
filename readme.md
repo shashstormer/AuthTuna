@@ -150,7 +150,7 @@ init_settings(**fetch_secrets())
 - Mount the built-in routers:
   ```python
   from authtuna.routers import social as social_router
-  app.include_router(social_router.router, prefix="/auth", tags=["Social Login"])
+  app.include_router(social_router.router, prefix="/social", tags=["Social Login"])
   ```
 
 ---

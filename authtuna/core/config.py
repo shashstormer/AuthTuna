@@ -1,6 +1,6 @@
 import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import SecretStr
+from pydantic import SecretStr, BaseSettings
 from typing import List, Optional, Any
 
 logger = logging.getLogger(__name__)
@@ -81,6 +81,13 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: Optional[SecretStr] = None
     GITHUB_REDIRECT_URI: Optional[str] = None
 
+    # RPC settings
+    RPC_ENABLED: bool = False
+    RPC_TOKEN: SecretStr = SecretStr("changeme-secure-token")
+    RPC_TLS_CERT_FILE: Optional[str] = None
+    RPC_TLS_KEY_FILE: Optional[str] = None
+    RPC_ADDRESS: str = "[::]:50051"
+
     model_config = SettingsConfigDict(env_file=os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
                                       extra='ignore')
 
@@ -139,4 +146,3 @@ class _SettingsProxy:
 
 
 settings = _SettingsProxy()
-
