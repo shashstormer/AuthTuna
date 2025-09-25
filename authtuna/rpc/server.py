@@ -36,7 +36,7 @@ def role_to_proto(role):
     if not role:
         return None
     return authtuna_pb2.Role(
-        id=getattr(role, 'id', ''),
+        id=str(getattr(role, 'id', '')),
         name=getattr(role, 'name', ''),
         description=getattr(role, 'description', ''),
         system=getattr(role, 'system', False),
@@ -48,7 +48,7 @@ def permission_to_proto(permission):
     if not permission:
         return None
     return authtuna_pb2.Permission(
-        id=getattr(permission, 'id', ''),
+        id=str(getattr(permission, 'id', '')),
         name=getattr(permission, 'name', ''),
         description=getattr(permission, 'description', ''),
     )
@@ -84,7 +84,7 @@ def audit_event_to_proto(event):
     if not event:
         return None
     return authtuna_pb2.AuditEvent(
-        id=getattr(event, 'id', ''),
+        id=str(getattr(event, 'id', '')),
         user_id=getattr(event, 'user_id', ''),
         event_type=getattr(event, 'event_type', ''),
         timestamp=getattr(event, 'timestamp', 0.0),
@@ -305,15 +305,14 @@ class AuthTunaService(authtuna_pb2_grpc.AuthTunaServiceServicer):
     async def GetSessionById(self, request, context):
         if not self._is_authorized(context):
             context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid RPC token.")
-        print("req: ", request)
-        print("ses: ", request.session_id)
-        print("Ded: ", encryption_utils.decode_jwt_token(str(request.session_id)))
-        session_id = encryption_utils.decode_jwt_token(request.session_id)["session"]
-        session = await _session_manager.get_by_id(session_id)
-        print("sez:", session)
-        if session:
-            return authtuna_pb2.SessionResponse(session=session_to_proto(session), error="")
-        return authtuna_pb2.SessionResponse(session=None, error="Session not found.")
+        try:
+            session_id = encryption_utils.decode_jwt_token(request.session_id)["session"]
+            session = await _session_manager.get_by_id(session_id)
+            if session:
+                return authtuna_pb2.SessionResponse(session=session_to_proto(session), error="")
+            return authtuna_pb2.SessionResponse(session=None, error="Session not found.")
+        except Exception as e:
+            return authtuna_pb2.SessionResponse(session=None, error=f"Invalid session identifier: {e}")
 
     async def CreateSession(self, request, context):
         if not self._is_authorized(context):
@@ -339,32 +338,27 @@ class AuthTunaService(authtuna_pb2_grpc.AuthTunaServiceServicer):
         except Exception as e:
             return authtuna_pb2.SessionResponse(session=None, error=str(e))
 
-    def CreateToken(self, request, context):
+    async def CreateToken(self, request, context):
         if not self._is_authorized(context):
             context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid RPC token.")
-        loop = asyncio.get_event_loop()
         try:
-            token = loop.run_until_complete(_token_manager.create(
+            token = await _token_manager.create(
                 user_id=request.user_id,
                 purpose=request.purpose,
                 expiry_seconds=int(request.etime) if request.etime else None
-            ))
+            )
             return authtuna_pb2.TokenResponse(token=token_to_proto(token), error="")
         except Exception as e:
             return authtuna_pb2.TokenResponse(token=None, error=str(e))
 
-    def ValidateToken(self, request, context):
+    async def ValidateToken(self, request, context):
         if not self._is_authorized(context):
             context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid RPC token.")
-        loop = asyncio.get_event_loop()
         try:
-            # Validate expects a db session, so we create one
-            async def validate():
-                async with _db_manager.get_db() as db:
-                    user = await _token_manager.validate(db, request.id, request.purpose, ip_address="rpc-server")
-                    return user
-
-            user = loop.run_until_complete(validate())
+            async with _db_manager.get_db() as db:
+                user = await _token_manager.validate(
+                    db, request.id, request.purpose, ip_address="rpc-server"
+                )
             return authtuna_pb2.UserResponse(user=user_to_proto(user), error="")
         except Exception as e:
             return authtuna_pb2.UserResponse(user=None, error=str(e))

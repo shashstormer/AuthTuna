@@ -52,7 +52,7 @@ class PermissionChecker:
 
         if self.mode == 'AND':
             for perm in self.permissions:
-                has_perm = role_manager_client.has_permission(user['id'], perm, scope)
+                has_perm = role_manager_client.has_permission(user.id, perm, scope)
                 if not has_perm:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
@@ -61,7 +61,7 @@ class PermissionChecker:
         elif self.mode == 'OR':
             has_at_least_one_perm = False
             for perm in self.permissions:
-                if role_manager_client.has_permission(user['id'], perm, scope):
+                if role_manager_client.has_permission(user.id, perm, scope):
                     has_at_least_one_perm = True
                     break
             if not has_at_least_one_perm:

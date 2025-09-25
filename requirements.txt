@@ -19,3 +19,7 @@ python-dotenv~=1.0.1
 uvicorn~=0.35.0
 grpcio>=1.60.0
 grpcio-tools>=1.60.0
+bcrypt>=4.0.0
+python-jose>=3.3.0
+Authlib>=1.0.0
+aiosqlite>=0.19.0
