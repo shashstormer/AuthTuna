@@ -21,18 +21,28 @@ __author__ = "shashstormer"
 __description__ = "A robust, multi-layered security foundation for modern web applications"
 
 from .core.config import settings, init_settings
-# Setting was getting insta initialized as soon as module import so commenting out other imports
-# from .core.database import DatabaseManager, db_manager, User # Like this module prepares all instances (initialization and other stuff) for connection as soon as import so...
-# from .middlewares.session import DatabaseSessionMiddleware
-# from .routers import auth_router, social_router
+
+import threading
+import importlib
+
+def _start_rpc_server_bg():
+    import asyncio
+    try:
+        server_mod = importlib.import_module('authtuna.rpc.server')
+        serve = getattr(server_mod, 'serve', None)
+        if serve:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(serve())
+    except Exception as e:
+        import warnings
+        warnings.warn(f"Failed to auto-start RPC server: {e}")
+
+if getattr(settings, 'RPC_AUTOSTART', False):
+    t = threading.Thread(target=_start_rpc_server_bg, daemon=True)
+    t.start()
 
 __all__ = [
     "settings",
     "init_settings",
-    # "DatabaseManager",
-    # "db_manager",
-    # "User",
-    # "DatabaseSessionMiddleware",
-    # "auth_router",
-    # "social_router",
 ]
