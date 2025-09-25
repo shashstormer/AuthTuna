@@ -282,6 +282,19 @@ class AuthTunaService(authtuna_pb2_grpc.AuthTunaServiceServicer):
         except Exception as e:
             return authtuna_pb2.UserListResponse(users=[], error=str(e))
 
+    async def HasPermission(self, request, context):
+        if not self._is_authorized(context):
+            context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid RPC token.")
+        try:
+            has_perm = await _role_manager.has_permission(
+                user_id=request.user_id,
+                permission_name=request.permission_name,
+                scope_prefix=request.scope
+            )
+            return authtuna_pb2.HasPermissionResponse(has_permission=has_perm, error="")
+        except Exception as e:
+            return authtuna_pb2.HasPermissionResponse(has_permission=False, error=str(e))
+
     async def GetPermissionByName(self, request, context):
         if not self._is_authorized(context):
             context.abort(grpc.StatusCode.UNAUTHENTICATED, "Invalid RPC token.")

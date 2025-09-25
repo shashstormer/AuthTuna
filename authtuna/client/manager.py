@@ -71,6 +71,13 @@ class RoleManagerClient(AuthTunaClientBase):
     def __init__(self):
         super().__init__(settings.RPC_ADDRESS, settings.RPC_TOKEN.get_secret_value(), tls=settings.RPC_USE_TLS, cert_file=settings.RPC_TLS_CERT_FILE)
 
+    def has_permission(self, user_id: str, permission_name: str, scope: str = 'global') -> bool:
+        req = authtuna_pb2.HasPermissionRequest(user_id=user_id, permission_name=permission_name, scope=scope)
+        resp = self.stub.HasPermission(req, metadata=self._auth_metadata())
+        if resp.error:
+            raise RPCError(resp.error)
+        return resp.has_permission
+
     def get_all_roles(self) -> List[Dict[str, Any]]:
         from google.protobuf.empty_pb2 import Empty
         resp = self.stub.GetAllRoles(Empty(), metadata=self._auth_metadata())
