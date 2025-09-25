@@ -83,6 +83,7 @@ class Settings(BaseSettings):
 
     # RPC settings
     RPC_ENABLED: bool = False
+    RPC_AUTOSTART: bool = True  # If enabled then will autostart by default
     RPC_TOKEN: SecretStr = SecretStr("changeme-secure-token")
     RPC_TLS_CERT_FILE: Optional[str] = None
     RPC_TLS_KEY_FILE: Optional[str] = None
