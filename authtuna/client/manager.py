@@ -104,6 +104,29 @@ class RoleManagerClient(AuthTunaClientBase):
         resp = self.stub.GetUsersForRole(req, metadata=self._auth_metadata())
         return [u for u in resp.users]
 
+    def has_permission(self, user_id: str, perm: str, scope: str = None) -> bool:
+        """
+        Check if the user has the given permission (by name) in any of their roles, optionally within a specific scope.
+        If the model does not support scope, raise an error to update the model/proto.
+        """
+        all_roles = self.get_all_roles()
+        for role in all_roles:
+            # Check if user is assigned to this role
+            users = self.get_users_for_role(role['name'])
+            for u in users:
+                if u['id'] == user_id:
+                    # If scope is provided, check if user-role assignment has scope
+                    if scope is not None:
+                        if 'scope' not in u:
+                            raise ValueError("Scope support missing in user-role assignment. Update your model/proto to include 'scope'.")
+                        if u['scope'] != scope:
+                            continue  # Skip this assignment if scope does not match
+                    # Check if this role has the permission
+                    permissions = role.get('permissions', [])
+                    if any(p.get('name') == perm for p in permissions):
+                        return True
+        return False
+
 class SessionManagerClient(AuthTunaClientBase):
     def __init__(self):
         super().__init__(settings.RPC_ADDRESS, settings.RPC_TOKEN.get_secret_value(), tls=settings.RPC_USE_TLS, cert_file=settings.RPC_TLS_CERT_FILE)
