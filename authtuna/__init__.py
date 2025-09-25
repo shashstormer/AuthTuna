@@ -31,7 +31,9 @@ def _start_rpc_server_bg():
         server_mod = importlib.import_module('authtuna.rpc.server')
         serve = getattr(server_mod, 'serve', None)
         if serve:
-            asyncio.run(serve())
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(serve())
     except Exception as e:
         import warnings
         warnings.warn(f"Failed to auto-start RPC server: {e}")
