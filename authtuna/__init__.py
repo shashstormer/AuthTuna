@@ -26,6 +26,8 @@ import threading
 import importlib
 
 def _start_rpc_server_bg():
+    if not settings.RPC_ENABLED:
+        return
     import asyncio
     try:
         server_mod = importlib.import_module('authtuna.rpc.server')
