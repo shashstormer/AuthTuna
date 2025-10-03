@@ -44,7 +44,7 @@ async def get_current_user(request: Request) -> User:
         )
 
 
-async def get_current_user_optional(request: Request) -> User | None:
+async def get_current_user_optional(request: Request) -> Optional[User]:
     """
     Does the exact same thing as get current user but doesn't throw error if not authenticated.
     :param request:
