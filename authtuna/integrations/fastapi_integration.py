@@ -1,4 +1,4 @@
-from typing import Optional, Literal
+from typing import Optional, Literal, Any, Coroutine
 
 from fastapi import Depends, HTTPException, status, Request
 
@@ -44,8 +44,26 @@ async def get_current_user(request: Request) -> User:
         )
 
 
+async def get_current_user_optional(request: Request) -> User | None:
+    """
+    Does the exact same thing as get current user but doesn't throw error if not authenticated.
+    :param request:
+    :return:
+    """
+    try:
+        return await get_current_user(request)
+    except HTTPException as e:
+        if e.detail == "Not authenticated":
+            pass
+        else:
+            raise e
+    return None
+
+
+
 def get_user_ip(request: Request) -> str:
     """
+    If you using this obvio you have included the session middleware which sets this so ...
     """
     return request.state.user_ip_address
 
@@ -60,12 +78,14 @@ class PermissionChecker:
             *permissions: str,
             mode: Literal['AND', 'OR'] = 'AND',
             scope_prefix: Optional[str] = None,
-            scope_from_path: Optional[str] = None
+            scope_from_path: Optional[str] = None,
+            raise_error: bool = True
     ):
         self.permissions = permissions
         self.mode = mode
         self.scope_prefix = scope_prefix
         self.scope_from_path = scope_from_path
+        self.raise_error = raise_error
 
     async def __call__(self, request: Request, user: User = Depends(get_current_user)):
         scope = "global"
@@ -110,8 +130,9 @@ class RoleChecker:
     user by request.state.user_id. If neither is present, it raises 401.
     """
 
-    def __init__(self, *roles: str):
+    def __init__(self, *roles: str, raise_error: bool= True):
         self.roles = set(roles)
+        self.raise_error = raise_error
 
     async def __call__(self, request: Request):
         # Try to get the user from request.state cache first
