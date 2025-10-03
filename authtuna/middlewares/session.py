@@ -57,8 +57,6 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         self.public_fastapi_docs = public_docs
         self.default_public_routes = {
             "/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/reset-password",
-            # "/auth/github/callback", "/auth/github/login",
-            # "/auth/google/callback", "/auth/google/login",
             "/auth/logout", "/auth/verify",
         }
         if public_routes is None:
@@ -101,11 +99,18 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         if await self._is_public_route(request):
             return await call_next(request)
 
-        session_cookie = request.cookies.get(settings.SESSION_TOKEN_NAME)
-
+        session_token = None
+        if settings.STRATEGY == "COOKIE":
+            session_token = request.cookies.get(settings.SESSION_TOKEN_NAME)
+        elif settings.STRATEGY == "BEARER":
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                session_token = auth_header.split(" ", 1)[1]
+        else:
+            raise ValueError("Invalid authentication strategy configured.")
         try:
-            if session_cookie:
-                session_data = encryption_utils.decode_jwt_token(session_cookie)
+            if session_token:
+                session_data = encryption_utils.decode_jwt_token(session_token)
 
                 if session_data:
                     last_db_check = session_data.get("database_checked", 0)

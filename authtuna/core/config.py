@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     DEFAULT_SUPERADMIN_EMAIL: str = "superadmin@example.com"
     DEFAULT_ADMIN_EMAIL: str = "admin@example.com"
     # Database settings
-    DEFAULT_DATABASE_URI: str = "sqlite+aiosqlite:///./authtuna_dev.db"  # JUST PROVIDE SYNC URI and set async to true if you want to use async db
-    DATABASE_USE_ASYNC_ENGINE: bool = True  # WILL replace sqlite with sqlite+aiosqlite and asyncpg with asyncpg+asyncpg (if true)
+    DEFAULT_DATABASE_URI: str = "sqlite+aiosqlite:///./authtuna_dev.db"  # PROVIDE ASYNC URI
+    DATABASE_USE_ASYNC_ENGINE: bool = True  # dosent do anything
     AUTO_CREATE_DATABASE: bool = True  # Automatically create the database tables if they don't exist
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 40
@@ -82,12 +82,15 @@ class Settings(BaseSettings):
     GITHUB_REDIRECT_URI: Optional[str] = None
 
     # RPC settings
-    RPC_ENABLED: bool = False
-    RPC_AUTOSTART: bool = True  # If enabled then will autostart by default
+    RPC_ENABLED: bool = False  # was working on it, didnt work so left for now will get back to it later, parts of this removed
+    RPC_AUTOSTART: bool = True  # If enabled then will autostart by default ()
     RPC_TOKEN: SecretStr = SecretStr("changeme-secure-token")
     RPC_TLS_CERT_FILE: Optional[str] = None
     RPC_TLS_KEY_FILE: Optional[str] = None
     RPC_ADDRESS: str = "[::]:50051"
+
+    # Authentication strategy: "COOKIE" or "BEARER"
+    STRATEGY: str = "COOKIE"  # Options: "COOKIE", "BEARER"
 
     model_config = SettingsConfigDict(env_file=os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
                                       extra='ignore')
