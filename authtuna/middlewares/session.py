@@ -136,17 +136,17 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                                     await db_session.update_random_string()
                                 request.state.user_id = db_session.user_id
                                 request.state.session_id = db_session.session_id
-                                session_cookie = db_session.get_cookie_string()
+                                session_token = db_session.get_cookie_string()
                             else:
-                                session_cookie = None
+                                session_token = None
                             await db.commit()
                     else:
                         request.state.user_id = session_data.get("user_id")
                         request.state.session_id = session_data.get("session")
                 else:
-                    session_cookie = None
+                    session_token = None
             else:
-                session_cookie = None
+                session_token = None
 
             response = await call_next(request)
 
@@ -155,16 +155,16 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                 raise e
             logger.error(f"Error in session middleware: {e}", exc_info=True)
             request.state.user_id = None
-            session_cookie = None
+            session_token = None
             response = await call_next(request)
 
         if response:
-            if session_cookie is None:
+            if session_token is None:
                 response.delete_cookie(settings.SESSION_TOKEN_NAME)
             else:
                 response.set_cookie(
                     key=settings.SESSION_TOKEN_NAME,
-                    value=session_cookie,
+                    value=session_token,
                     samesite=settings.SESSION_SAME_SITE,
                     secure=settings.SESSION_SECURE,
                     httponly=True,
