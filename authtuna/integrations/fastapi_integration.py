@@ -1,4 +1,4 @@
-from typing import Optional, Literal, Any, Coroutine
+from typing import Optional, Literal
 
 from fastapi import Depends, HTTPException, status, Request
 
@@ -87,15 +87,17 @@ class PermissionChecker:
         self.scope_from_path = scope_from_path
         self.raise_error = raise_error
 
-    async def __call__(self, request: Request, user: User = Depends(get_current_user)):
+    async def __call__(self, request: Request, user: User = Depends(get_current_user)) -> Optional[User]:
         scope = "global"
         if self.scope_from_path:
             path_param_value = request.path_params.get(self.scope_from_path)
             if not path_param_value:
-                raise HTTPException(
+                if self.raise_error:
+                    raise HTTPException(
                     status_code=500,
                     detail=f"Scope parameter '{self.scope_from_path}' not found in URL path."
-                )
+                    )
+                return None
             prefix = self.scope_prefix or self.scope_from_path.replace('_id', '')
             scope = f"{prefix}:{path_param_value}"
 
@@ -103,10 +105,12 @@ class PermissionChecker:
             for perm in self.permissions:
                 has_perm = await auth_service.roles.has_permission(user.id, perm, scope)
                 if not has_perm:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=f"Missing required permission: '{perm}'"
-                    )
+                    if self.raise_error:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"Missing required permission: '{perm}'"
+                        )
+                    return None
         elif self.mode == 'OR':
             has_at_least_one_perm = False
             for perm in self.permissions:
@@ -114,10 +118,12 @@ class PermissionChecker:
                     has_at_least_one_perm = True
                     break
             if not has_at_least_one_perm:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"User must have at least one of: {', '.join(self.permissions)}"
-                )
+                if self.raise_error:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"User must have at least one of: {', '.join(self.permissions)}"
+                    )
+                return None
         return user
 
 
@@ -134,33 +140,20 @@ class RoleChecker:
         self.roles = set(roles)
         self.raise_error = raise_error
 
-    async def __call__(self, request: Request):
-        # Try to get the user from request.state cache first
-        user: Optional[User] = getattr(request.state, "user_object", None)
-        if user is None:
-            user_id = getattr(request.state, "user_id", None)
-            if not user_id:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Not authenticated"
-                )
-            try:
-                user = await auth_service.users.get_by_id(user_id, with_relations=True)
-            except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Could not retrieve user: {e}")
-            if not user:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="User not found for this session",
-                )
+    async def __call__(self, request: Request) -> Optional[User]:
+        if self.raise_error:
+            user = await get_current_user(request)
+        else:
+            user = await get_current_user_optional(request)
+            if user is None:
+                return None
         user_role_names = {role.name for role in user.roles}
         if not self.roles.issubset(user_role_names):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"User lacks required role(s). Requires: {', '.join(self.roles)}"
-            )
-        # Make user available to downstream if needed
+            if self.raise_error:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"User lacks required role(s). Requires: {', '.join(self.roles)}"
+                )
+            return None
         request.state.user_object = user
         return user
