@@ -132,7 +132,8 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                                     db=db
                             ):
                                 await db_session.update_last_ip(await get_remote_address(request), db=db)
-                                await db_session.update_random_string()
+                                if settings.STRATEGY == "COOKIE":
+                                    await db_session.update_random_string()
                                 request.state.user_id = db_session.user_id
                                 request.state.session_id = db_session.session_id
                                 session_cookie = db_session.get_cookie_string()

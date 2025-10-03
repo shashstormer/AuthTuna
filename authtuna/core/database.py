@@ -300,7 +300,7 @@ class Session(Base):
     create_ip = Column(String(45))
     last_ip = Column(String(45))
     user = relationship('User', back_populates='sessions')
-    random_string = Column(String(255), nullable=False, default=encryption_utils.gen_random_string, onupdate=encryption_utils.gen_random_string)
+    random_string = Column(String(255), nullable=False, default=encryption_utils.gen_random_string)
     previous_random_strings = Column(JsonType, nullable=False, default=list)
 
     def is_expired(self):
