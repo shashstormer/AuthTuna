@@ -363,7 +363,7 @@ class Session(Base):
 
         new_history = [{'value': self.random_string, 'timestamp': now}]
 
-        grace_period = settings.SESSION_DB_VERIFICATION_INTERVAL + 5
+        grace_period = settings.SESSION_DB_VERIFICATION_INTERVAL + 60 # HARDCODED AS REQUESTS MAY RUN FOR LIKE 60 SEC USUALLY BEFORE BEING PROCESSED BY SERVER AND TIMEOUT AFTER THAT, MINIMIZES FALSE INVALIDATIONS
         for entry in self.previous_random_strings:
             if now - entry.get('timestamp', 0) < grace_period:
                 new_history.append(entry)
