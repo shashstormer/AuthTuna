@@ -553,6 +553,7 @@ class RoleManager:
                     or_(user_roles_association.c.scope == 'global',
                         user_roles_association.c.scope.startswith(scope_prefix))
                 )
+            print(stmt.__str__())
             result = (await session.execute(stmt)).first()
             return result is not None
 
