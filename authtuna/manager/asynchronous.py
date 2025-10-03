@@ -553,11 +553,6 @@ class RoleManager:
                     or_(user_roles_association.c.scope == 'global',
                         user_roles_association.c.scope.startswith(scope_prefix))
                 )
-            compiled = stmt.compile(
-                dialect=session.bind.dialect,
-                compile_kwargs={"literal_binds": True}
-            )
-            print(str(compiled).replace("\n", " "))
             result = (await session.execute(stmt)).first()
             return result is not None
 
