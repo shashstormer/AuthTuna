@@ -325,7 +325,7 @@ class RoleManager:
 
         return final_assignable_roles
 
-    async def get_users_for_role(self, role_name: str) -> List[Dict[str, str]]:
+    async def get_users_for_role(self, role_name: str, scope: str = None) -> List[Dict[str, str]]:
         """Fetches all users who have a given role, along with the scope."""
         async with self._db_manager.get_db() as db:
             role = await self.get_by_name(role_name)
@@ -334,6 +334,10 @@ class RoleManager:
             stmt = select(User.username, user_roles_association.c.scope).join_from(
                 user_roles_association, User, user_roles_association.c.user_id == User.id
             ).where(user_roles_association.c.role_id == role.id)
+            if scope is not None:
+                stmt = stmt.where(
+                    user_roles_association.c.scope == scope,
+                )
             results = (await db.execute(stmt)).all()
             return [{"username": row[0], "scope": row[1]} for row in results]
 
