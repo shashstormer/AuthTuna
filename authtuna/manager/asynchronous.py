@@ -337,6 +337,26 @@ class RoleManager:
             results = (await db.execute(stmt)).all()
             return [{"username": row[0], "scope": row[1]} for row in results]
 
+    async def _is_authorized_to_manage_role(self, manager_user: User, role_to_manage: Role, db: AsyncSession) -> bool:
+        """Private helper to check the 3 authorization pathways for role assignment."""
+        # Pathway 1: Permission Override
+        required_permission = f"roles:assign:{role_to_manage.name}"
+        if await self.has_permission(manager_user.id, required_permission, db=db):
+            return True
+
+        # Pathway 2: Direct Grant
+        for manager_role in manager_user.roles:
+            if any(assignable.id == role_to_manage.id for assignable in manager_role.can_assign_roles):
+                return True
+
+        # Pathway 3: Level Hierarchy
+        if manager_user.roles:
+            manager_max_level = max((role.level for role in manager_user.roles if role.level is not None), default=-1)
+            if role_to_manage.level is not None and manager_max_level > role_to_manage.level:
+                return True
+
+        return False
+
     async def assign_to_user(self, user_id: str, role_name: str, assigner_id: str, scope: str = 'none'):
         async with self._db_manager.get_db() as db:
             # Step 1: Fetch all necessary objects
@@ -351,27 +371,8 @@ class RoleManager:
 
             # Step 2: Perform the 3-pathway 'OR' authorization check
 
-            # Pathway 1: Check for specific permission override
-            required_permission = f"roles:assign:{role_name}"
-            has_permission_override = await self.has_permission(assigner_id, required_permission, db=db)
-
-            # Pathway 2: Check for direct role assignment grant
-            has_direct_grant = False
-            for assigner_role in assigner.roles:
-                if any(assignable.id == role_to_assign.id for assignable in assigner_role.can_assign_roles):
-                    has_direct_grant = True
-                    break
-
-            # Pathway 3: Check role level hierarchy
-            has_sufficient_level = False
-            if assigner.roles:
-                assigner_max_level = max(role.level for role in assigner.roles if role.level is not None)
-
-                if role_to_assign.level is not None and assigner_max_level > role_to_assign.level:
-                    has_sufficient_level = True
-
-            # Final Authorization Gate
-            if not (has_permission_override or has_direct_grant or has_sufficient_level):
+            can_manage_role = await self._is_authorized_to_manage_role(assigner, role_to_assign, db)
+            if not can_manage_role:
                 raise OperationForbiddenError(
                     "You lack the required permission, direct grant, or sufficient role level to assign this role."
                 )
@@ -413,27 +414,9 @@ class RoleManager:
 
             # Step 2: Perform the 3-pathway 'OR' authorization check
 
-            # Pathway 1: Check for specific permission override
-            required_permission = f"roles:assign:{role_name}"
-            has_permission_override = await self.has_permission(remover_id, required_permission, db=db)
+            can_manage_role = self._is_authorized_to_manage_role(assigner, role_to_assign, db)
 
-            # Pathway 2: Check for direct role assignment grant
-            has_direct_grant = False
-            for assigner_role in assigner.roles:
-                if any(assignable.id == role_to_assign.id for assignable in assigner_role.can_assign_roles):
-                    has_direct_grant = True
-                    break
-
-            # Pathway 3: Check role level hierarchy
-            has_sufficient_level = False
-            if assigner.roles:
-                assigner_max_level = max(role.level for role in assigner.roles if role.level is not None)
-
-                if role_to_assign.level is not None and assigner_max_level > role_to_assign.level:
-                    has_sufficient_level = True
-
-            # Final Authorization Gate
-            if not (has_permission_override or has_direct_grant or has_sufficient_level):
+            if not can_manage_role:
                 raise OperationForbiddenError(
                     "You lack the required permission, direct grant, or sufficient role level to assign this role."
                 )
