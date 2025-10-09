@@ -80,7 +80,6 @@ async def social_callback(
             social_account = result.unique().scalar_one_or_none()
 
             if social_account:
-                print(social_account)
                 social_account.access_token = token.get('access_token')
                 social_account.refresh_token = token.get('refresh_token')
                 social_account.expires_at = token.get('expires_at')
