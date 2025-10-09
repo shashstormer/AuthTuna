@@ -120,7 +120,8 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                         async with db_manager.get_db() as db:
                             stmt = select(DBSession).where(
                                 DBSession.session_id == session_data.get("session"),
-                                DBSession.user_id == session_data.get("user_id")
+                                DBSession.user_id == session_data.get("user_id"),
+                                DBSession.active == True,
                             )
                             result = await db.execute(stmt)
                             db_session = result.scalar_one_or_none()
