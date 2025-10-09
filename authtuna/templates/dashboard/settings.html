@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Account Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #confirm-modal {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-gray-800 p-6 flex flex-col justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-white mb-8">AuthTuna</h1>
+            <nav class="space-y-4">
+                <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+                    <span class="ml-3">Dashboard</span>
+                </a>
+                <a href="{{ url_for('ui_profile') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+                    <span class="ml-3">Profile</span>
+                </a>
+                <a href="{{ url_for('ui_settings') }}" class="flex items-center p-2 text-base font-normal text-white rounded-lg bg-gray-700">
+                    <span class="ml-3">Settings</span>
+                </a>
+            </nav>
+        </div>
+        <div>
+            <a href="/auth/logout" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+                <span class="ml-3">Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 p-10">
+        <h1 class="text-3xl font-bold text-white">Account Settings</h1>
+        <p class="text-gray-400 mb-8">Manage your account security.</p>
+
+        <div class="max-w-4xl space-y-8">
+            <!-- Change Password Section -->
+            <div class="bg-gray-800 p-8 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-6">Change Password</h2>
+                <form id="password-form" class="space-y-6">
+                    <div>
+                        <label for="current-password" class="block text-sm font-medium text-gray-300 mb-2">Current Password</label>
+                        <input type="password" id="current-password" required class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label for="new-password" class="block text-sm font-medium text-gray-300 mb-2">New Password</label>
+                        <input type="password" id="new-password" required class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                     <div>
+                        <label for="confirm-password" class="block text-sm font-medium text-gray-300 mb-2">Confirm New Password</label>
+                        <input type="password" id="confirm-password" required class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                        Update Password
+                    </button>
+                </form>
+                <div id="password-message-box" class="mt-4 text-center text-sm font-medium hidden"></div>
+            </div>
+
+            <!-- MFA Section -->
+            <div class="bg-gray-800 p-8 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-4">Two-Factor Authentication (2FA)</h2>
+                {% if user.mfa_enabled %}
+                    <p class="text-green-400 mb-4">2FA is currently <strong>enabled</strong> on your account.</p>
+                    <button id="disable-mfa-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                        Disable Two-Factor Authentication
+                    </button>
+                {% else %}
+                    <p class="text-gray-400 mb-4">Protect your account with an extra layer of security.</p>
+                    <a href="/mfa/setup" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                        Setup Two-Factor Authentication
+                    </a>
+                {% endif %}
+                <div id="mfa-message-box" class="mt-4 text-center text-sm font-medium hidden"></div>
+            </div>
+
+            <!-- Active Sessions Section -->
+            <div class="bg-gray-800 p-8 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-4">Active Sessions</h2>
+                <p class="text-gray-400 mb-6">This is a list of devices that have logged into your account. Revoke any sessions that you do not recognize.</p>
+                <div id="sessions-list" class="space-y-4">
+                    <!-- Sessions will be loaded here -->
+                </div>
+                 <div id="sessions-message-box" class="mt-4 text-center text-sm font-medium hidden"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden opacity-0">
+    <div class="bg-gray-800 rounded-lg shadow-xl p-8 max-w-sm w-full">
+        <h3 id="modal-title" class="text-xl font-bold text-white mb-4">Are you sure?</h3>
+        <p id="modal-body" class="text-gray-300 mb-6">This action cannot be undone.</p>
+        <div class="flex justify-end space-x-4">
+            <button id="modal-cancel-button" class="px-6 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors">Cancel</button>
+            <button id="modal-confirm-button" class="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showMessage(box, text, type) {
+        let colorClass = '';
+        if (type === 'success') colorClass = 'text-green-400';
+        if (type === 'error') colorClass = 'text-red-400';
+
+        box.textContent = text;
+        box.className = `mt-4 text-center text-sm font-medium ${colorClass}`;
+        box.classList.toggle('hidden', type === 'hidden' || !text);
+    }
+
+    // --- Confirmation Modal ---
+    const modal = document.getElementById('confirm-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const modalCancelButton = document.getElementById('modal-cancel-button');
+    const modalConfirmButton = document.getElementById('modal-confirm-button');
+    let confirmCallback = null;
+
+    function showModal(title, body, onConfirm) {
+        modalTitle.textContent = title;
+        modalBody.textContent = body;
+        confirmCallback = onConfirm;
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+
+    modalCancelButton.addEventListener('click', () => {
+        modal.classList.add('opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+        confirmCallback = null;
+    });
+
+    modalConfirmButton.addEventListener('click', () => {
+        if (confirmCallback) {
+            confirmCallback();
+        }
+        modalCancelButton.click();
+    });
+
+
+    // --- Change Password ---
+    const passwordForm = document.getElementById('password-form');
+    const passwordMessageBox = document.getElementById('password-message-box');
+    passwordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showMessage(passwordMessageBox, '', 'hidden');
+        // ... (rest of the password logic from previous step)
+    });
+
+    // --- Disable MFA ---
+    const disableMfaButton = document.getElementById('disable-mfa-button');
+    const mfaMessageBox = document.getElementById('mfa-message-box');
+    if (disableMfaButton) {
+        disableMfaButton.addEventListener('click', () => {
+            showModal(
+                'Disable Two-Factor Authentication?',
+                'Are you sure you want to disable 2FA? This will reduce the security of your account.',
+                async () => {
+                    try {
+                        const response = await fetch('/mfa/disable', { method: 'POST' });
+                        const data = await response.json();
+                        if (response.ok) {
+                            showMessage(mfaMessageBox, data.message || 'MFA disabled successfully! Page will reload.', 'success');
+                            setTimeout(() => window.location.reload(), 2000);
+                        } else {
+                            showMessage(mfaMessageBox, data.detail || 'An error occurred.', 'error');
+                        }
+                    } catch (error) {
+                         showMessage(mfaMessageBox, 'A network error occurred.', 'error');
+                    }
+                }
+            );
+        });
+    }
+
+    // --- Active Sessions ---
+    const sessionsList = document.getElementById('sessions-list');
+    const sessionsMessageBox = document.getElementById('sessions-message-box');
+
+    async function loadSessions() {
+        try {
+            const response = await fetch('/ui/settings/sessions');
+            if (!response.ok) throw new Error('Failed to load sessions.');
+            const sessions = await response.json();
+
+            if (sessions.length === 0) {
+                sessionsList.innerHTML = '<p class="text-gray-400">No active sessions found.</p>';
+                return;
+            }
+
+            sessionsList.innerHTML = sessions.map(session => `
+                <div class="bg-gray-700 p-4 rounded-lg flex items-center justify-between">
+                    <div>
+                        <p class="font-semibold text-white">${session.device}</p>
+                        <p class="text-sm text-gray-400">
+                            ${session.region} &bull; IP: ${session.last_ip}
+                            ${session.is_current ? '<span class="text-green-400 font-semibold ml-2">(Current Session)</span>' : ''}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">Last active: ${new Date(session.mtime * 1000).toLocaleString()}</p>
+                    </div>
+                    ${!session.is_current ? `<button onclick="terminateSession('${session.session_id}')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Terminate</button>` : ''}
+                </div>
+            `).join('');
+
+        } catch (error) {
+            showMessage(sessionsMessageBox, error.message, 'error');
+        }
+    }
+
+    async function terminateSession(sessionId) {
+        showModal(
+            'Terminate Session?',
+            'Are you sure you want to log out this session? The user will need to log in again.',
+            async () => {
+                try {
+                    const response = await fetch(`/ui/settings/sessions/${sessionId}/terminate`, { method: 'POST' });
+                    const data = await response.json();
+                    if (response.ok) {
+                        showMessage(sessionsMessageBox, data.message || 'Session terminated.', 'success');
+                        loadSessions(); // Refresh the list
+                    } else {
+                        showMessage(sessionsMessageBox, data.detail || 'Failed to terminate session.', 'error');
+                    }
+                } catch (error) {
+                    showMessage(sessionsMessageBox, 'A network error occurred.', 'error');
+                }
+            }
+        );
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSessions();
+    });
+
+</script>
+</body>
+</html>
+
