@@ -57,7 +57,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         self.public_fastapi_docs = public_docs
         self.default_public_routes = {
             "/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/reset-password",
-            "/auth/logout", "/auth/verify",
+            "/auth/logout", "/auth/verify", "/mfa/validate-login"
         }
         if public_routes is None:
             self.public_routes = self.default_public_routes_function
@@ -66,8 +66,6 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
 
     def default_public_routes_function(self, request: Request) -> bool:
         if request.url.path in self.default_public_routes:
-            return True
-        elif request.url.path.startswith("/mfa/"):
             return True
         elif request.url.path.startswith("/auth/") and (request.url.path.rstrip("/").endswith("/callback") or request.url.path.endswith("/login")):
             return True
