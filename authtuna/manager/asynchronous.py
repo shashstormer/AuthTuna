@@ -674,18 +674,24 @@ class SessionManager:
             if errors == "ignore": return False
             raise SessionNotFoundError("Session not found.")
 
-    async def terminate_all_for_user(self, user_id: str, ip_address: str, except_session_id: Optional[str] = None):
-        async with self._db_manager.get_db() as db:
+    async def terminate_all_for_user(self, user_id: str, ip_address: str, except_session_id: Optional[str] = None, db: AsyncSession=None):
+        async def _ori(_db: AsyncSession):
             stmt = select(DBSession).where(DBSession.user_id == user_id, DBSession.active == True)
             if except_session_id:
                 stmt = stmt.where(DBSession.session_id != except_session_id)
-            sessions_to_terminate = (await db.execute(stmt)).scalars().all()
+            sessions_to_terminate = (await _db.execute(stmt)).scalars().all()
             for session in sessions_to_terminate:
                 session.active = False
 
             await self._db_manager.log_audit_event(user_id, "SESSIONS_TERMINATED_ALL", ip_address,
-                                                   {"except": except_session_id}, db=db)
-            await db.commit()
+                                                   {"except": except_session_id}, db=_db)
+            await _db.commit()
+        if db:
+            return await _ori(db)
+        else:
+            async with self._db_manager.get_db() as db:
+                return await _ori(db)
+
 
     async def get_all_for_user(self, user_id: str, session_id: str) -> List[DBSession]:
         async with self._db_manager.get_db() as db:
@@ -828,6 +834,25 @@ class AuthTunaAsync:
                 return user, await self.tokens.create(user.id, "mfa_validation", expiry_seconds=300)
             else:
                 return user, await self.sessions.create(user.id, ip_address, region, device)
+
+    async def change_password(self, user: User, current_password: str, new_password: str, ip_address: str, current_session_id: str):
+        """
+        Allows a user to change their password after verifying their current one.
+        Terminates all other active sessions for security.
+        """
+        async with self.db_manager.get_db() as db:
+            # Re-fetch user inside the session to ensure it's attached
+            user_in_session = await db.get(User, user.id)
+            if not user_in_session:
+                raise UserNotFoundError("User not found.")
+
+            password_valid = await user_in_session.check_password(current_password, ip_address, db_manager_custom=self.db_manager, db=db)
+            if not password_valid:
+                raise InvalidCredentialsError("The current password you entered is incorrect.")
+
+            await user_in_session.set_password(new_password, ip_address, db_manager_custom=self.db_manager, db=db)
+            await self.sessions.terminate_all_for_user(user.id, ip_address, except_session_id=current_session_id, db=db)
+            await db.commit()
 
     async def request_password_reset(self, email: str) -> Optional[Token]:
         async with self.db_manager.get_db() as db:

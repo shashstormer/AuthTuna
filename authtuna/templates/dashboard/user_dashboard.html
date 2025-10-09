@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>User Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-gray-800 p-6 flex flex-col justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-white mb-8">AuthTuna</h1>
+            <nav class="space-y-4">
+                <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal text-white rounded-lg bg-gray-700">
+                    <span class="ml-3">Dashboard</span>
+                </a>
+                <a href="{{ url_for('ui_profile') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+                    <span class="ml-3">Profile</span>
+                </a>
+                <a href="{{ url_for('ui_settings') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+                    <span class="ml-3">Settings</span>
+                </a>
+            </nav>
+        </div>
+        <div>
+            <a href="/auth/logout" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+                <span class="ml-3">Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 p-10">
+        <h1 class="text-3xl font-bold text-white">Dashboard</h1>
+        <p class="text-gray-400 mb-8">Welcome back, {{ user.username }}!</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Profile Card -->
+            <a href="{{ url_for('ui_profile') }}" class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 transition-colors">
+                <h2 class="text-xl font-semibold text-white mb-2">My Profile</h2>
+                <p class="text-gray-400">View and update your personal information.</p>
+            </a>
+            <!-- Settings Card -->
+            <a href="{{ url_for('ui_settings') }}" class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 transition-colors">
+                <h2 class="text-xl font-semibold text-white mb-2">Account Settings</h2>
+                <p class="text-gray-400">Manage your password and security settings.</p>
+            </a>
+             <!-- Admin Dashboard Card (if user is admin) -->
+            {% if 'Admin' in user.roles|map(attribute='name') or 'SuperAdmin' in user.roles|map(attribute='name') %}
+            <a href="/admin/dashboard" class="bg-indigo-800 p-6 rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">
+                <h2 class="text-xl font-semibold text-white mb-2">Admin Panel</h2>
+                <p class="text-gray-300">Access the administration dashboard.</p>
+            </a>
+            {% endif %}
+        </div>
+    </main>
+</div>
+
+</body>
+</html>

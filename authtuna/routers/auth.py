@@ -47,10 +47,17 @@ class PasswordUpdate(BaseModel):
 class TokenValidation(BaseModel):
     token: str
 
+
 class RoleInfo(BaseModel):
     """Defines the structure for a user's role and its scope."""
     role_name: str
     scope: str
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
 
 class UserInfoResponse(BaseModel):
     """The complete, secure, and useful user information payload."""
@@ -61,14 +68,6 @@ class UserInfoResponse(BaseModel):
     email_verified: bool
     mfa_enabled: bool
     # roles: List[RoleInfo]
-
-
-@router.get("/signup", response_class=HTMLResponse)
-async def show_signup_page(request: Request):
-    """
-    Render the signup page (HTML form).
-    """
-    return templates.TemplateResponse("signup.html", {"request": request})
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
@@ -108,19 +107,6 @@ async def signup_user(
     except Exception as e:
         logger.error(f"Error during signup: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
-
-
-@router.get("/login", response_class=HTMLResponse)
-async def show_login_page(request: Request):
-    """
-    Render the login page (HTML form), with social login options if enabled.
-    """
-    context = {
-        "request": request,
-        "google_login_enabled": bool(settings.GOOGLE_CLIENT_ID),
-        "github_login_enabled": bool(settings.GITHUB_CLIENT_ID),
-    }
-    return templates.TemplateResponse("login.html", context)
 
 
 @router.post("/login")
@@ -187,14 +173,6 @@ async def logout_user(request: Request, response: Response):
     return {"message": "Logged out successfully."}
 
 
-@router.get("/forgot-password", response_class=HTMLResponse)
-async def show_forgot_password_page(request: Request):
-    """
-    Render the forgot password page (HTML form).
-    """
-    return templates.TemplateResponse("forgot_password.html", {"request": request})
-
-
 @router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
 async def forgot_password(
         request_data: PasswordResetRequest,
@@ -244,53 +222,40 @@ async def reset_password(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
 
 
-@router.get("/verify", response_class=HTMLResponse)
-async def verify_email(
-        token: str,
-        request: Request
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+        password_data: PasswordChange,
+        request: Request,
+        background_tasks: BackgroundTasks,
+        user: User = Depends(get_current_user),
 ):
     """
-    Verify a user's email address using a verification token. Renders a success or error page.
+    Allows an authenticated user to change their own password.
     """
     try:
         ip_address = request.state.user_ip_address
-        await auth_service.verify_email(token, ip_address)
-        return templates.TemplateResponse("verify_email.html", {"request": request})
-    except (InvalidTokenError, TokenExpiredError) as e:
-        return templates.TemplateResponse("error.html", {"request": request, "message": str(e)})
+        session_id = request.state.session_id
+
+        await auth_service.change_password(
+            user=user,
+            current_password=password_data.current_password,
+            new_password=password_data.new_password,
+            ip_address=ip_address,
+            current_session_id=session_id
+        )
+        # Email notification for security
+        await email_manager.send_password_change_email(user.email, background_tasks)
+        return {"message": "Password updated successfully. All other sessions have been logged out."}
+    except InvalidCredentialsError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except Exception as e:
-        logger.error(f"Error during email verification: {e}", exc_info=True)
-        return templates.TemplateResponse("error.html", {"request": request, "message": "An unexpected error occurred."})
+        logger.error(f"Error during password change: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-
-@router.get("/reset-password", response_class=HTMLResponse)
-async def show_reset_page(token: str, request: Request,
-                          # db: AsyncSession = Depends(db_manager.get_db)
-                          ):
-    """
-    Render the reset password page if the token is valid, otherwise show an error page.
-    """
-    async with db_manager.get_db() as db:
-        stmt = select(Token).where(Token.id == token, Token.purpose == "password_reset")
-        result = await db.execute(stmt)
-        token_obj = result.unique().scalar_one_or_none()
-
-        if not token_obj or not token_obj.is_valid():
-            return templates.TemplateResponse("error.html", {"request": request, "message": "Invalid or expired token."})
-        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
-
-
-# @router.api_route("/user-info", methods=["GET", "POST"], response_model=dict[str, str],)
-# async def get_current_user_info(user: User = Depends(get_current_user)):
-#     return {
-#         "email": user.email,
-#         "username": user.username,
-#         "user_id": user.id,
-#     }
 
 @router.api_route("/user-info", methods=["GET", "POST"], response_model=UserInfoResponse)
 async def get_current_user_info(
-    user: User = Depends(get_current_user)
+        user: User = Depends(get_current_user)
 ):
     """
     Returns a comprehensive, secure overview of the currently authenticated user,
@@ -307,3 +272,72 @@ async def get_current_user_info(
         mfa_enabled=user.mfa_enabled,
         # roles=[RoleInfo(**role) for role in roles_with_scope]
     )
+
+
+## UI ROUTES (got mixed up above so moved down)
+
+@router.get("/signup", response_class=HTMLResponse)
+async def show_signup_page(request: Request):
+    """
+    Render the signup page (HTML form).
+    """
+    return templates.TemplateResponse("signup.html", {"request": request})
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def show_login_page(request: Request):
+    """
+    Render the login page (HTML form), with social login options if enabled.
+    """
+    context = {
+        "request": request,
+        "google_login_enabled": bool(settings.GOOGLE_CLIENT_ID),
+        "github_login_enabled": bool(settings.GITHUB_CLIENT_ID),
+    }
+    return templates.TemplateResponse("login.html", context)
+
+
+@router.get("/forgot-password", response_class=HTMLResponse)
+async def show_forgot_password_page(request: Request):
+    """
+    Render the forgot password page (HTML form).
+    """
+    return templates.TemplateResponse("forgot_password.html", {"request": request})
+
+
+@router.get("/verify", response_class=HTMLResponse)
+async def verify_email(
+        token: str,
+        request: Request
+):
+    """
+    Verify a user's email address using a verification token. Renders a success or error page.
+    """
+    try:
+        ip_address = request.state.user_ip_address
+        await auth_service.verify_email(token, ip_address)
+        return templates.TemplateResponse("verify_email.html", {"request": request})
+    except (InvalidTokenError, TokenExpiredError) as e:
+        return templates.TemplateResponse("error.html", {"request": request, "message": str(e)})
+    except Exception as e:
+        logger.error(f"Error during email verification: {e}", exc_info=True)
+        return templates.TemplateResponse("error.html",
+                                          {"request": request, "message": "An unexpected error occurred."})
+
+
+@router.get("/reset-password", response_class=HTMLResponse)
+async def show_reset_page(token: str, request: Request,
+                          # db: AsyncSession = Depends(db_manager.get_db)
+                          ):
+    """
+    Render the reset password page if the token is valid, otherwise show an error page.
+    """
+    async with db_manager.get_db() as db:
+        stmt = select(Token).where(Token.id == token, Token.purpose == "password_reset")
+        result = await db.execute(stmt)
+        token_obj = result.unique().scalar_one_or_none()
+
+        if not token_obj or not token_obj.is_valid():
+            return templates.TemplateResponse("error.html",
+                                              {"request": request, "message": "Invalid or expired token."})
+        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
