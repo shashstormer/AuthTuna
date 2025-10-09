@@ -72,6 +72,8 @@ class Settings(BaseSettings):
 
     EMAIL_TEMPLATE_DIR: str = os.path.join(module_path, "templates/email")
     HTML_TEMPLATE_DIR: str = os.path.join(module_path, "templates/pages")
+    DASHBOARD_AND_USER_INFO_PAGES_TEMPLATE_DIR: str = os.path.join(module_path, "templates/dashboard")
+
     # OAuth settings
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[SecretStr] = None

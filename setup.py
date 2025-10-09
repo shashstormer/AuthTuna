@@ -14,7 +14,7 @@ setup(
     url="https://github.com/shashstormer/authtuna",
     packages=find_packages(),
     package_data={
-        'authtuna': ['templates/email/*.html', 'templates/pages/*.html'],
+        'authtuna': ['templates/email/*.html', 'templates/pages/*.html', 'templates/dashboard/*.html'],
     },
     classifiers=[
         "Development Status :: 4 - Beta",
