@@ -189,7 +189,41 @@
     const passwordMessageBox = document.getElementById('password-message-box');
     passwordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        // ... (password change logic is unchanged)
+        const button = e.target.querySelector('button[type="submit"]');
+        showMessage(passwordMessageBox, '', 'hidden');
+
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+
+        if (newPassword !== confirmPassword) {
+            showMessage(passwordMessageBox, "New passwords do not match.", 'error');
+            return;
+        }
+
+        button.disabled = true;
+
+        try {
+            const response = await fetch('/auth/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                showMessage(passwordMessageBox, data.message || 'Password updated successfully!', 'success');
+                passwordForm.reset();
+            } else {
+                showMessage(passwordMessageBox, data.detail || 'Failed to update password.', 'error');
+            }
+        } catch (error) {
+            showMessage(passwordMessageBox, 'A network error occurred.', 'error');
+        } finally {
+            button.disabled = false;
+        }
     });
 
     // --- Disable MFA ---
@@ -201,7 +235,18 @@
                 'Disable Two-Factor Authentication?',
                 'This will reduce the security of your account. Are you sure you want to proceed?',
                 async () => {
-                    // ... (MFA disabling logic is unchanged)
+                     try {
+                        const response = await fetch('/mfa/disable', { method: 'POST' });
+                        const data = await response.json();
+                        if (response.ok) {
+                            showMessage(mfaMessageBox, data.message || 'MFA disabled successfully! Page will reload.', 'success');
+                            setTimeout(() => window.location.reload(), 2000);
+                        } else {
+                            showMessage(mfaMessageBox, data.detail || 'An error occurred.', 'error');
+                        }
+                    } catch (error) {
+                         showMessage(mfaMessageBox, 'A network error occurred.', 'error');
+                    }
                 }
             );
         });
@@ -213,7 +258,34 @@
     const terminateAllButton = document.getElementById('terminate-all-button');
 
     async function loadSessions() {
-        // ... (load sessions logic is unchanged)
+        try {
+            const response = await fetch('/ui/settings/sessions');
+            if (!response.ok) throw new Error('Failed to load sessions.');
+            const sessions = await response.json();
+
+            if (sessions.length <= 1) { // Only the current session
+                terminateAllButton.style.display = 'none';
+            } else {
+                 terminateAllButton.style.display = 'inline-block';
+            }
+
+            sessionsList.innerHTML = sessions.map(session => `
+                <div class="bg-black/20 p-4 rounded-lg flex items-center justify-between border border-white/10">
+                    <div>
+                        <p class="font-semibold text-white">${session.device}</p>
+                        <p class="text-sm text-gray-400">
+                            ${session.region} &bull; IP: ${session.last_ip}
+                            ${session.is_current ? '<span class="text-green-400 font-semibold ml-2">(Current Session)</span>' : ''}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">Last active: ${new Date(session.mtime * 1000).toLocaleString()}</p>
+                    </div>
+                    ${!session.is_current ? `<button onclick="terminateSession('${session.session_id}')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Terminate</button>` : ''}
+                </div>
+            `).join('');
+
+        } catch (error) {
+            showMessage(sessionsMessageBox, error.message, 'error');
+        }
     }
 
     async function terminateSession(sessionId) {
@@ -221,7 +293,18 @@
             'Terminate Session?',
             'The user will be logged out on this device. Are you sure?',
             async () => {
-                // ... (terminate single session logic is unchanged)
+                try {
+                    const response = await fetch(`/ui/settings/sessions/${sessionId}/terminate`, { method: 'POST' });
+                    const data = await response.json();
+                    if (response.ok) {
+                        showMessage(sessionsMessageBox, data.message || 'Session terminated.', 'success');
+                        loadSessions(); // Refresh the list
+                    } else {
+                        showMessage(sessionsMessageBox, data.detail || 'Failed to terminate session.', 'error');
+                    }
+                } catch (error) {
+                    showMessage(sessionsMessageBox, 'A network error occurred.', 'error');
+                }
             }
         );
     }
