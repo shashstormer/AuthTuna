@@ -88,7 +88,6 @@ async def social_callback(
                 social_account.expires_at = token.get('expires_at')
                 social_account.last_used_at = time.time()
                 await db.commit()
-                # await db.refresh(social_account, attribute_names=['user'])
                 user = social_account.user
             else:
                 user_email = user_info_raw.get('email')
