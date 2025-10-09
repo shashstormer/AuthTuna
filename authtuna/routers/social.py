@@ -77,14 +77,14 @@ async def social_callback(
                 SocialAccount.provider_user_id == str(user_info_raw.get('sub'))
             )
             result = await db.execute(stmt)
-            social_account = await result.unique().scalar_one_or_none()
+            social_account = result.unique().scalar_one_or_none()
 
             if social_account:
+                print(social_account)
                 social_account.access_token = token.get('access_token')
                 social_account.refresh_token = token.get('refresh_token')
                 social_account.expires_at = token.get('expires_at')
                 social_account.last_used_at = time.time()
-                print(social_account)
                 await db.commit()
                 user = social_account.user
             else:
