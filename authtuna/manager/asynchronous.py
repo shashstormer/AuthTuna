@@ -693,9 +693,11 @@ class SessionManager:
                 return await _ori(db)
 
 
-    async def get_all_for_user(self, user_id: str, session_id: str) -> List[DBSession]:
+    async def get_all_for_user(self, user_id: str, session_id: str, only_active=True) -> List[DBSession]:
         async with self._db_manager.get_db() as db:
             stmt = select(DBSession).where(DBSession.user_id == user_id)
+            if only_active:
+                stmt = stmt.where(DBSession.active == True)
             all_sessions = (await db.execute(stmt)).scalars().all()
             for session in all_sessions:
                 if session.session_id == session_id:
