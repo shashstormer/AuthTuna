@@ -20,12 +20,13 @@ __version__ = "0.0.1"
 __author__ = "shashstormer"
 __description__ = "A robust, multi-layered security foundation for modern web applications"
 
+import importlib
+import threading
+
 from fastapi import FastAPI
 
 from .core.config import settings, init_settings
 
-import threading
-import importlib
 
 def _start_rpc_server_bg():
     if not settings.RPC_ENABLED:
@@ -42,14 +43,11 @@ def _start_rpc_server_bg():
         import warnings
         warnings.warn(f"Failed to auto-start RPC server: {e}")
 
+
 if getattr(settings, 'RPC_AUTOSTART', False):
     t = threading.Thread(target=_start_rpc_server_bg, daemon=True)
     t.start()
 
-__all__ = [
-    "settings",
-    "init_settings",
-]
 
 def init_app(app: FastAPI):
     """
@@ -68,3 +66,10 @@ def init_app(app: FastAPI):
     app.include_router(mfa_router)
     app.include_router(admin_router)
     app.include_router(ui_router)
+
+
+__all__ = [
+    "settings",
+    "init_settings",
+    "init_app"
+]
