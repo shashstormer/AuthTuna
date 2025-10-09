@@ -6,6 +6,7 @@ from fastapi import (APIRouter, Request, HTTPException, status,
                      Depends, BackgroundTasks)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from starlette.responses import RedirectResponse
 
 from authtuna.core.config import settings
@@ -72,7 +73,9 @@ async def social_callback(
             else:
                 raise HTTPException(status_code=400, detail=f"Unsupported provider: {provider_name}")
 
-            stmt = select(SocialAccount).where(
+            stmt = select(SocialAccount).options(
+                selectinload(SocialAccount.user)
+            ).where(
                 SocialAccount.provider == provider_name,
                 SocialAccount.provider_user_id == str(user_info_raw.get('sub'))
             )
@@ -85,7 +88,7 @@ async def social_callback(
                 social_account.expires_at = token.get('expires_at')
                 social_account.last_used_at = time.time()
                 await db.commit()
-                await db.refresh(social_account, attribute_names=['user'])
+                # await db.refresh(social_account, attribute_names=['user'])
                 user = social_account.user
             else:
                 user_email = user_info_raw.get('email')
