@@ -130,10 +130,15 @@ async def social_callback(
 
                 await db.commit()
                 await db.refresh(user)
+
+            return_url = request.cookies.get("return_url", "/ui/dashboard")
+
             if user.mfa_enabled:
                 mfa_token = await auth_service.tokens.create(user.id, "mfa_validation", expiry_seconds=300)
                 return RedirectResponse(url=f"/mfa/challenge?mfa_token={mfa_token.id}")
-            redirect_response = RedirectResponse(url="/")
+
+            redirect_response = RedirectResponse(url=return_url)
+            redirect_response.delete_cookie("return_url")
             await create_session_and_set_cookie(user, request, redirect_response, db)
             return redirect_response
 

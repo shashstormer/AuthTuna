@@ -70,7 +70,7 @@
         .light .form-input::placeholder { color: rgba(255, 255, 255, 0.7); }
     </style>
     <script>
-        // Theme toggling logic
+        // Theme toggling logic (original)
         function setTheme(theme) {
             document.documentElement.classList.toggle('dark', theme === 'dark');
             localStorage.setItem('theme', theme);
@@ -162,6 +162,30 @@
         </div>
     </div>
     <script>
+    // --- Cookie Helpers ---
+    function setCookie(name, value, minutes) {
+        let expires = "";
+        if (minutes) {
+            const date = new Date();
+            date.setTime(date.getTime() + (minutes * 60 * 1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+    }
+    function getCookie(name) {
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(';');
+        for(let i=0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+    function deleteCookie(name) {
+        document.cookie = name +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    }
+
     // --- DOM Elements ---
     const passwordForm = document.getElementById('password-form');
     const mfaForm = document.getElementById('mfa-form');
@@ -173,6 +197,17 @@
     const passwordError = document.getElementById('password-error');
     const mfaTokenInput = document.getElementById('mfa-token-input');
     const mfaCodeInput = document.getElementById('mfa-code');
+
+    // --- On Page Load ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // This is separate from the theme logic to avoid conflicts.
+        const urlParams = new URLSearchParams(window.location.search);
+        const returnUrl = urlParams.get('return_url');
+        if (returnUrl) {
+            // Store for 10 minutes
+            setCookie('return_url', returnUrl, 10);
+        }
+    });
 
     // --- Validation Logic ---
     function validateUsernameOrEmail(input) {
@@ -241,7 +276,9 @@
                     switchToMfaStep(data.mfa_token);
                 } else {
                     showMessage(data.message, 'text-green-400');
-                    setTimeout(() => window.location.href = '/', 1500);
+                    const returnUrl = getCookie('return_url');
+                    deleteCookie('return_url');
+                    setTimeout(() => window.location.href = returnUrl || '/ui/dashboard', 1500);
                 }
             } else {
                 showMessage(data.detail || 'Invalid credentials.', 'text-red-400');
@@ -275,7 +312,9 @@
             const data = await response.json();
             if (response.ok) {
                 showMessage(data.message, 'text-green-400');
-                setTimeout(() => window.location.href = '/', 1500);
+                const returnUrl = getCookie('return_url');
+                deleteCookie('return_url');
+                setTimeout(() => window.location.href = returnUrl || '/ui/dashboard', 1500);
             } else {
                 showMessage(data.detail || 'Invalid code.', 'text-red-400');
                 mfaCodeInput.value = '';
@@ -301,4 +340,3 @@
     </script>
 </body>
 </html>
-

@@ -87,6 +87,20 @@
     </div>
 
     <script>
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for(let i=0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0)==' ') c = c.substring(1,c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+            }
+            return null;
+        }
+        function deleteCookie(name) {
+            document.cookie = name +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+        }
+
         const mfaForm = document.getElementById('mfa-challenge-form');
         const messageBox = document.getElementById('message-box');
         const mfaCodeInput = document.getElementById('mfa-code');
@@ -122,7 +136,9 @@
                 const data = await response.json();
                 if (response.ok) {
                     showMessage(data.message, 'text-green-300/90');
-                    setTimeout(() => window.location.href = '/', 2000);
+                    const returnUrl = getCookie('return_url');
+                    deleteCookie('return_url');
+                    setTimeout(() => window.location.href = returnUrl || '/ui/dashboard', 2000);
                 } else {
                     showMessage(data.detail || 'Verification failed.', 'text-red-300/90');
                 }
@@ -141,4 +157,3 @@
     </script>
 </body>
 </html>
-
