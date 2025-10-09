@@ -90,7 +90,6 @@ async def terminate_session(session_id: str, request: Request, user: User = Depe
     """
     Terminates a specific session for the current user.
     """
-    # Security check: Ensure the session belongs to the current user
     session_to_terminate = await auth_service.sessions.get_by_id(session_id)
     if not session_to_terminate or session_to_terminate.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found or does not belong to user.")
@@ -101,3 +100,13 @@ async def terminate_session(session_id: str, request: Request, user: User = Depe
     ip_address = request.state.user_ip_address
     await auth_service.sessions.terminate(session_id, ip_address)
     return {"message": "Session terminated successfully."}
+
+@router.post("/settings/sessions/terminate-all", status_code=status.HTTP_200_OK)
+async def terminate_all_other_sessions(request: Request, user: User = Depends(get_current_user)):
+    """
+    Terminates all active sessions for the current user, except the current one.
+    """
+    current_session_id = request.state.session_id
+    ip_address = request.state.user_ip_address
+    await auth_service.sessions.terminate_all_for_user(user.id, ip_address, except_session_id=current_session_id)
+    return {"message": "All other sessions have been terminated."}

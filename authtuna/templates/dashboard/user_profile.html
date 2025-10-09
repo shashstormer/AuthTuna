@@ -8,8 +8,26 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
           rel="stylesheet">
     <style>
+        :root {
+            --bg-start-dark: hsla(252, 40%, 29%, 1);
+            --bg-end-dark: hsla(270, 77%, 71%, 1);
+        }
         body {
             font-family: 'Poppins', sans-serif;
+            background: linear-gradient(90deg, var(--bg-start-dark), var(--bg-end-dark));
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
+        }
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .bg-card {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
         button:disabled {
             opacity: 0.5;
@@ -21,23 +39,23 @@
 
 <div class="flex min-h-screen">
     <!-- Sidebar -->
-    <aside class="w-64 bg-gray-800 p-6 flex flex-col justify-between">
+    <aside class="w-64 bg-card p-6 flex flex-col justify-between">
         <div>
             <h1 class="text-2xl font-bold text-white mb-8">AuthTuna</h1>
             <nav class="space-y-4">
-                <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+                <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
                     <span class="ml-3">Dashboard</span>
                 </a>
-                <a href="{{ url_for('ui_profile') }}" class="flex items-center p-2 text-base font-normal text-white rounded-lg bg-gray-700">
+                <a href="{{ url_for('ui_profile') }}" class="flex items-center p-2 text-base font-normal text-white rounded-lg bg-white/10">
                     <span class="ml-3">Profile</span>
                 </a>
-                <a href="{{ url_for('ui_settings') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+                <a href="{{ url_for('ui_settings') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
                     <span class="ml-3">Settings</span>
                 </a>
             </nav>
         </div>
         <div>
-            <a href="/auth/logout" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+            <a href="/auth/logout" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
                 <span class="ml-3">Logout</span>
             </a>
         </div>
@@ -48,21 +66,21 @@
         <h1 class="text-3xl font-bold text-white">My Profile</h1>
         <p class="text-gray-400 mb-8">Update your personal details.</p>
 
-        <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-lg">
+        <div class="bg-card p-8 rounded-lg shadow-lg max-w-lg">
             <form id="profile-form">
                 <div class="mb-6">
                     <label for="email" class="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                    <input type="email" id="email" value="{{ user.email }}" disabled class="w-full bg-gray-700 text-gray-400 p-3 rounded-lg border border-gray-600 cursor-not-allowed">
+                    <input type="email" id="email" value="{{ user.email }}" disabled class="w-full bg-black/20 text-gray-400 p-3 rounded-lg border border-white/20 cursor-not-allowed">
                 </div>
                 <div class="mb-6">
                     <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                    <input type="text" id="username" value="{{ user.username }}" required class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="username" value="{{ user.username }}" required class="w-full bg-black/20 text-white p-3 rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
                 <button type="submit" id="save-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
                     Save Changes
                 </button>
             </form>
-            <div id="profile-message-box" class="mt-4 text-center text-sm font-medium hidden"></div>
+            <div id="profile-message-box" class="mt-4 text-center text-sm font-medium"></div>
         </div>
     </main>
 </div>
@@ -71,7 +89,6 @@
     const messageBox = document.getElementById('profile-message-box');
     const saveButton = document.getElementById('save-button');
     const usernameInput = document.getElementById('username');
-
 
     function showMessage(text, type) {
         let colorClass = '';
@@ -103,6 +120,9 @@
 
             if (response.ok) {
                 showMessage(data.message || 'Profile updated successfully!', 'success');
+                 if(data.user && data.user.username) {
+                    usernameInput.value = data.user.username;
+                }
             } else {
                 showMessage(data.detail || 'An error occurred.', 'error');
             }
@@ -111,6 +131,7 @@
         } finally {
             saveButton.disabled = false;
             saveButton.textContent = 'Save Changes';
+            setTimeout(() => showMessage('', 'hidden'), 3000);
         }
     });
 </script>

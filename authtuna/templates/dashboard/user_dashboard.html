@@ -3,13 +3,33 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>User Dashboard</title>
+    <title>Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
           rel="stylesheet">
     <style>
+        :root {
+            --bg-start-light: hsla(202, 71%, 27%, 1);
+            --bg-end-light: hsla(176, 45%, 66%, 1);
+            --bg-start-dark: hsla(252, 40%, 29%, 1);
+            --bg-end-dark: hsla(270, 77%, 71%, 1);
+        }
         body {
             font-family: 'Poppins', sans-serif;
+            background: linear-gradient(90deg, var(--bg-start-dark), var(--bg-end-dark));
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
+        }
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .bg-card {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
     </style>
 </head>
@@ -17,23 +37,23 @@
 
 <div class="flex min-h-screen">
     <!-- Sidebar -->
-    <aside class="w-64 bg-gray-800 p-6 flex flex-col justify-between">
+    <aside class="w-64 bg-card p-6 flex flex-col justify-between">
         <div>
             <h1 class="text-2xl font-bold text-white mb-8">AuthTuna</h1>
             <nav class="space-y-4">
-                <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal text-white rounded-lg bg-gray-700">
+                <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal text-white rounded-lg bg-white/10">
                     <span class="ml-3">Dashboard</span>
                 </a>
-                <a href="{{ url_for('ui_profile') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+                <a href="{{ url_for('ui_profile') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
                     <span class="ml-3">Profile</span>
                 </a>
-                <a href="{{ url_for('ui_settings') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+                <a href="{{ url_for('ui_settings') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
                     <span class="ml-3">Settings</span>
                 </a>
             </nav>
         </div>
         <div>
-            <a href="/auth/logout" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-gray-700">
+            <a href="/auth/logout" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
                 <span class="ml-3">Logout</span>
             </a>
         </div>
@@ -41,30 +61,29 @@
 
     <!-- Main content -->
     <main class="flex-1 p-10">
-        <h1 class="text-3xl font-bold text-white">Dashboard</h1>
-        <p class="text-gray-400 mb-8">Welcome back, {{ user.username }}!</p>
+        <h1 class="text-3xl font-bold text-white">Welcome, {{ user.username }}!</h1>
+        <p class="text-gray-400 mb-8">Here's a quick overview of your account.</p>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Profile Card -->
-            <a href="{{ url_for('ui_profile') }}" class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 transition-colors">
-                <h2 class="text-xl font-semibold text-white mb-2">My Profile</h2>
-                <p class="text-gray-400">View and update your personal information.</p>
-            </a>
-            <!-- Settings Card -->
-            <a href="{{ url_for('ui_settings') }}" class="bg-gray-800 p-6 rounded-lg shadow-lg hover:bg-gray-700 transition-colors">
-                <h2 class="text-xl font-semibold text-white mb-2">Account Settings</h2>
-                <p class="text-gray-400">Manage your password and security settings.</p>
-            </a>
-             <!-- Admin Dashboard Card (if user is admin) -->
-            {% if 'Admin' in user.roles|map(attribute='name') or 'SuperAdmin' in user.roles|map(attribute='name') %}
-            <a href="/admin/dashboard" class="bg-indigo-800 p-6 rounded-lg shadow-lg hover:bg-indigo-700 transition-colors">
-                <h2 class="text-xl font-semibold text-white mb-2">Admin Panel</h2>
-                <p class="text-gray-300">Access the administration dashboard.</p>
-            </a>
-            {% endif %}
+            <div class="bg-card p-6 rounded-lg shadow-lg">
+                <h3 class="font-semibold text-white">Email</h3>
+                <p class="text-gray-300">{{ user.email }}</p>
+            </div>
+            <div class="bg-card p-6 rounded-lg shadow-lg">
+                <h3 class="font-semibold text-white">Account Status</h3>
+                <p class="{{ 'text-green-400' if user.is_active else 'text-red-400' }}">
+                    {{ "Active" if user.is_active else "Inactive" }}
+                </p>
+            </div>
+            <div class="bg-card p-6 rounded-lg shadow-lg">
+                <h3 class="font-semibold text-white">2-Factor Authentication</h3>
+                 <p class="{{ 'text-green-400' if user.mfa_enabled else 'text-yellow-400' }}">
+                    {{ "Enabled" if user.mfa_enabled else "Disabled" }}
+                </p>
+            </div>
         </div>
     </main>
 </div>
-
 </body>
 </html>
+
