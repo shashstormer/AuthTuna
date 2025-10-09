@@ -20,6 +20,8 @@ __version__ = "0.0.1"
 __author__ = "shashstormer"
 __description__ = "A robust, multi-layered security foundation for modern web applications"
 
+from fastapi import FastAPI
+
 from .core.config import settings, init_settings
 
 import threading
@@ -48,3 +50,21 @@ __all__ = [
     "settings",
     "init_settings",
 ]
+
+def init_app(app: FastAPI):
+    """
+    New wrapper to initialize AuthTuna with a FastAPI app instance and all routers.
+    :param app:
+    :return:
+    """
+    from authtuna.routers import admin_router, auth_router, social_router, mfa_router, ui_router
+    from authtuna.middlewares import DatabaseSessionMiddleware
+    from starlette.middleware.sessions import SessionMiddleware
+
+    app.add_middleware(DatabaseSessionMiddleware)
+    app.add_middleware(SessionMiddleware, settings.ENCRYPTION_PRIMARY_KEY.get_secret_value())
+    app.include_router(auth_router)
+    app.include_router(social_router)
+    app.include_router(mfa_router)
+    app.include_router(admin_router)
+    app.include_router(ui_router)
