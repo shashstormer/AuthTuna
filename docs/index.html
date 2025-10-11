@@ -6,6 +6,14 @@
     <title>AuthTuna 🐟 - Asynchronous Security Framework</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Highlight.js for Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Load required language definitions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+
     <style>
         :root {
             --primary: #8b5cf6; /* Indigo-500 */
@@ -118,23 +126,23 @@
         // --- Documentation Content (Simulated Pages) ---
         pages['introduction'] = `
             <h1>AuthTuna 🐟 - High-Performance Async Security</h1>
-            <p class="lead">AuthTuna is a modern, batteries-included authentication and authorization framework for Python, designed specifically for <b>FastAPI</b> applications, but with a framework-agnostic core.</p>
+            <p class="lead">AuthTuna is a modern, batteries-included authentication and authorization framework for Python, designed specifically for **FastAPI** applications, but with a framework-agnostic core.</p>
 
             <h2>Key Features</h2>
             <ul>
                 <li><strong>Async-First:</strong> Built entirely with asynchronous managers and SQLAlchemy 2.0.</li>
                 <li><strong>Robust Sessions:</strong> DB-backed sessions with anti-hijack checks (device/region/IP mismatch).</li>
-                <li><strong>Comprehensive RBAC:</strong> Hierarchical roles, fine-grained <b>Scoped Permissions</b>.</li>
+                <li><strong>Comprehensive RBAC:</strong> Hierarchical roles, fine-grained **Scoped Permissions**.</li>
                 <li><strong>Built-in Flows:</strong> Ready-to-use routers for Login, Signup, MFA, Password Reset, and Social SSO.</li>
                 <li><strong>Auditing:</strong> Logs all critical security events (login, password change, suspension).</li>
             </ul>
 
             <h2>Getting Started (Minimal Setup)</h2>
             <p>Install dependencies and initialize your FastAPI application:</p>
-            <pre><code>pip install authtuna fastapi uvicorn aiosqlite python-dotenv</code></pre>
+            <pre><code class="language-bash">pip install authtuna fastapi uvicorn aiosqlite python-dotenv</code></pre>
 
             <h3>1. Create a minimal .env file</h3>
-            <pre><code># .env
+            <pre><code class="language-bash"># .env
 API_BASE_URL=http://localhost:8000
 # Mandatory encryption keys (rotate periodically!)
 FERNET_KEYS='["YOUR_PRIMARY_KEY", "YOUR_SECONDARY_KEY"]'
@@ -143,7 +151,7 @@ DEFAULT_DATABASE_URI=sqlite+aiosqlite:///./authtuna.db
 </code></pre>
 
             <h3>2. Initialize the App</h3>
-            <pre><code>from fastapi import FastAPI, Depends
+            <pre><code class="language-python">from fastapi import FastAPI, Depends
 from authtuna import init_app
 from authtuna.integrations import get_current_user
 from authtuna.core.database import User
@@ -238,7 +246,7 @@ async def read_user_self(user: User = Depends(get_current_user)):
 
             <h2>UserManager</h2>
             <p>Handles user lifecycle and data management.</p>
-            <pre><code># Example: Suspending a user
+            <pre><code class="language-python"># Example: Suspending a user
 from authtuna.integrations import auth_service
 
 async def suspend(user_id, admin_id):
@@ -252,7 +260,7 @@ async def suspend(user_id, admin_id):
 
             <h2>SessionManager</h2>
             <p>Directly manages database sessions, terminations, and retrieval.</p>
-            <pre><code># Example: Terminate all other sessions for a user
+            <pre><code class="language-python"># Example: Terminate all other sessions for a user
 async def cleanup_sessions(user_id, current_session_id, ip_address):
     await auth_service.sessions.terminate_all_for_user(
         user_id=user_id,
@@ -263,7 +271,7 @@ async def cleanup_sessions(user_id, current_session_id, ip_address):
 
             <h2>MFAManager & TokenManager</h2>
             <p>Handle Multi-Factor Authentication setups (TOTP) and time-limited security tokens (email verification, password reset, MFA validation).</p>
-            <pre><code># Example: Creating a password reset token
+            <pre><code class="language-python"># Example: Creating a password reset token
 token = await auth_service.tokens.create(
     user_id="user_id_abc",
     purpose="password_reset",
@@ -278,7 +286,7 @@ token = await auth_service.tokens.create(
 
             <h2>\`get_current_user\`</h2>
             <p>The standard authentication dependency. Retrieves the complete <code>User</code> object from the database (with roles/permissions pre-loaded once per request) or raises <code>401 Unauthorized</code>.</p>
-            <pre><code>from fastapi import Depends
+            <pre><code class="language-python">from fastapi import Depends
 from authtuna.integrations import get_current_user
 from authtuna.core.database import User
 
@@ -289,7 +297,7 @@ async def get_full_user(user: User = Depends(get_current_user)):
 
             <h2>\`get_current_user_optional\`</h2>
             <p>Used for routes accessible to both authenticated and unauthenticated users (e.g., a public homepage).</p>
-            <pre><code>from typing import Optional
+            <pre><code class="language-python">from typing import Optional
 from authtuna.integrations import get_current_user_optional
 
 @router.get("/")
@@ -301,7 +309,7 @@ async def homepage(user: Optional[User] = Depends(get_current_user_optional)):
 
             <h2>\`get_user_ip\`</h2>
             <p>A simple dependency to retrieve the client's determined IP address from the request state.</p>
-            <pre><code>from authtuna.integrations import get_user_ip
+            <pre><code class="language-python">from authtuna.integrations import get_user_ip
 
 @router.get("/ip")
 async def show_ip(ip: str = Depends(get_user_ip)):
@@ -315,7 +323,7 @@ async def show_ip(ip: str = Depends(get_user_ip)):
 
             <h2>\`RoleChecker\` (Simple Role Enforcement)</h2>
             <p>Enforces that the user has all specified roles. Raises <code>403 Forbidden</code> if roles are missing.</p>
-            <pre><code>from authtuna.integrations import RoleChecker
+            <pre><code class="language-python">from authtuna.integrations import RoleChecker
 
 # Requires BOTH 'Admin' AND 'Moderator' roles
 @router.delete("/content/{id}", dependencies=[Depends(RoleChecker("Admin", "Moderator"))])
@@ -327,14 +335,14 @@ async def delete_content():
             <p>The most flexible authorization dependency. Checks for a named permission and supports scoping based on URL parameters.</p>
 
             <h3>1. Basic Permission Check (Global)</h3>
-            <pre><code>@router.get("/analytics", dependencies=[Depends(PermissionChecker("data:view:analytics"))])
+            <pre><code class="language-python">@router.get("/analytics", dependencies=[Depends(PermissionChecker("data:view:analytics"))])
 async def get_analytics():
     return {"data": "viewing allowed"}
 </code></pre>
 
             <h3>2. Scoped Permission Check (Context-Aware)</h3>
             <p>The <code>scope_from_path</code> parameter automatically constructs the scope string (e.g., <code>project:456</code>) and checks only permissions valid in that scope OR the <code>global</code> scope.</p>
-            <pre><code>@router.patch("/project/{project_id}/settings")
+            <pre><code class="language-python">@router.patch("/project/{project_id}/settings")
 async def update_project(
     project_id: str,
     # Checks for permission "project:write:settings" in scope "project:{project_id}"
@@ -372,7 +380,7 @@ async def update_project(
 
             <h3>1. Permission Creation and Management</h3>
             <p>The <code>PermissionManager</code> handles the creation and management of permissions.</p>
-            <pre><code>from authtuna.integrations import auth_service
+            <pre><code class="language-python">from authtuna.integrations import auth_service
 from authtuna.manager.asynchronous import PermissionManager
 
 # Create a new permission (Perm Creation)
@@ -390,7 +398,7 @@ perm, created = await auth_service.permissions.get_or_create("data:view:summary"
 
             <h3>2. Role Creation and Management</h3>
             <p>The <code>RoleManager</code> handles core role definition.</p>
-            <pre><code>from authtuna.manager.asynchronous import RoleManager
+            <pre><code class="language-python">from authtuna.manager.asynchronous import RoleManager
 
 # Role Creation
 new_role = await auth_service.roles.create(
@@ -409,7 +417,7 @@ await auth_service.roles.add_permission_to_role(
 
             <h3>3. Managing Assignment Grants (The Core of Role Management)</h3>
             <p>The <code>grant_relationship</code> method is crucial for configuring explicit authorization rules (Rule 3).</p>
-            <pre><code>from authtuna.manager.asynchronous import RoleManager, PermissionManager
+            <pre><code class="language-python">from authtuna.manager.asynchronous import RoleManager, PermissionManager
 
 # Grant Role Assignment (AssignerRole -> AssignableRole)
 # 'can_assign_roles' enables Rule #3 for role management checks.
@@ -431,7 +439,7 @@ await auth_service.roles.grant_relationship(
 
             <h3>4. Assigning Users to Roles</h3>
             <p>This central operation triggers the three-part authorization check to ensure the <code>assigner_id</code> is authorized.</p>
-            <pre><code># Add/Assign Users to a Role
+            <pre><code class="language-python"># Add/Assign Users to a Role
 await auth_service.roles.assign_to_user(
     user_id="user-12345",
     role_name="VIP",
@@ -527,7 +535,7 @@ await auth_service.roles.assign_to_user(
 
             <h2>Social Login (\`/auth/{provider}\`)</h2>
             <p>If configured, the <code>social_router</code> handles OAuth2/OIDC flows for providers like Google and GitHub, automatically linking or creating user accounts.</p>
-            <pre><code># Example: Google Login
+            <pre><code class="language-python"># Example: Google Login
 /auth/google/login
 /auth/google/callback
 </code></pre>
@@ -565,7 +573,10 @@ await auth_service.roles.assign_to_user(
             // 1. Update Content
             contentDiv.innerHTML = pages[pageId] || `<h1>404</h1><p>Documentation page not found for "\${pageId}".</p>`;
 
-            // 2. Update Active Class
+            // 2. Run Syntax Highlighting
+            hljs.highlightAll();
+
+            // 3. Update Active Class
             navLinks.forEach(link => {
                 link.classList.remove('bg-indigo-600', 'text-white', 'font-semibold');
                 link.classList.add('text-gray-300');
@@ -575,10 +586,10 @@ await auth_service.roles.assign_to_user(
                 }
             });
 
-            // 3. Update URL Hash
+            // 4. Update URL Hash
             history.pushState(null, null, '#' + pageId);
 
-            // 4. Scroll to top on new page load
+            // 5. Scroll to top on new page load
             document.querySelector('.doc-content-area').scrollTop = 0;
         }
 
