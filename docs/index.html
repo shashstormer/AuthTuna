@@ -118,13 +118,13 @@
         // --- Documentation Content (Simulated Pages) ---
         pages['introduction'] = `
             <h1>AuthTuna 🐟 - High-Performance Async Security</h1>
-            <p class="lead">AuthTuna is a modern, batteries-included authentication and authorization framework for Python, designed specifically for **FastAPI** applications, but with a framework-agnostic core.</p>
+            <p class="lead">AuthTuna is a modern, batteries-included authentication and authorization framework for Python, designed specifically for <b>FastAPI</b> applications, but with a framework-agnostic core.</p>
 
             <h2>Key Features</h2>
             <ul>
                 <li><strong>Async-First:</strong> Built entirely with asynchronous managers and SQLAlchemy 2.0.</li>
                 <li><strong>Robust Sessions:</strong> DB-backed sessions with anti-hijack checks (device/region/IP mismatch).</li>
-                <li><strong>Comprehensive RBAC:</strong> Hierarchical roles, fine-grained **Scoped Permissions**.</li>
+                <li><strong>Comprehensive RBAC:</strong> Hierarchical roles, fine-grained <b>Scoped Permissions</b>.</li>
                 <li><strong>Built-in Flows:</strong> Ready-to-use routers for Login, Signup, MFA, Password Reset, and Social SSO.</li>
                 <li><strong>Auditing:</strong> Logs all critical security events (login, password change, suspension).</li>
             </ul>
@@ -348,22 +348,22 @@ async def update_project(
             <h1>RBAC Management (Admin API)</h1>
             <p>The <code>auth_service</code> exposes powerful asynchronous methods in its <code>roles</code> and <code>permissions</code> managers for administrative control over the RBAC system.</p>
             <p class="p-3 bg-red-900/50 rounded-lg">
-                <strong>NOTE:</strong> The built-in Admin routes are currently subject to change. For stable, custom administration and integration with your application logic, it is highly recommended to use the core **Service Manager methods** (<code>auth_service.roles</code> and <code>auth_service.permissions</code>) directly.
+                <strong>NOTE:</strong> The built-in Admin routes are currently subject to change. For stable, custom administration and integration with your application logic, it is highly recommended to use the core <b>Service Manager methods</b> (<code>auth_service.roles</code> and <code>auth_service.permissions</code>) directly.
             </p>
 
             <h2>Authorization for Management</h2>
             <p>AuthTuna uses a hybrid model combining hierarchy and explicit grants for managing roles. Management operations (like role/permission creation and user assignment) are controlled by three authorization rules, checked in order:</p>
             <ol class="list-decimal pl-6 space-y-2">
                 <li><strong>Specific Permission Override:</strong> Does the administrator have a permission like <code>roles:assign:SomeRole</code>?</li>
-                <li><strong>Role Hierarchy:</strong> Does the administrator's **highest role level** exceed the target role's **level**? (e.g., Admin level 90 can assign Moderator level 50).</li>
+                <li><strong>Role Hierarchy:</strong> Does the administrator's <b>highest role level</b> exceed the target role's <b>level</b>? (e.g., Admin level 90 can assign Moderator level 50).</li>
                 <li><strong>Explicit Role Grant:</strong> Is the administrator's role explicitly granted permission to assign the target role (managed via <code>/admin/roles/grants/assign-role</code>)?</li>
             </ol>
             <p class="mt-4 p-3 bg-indigo-900/50 rounded-lg">
                 <strong>Role Level Configuration:</strong>
                 <ul>
-                    <li>Set a role's <code>level</code> to a positive integer to enable **Hierarchical** authorization (Rule 2).</li>
-                    <li>Set a role's <code>level</code> to **0** if you want the "system" default user to be able to assign it without explicit grants, but restrict human admins to using **Explicit Grants** (Rule 3).</li>
-                    <li>Set a role's <code>level</code> to **None** (the default) to use a pure **Explicit Grant-based system** (Rule 3) only, requiring explicit grants for *all* assigners.</li>
+                    <li>Set a role's <code>level</code> to a positive integer to enable <b>Hierarchical</b> authorization (Rule 2).</li>
+                    <li>Set a role's <code>level</code> to <b>0</b> if you want the "system" default user to be able to assign it without explicit grants, but restrict human admins to using <b>Explicit Grants</b> (Rule 3).</li>
+                    <li>Set a role's <code>level</code> to <b>None</b> (the default) to use a pure <b>Explicit Grant-based system</b> (Rule 3) only, requiring explicit grants for *all* assigners.</li>
                 </ul>
             </p>
 
@@ -445,7 +445,7 @@ await auth_service.roles.assign_to_user(
 
             <h3 class="mt-8">Important Default User Security Note</h3>
             <p class="p-3 bg-red-900/50 rounded-lg">
-                The <code>superadmin</code> and <code>admin</code> users are created **without a usable password** by default, so they cannot be logged into unless <code>DEFAULT_SUPERADMIN_PASSWORD</code> or <code>DEFAULT_ADMIN_PASSWORD</code> were explicitly configured in the <code>.env</code> file **before the first database initialization**. If configuration is missed, you must set the password directly via the Admin UI or programmatically using <code>auth_service.users.set_password()</code>.
+                The <code>superadmin</code> and <code>admin</code> users are created <b>without a usable password</b> by default, so they cannot be logged into unless <code>DEFAULT_SUPERADMIN_PASSWORD</code> or <code>DEFAULT_ADMIN_PASSWORD</code> were explicitly configured in the <code>.env</code> file <b>before the first database initialization</b>. If configuration is missed, you must set the password directly via the Admin UI or programmatically using <code>auth_service.users.set_password()</code>.
             </p>
 
             <div class="overflow-x-auto">
@@ -468,7 +468,7 @@ await auth_service.roles.assign_to_user(
             </div>
 
             <h3 class="mt-8">Default Users</h3>
-            <p>Three default users are created. The **system** user is an internal utility account and cannot be logged into by humans.</p>
+            <p>Three default users are created. The <b>system</b> user is an internal utility account and cannot be logged into by humans.</p>
             <ul>
                 <li><strong>system:</strong> Internal ID: <code>system</code>. Used for audit logging and initial role assignments. Due to its high level (999), it can be used for automated role assignments without requiring explicit grants (if the role being assigned has a level < 999).</li>
                 <li><strong>superadmin:</strong> Default Email: <code>settings.DEFAULT_SUPERADMIN_EMAIL</code>. Assigned <code>SuperAdmin</code> role.</li>
@@ -546,9 +546,9 @@ await auth_service.roles.assign_to_user(
                     <ul>
                         <li>Fetches the full session record from the database.</li>
                         <li>Verifies the session is active and not expired.</li>
-                        <li>Checks for **Session Hijack** (mismatch in Region, Device, or Random String). If detected, session is **invalidated**.</li>
+                        <li>Checks for <b>Session Hijack</b> (mismatch in Region, Device, or Random String). If detected, session is <b>invalidated</b>.</li>
                         <li>Updates the session's <code>last_ip</code> and <code>mtime</code>.</li>
-                        <li>**Rotates** the <code>random_string</code> in the DB for the next request.</li>
+                        <li><b>Rotates</b> the <code>random_string</code> in the DB for the next request.</li>
                     </ul>
                 </li>
                 <li>Sets <code>request.state.user_id</code>, <code>request.state.session_id</code>, and <code>request.state.user_ip_address</code> for use by dependencies.</li>
