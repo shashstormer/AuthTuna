@@ -50,7 +50,8 @@ setup(
         "starlette>=0.27.0",
         "Jinja2>=3.0.0",
         "httpx",
-        "itsdangerous"
+        "itsdangerous",
+        "uvicorn",
     ],
     extras_require={
         "dev": [
@@ -63,6 +64,7 @@ setup(
             "httpx>=0.28.1",
             "pytest-cov",
             "pillow",
+            "uvicorn",
         ],
     },
     include_package_data=True,
