@@ -49,6 +49,8 @@ setup(
         "fastapi>=0.100.0",
         "starlette>=0.27.0",
         "Jinja2>=3.0.0",
+        "httpx>=2.2.0",
+        "itsdangerous>=0.28.1"
     ],
     extras_require={
         "dev": [

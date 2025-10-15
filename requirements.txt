@@ -23,3 +23,5 @@ Authlib>=1.6.4
 aiosqlite>=0.19.0
 protobuf>=4.25.8 # not directly required, pinned by Snyk to avoid a vulnerability
 setuptools>=78.1.1 # not directly required, pinned by Snyk to avoid a vulnerability
+itsdangerous
+httpx
