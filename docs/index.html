@@ -179,6 +179,7 @@ async def read_user_self(user: User = Depends(get_current_user)):
 
         pages['configuration'] = `
             <h1>Configuration (\`Settings\` Reference)</h1>
+            <h2>CHECK THE README.MD for more env vars you want to set before pushing to prod. I will be enhancing docs later but for now readme.md, Thanks for understanding.</h2>
             <p>AuthTuna uses Pydantic settings, loading configuration from environment variables or a <code>.env</code> file. Secrets use <code>SecretStr</code> to prevent accidental logging.</p>
 
             <h2>Critical & Database Settings</h2>
