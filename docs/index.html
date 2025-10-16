@@ -170,9 +170,15 @@ app = FastAPI(title="AuthTuna Demo API")
 # This single function adds all middleware and routers
 init_app(app)
 
-@app.get("/me")
-async def read_user_self(user: User = Depends(get_current_user)):
-    return {"username": user.username, "mfa_enabled": user.mfa_enabled}
+@app.get("/", tags=["Root"],)
+async def root(user=Depends(get_current_user_optional)):
+    """
+    Automatically redirects to login page if not authenticated, else redirects to the dashboard.
+    """
+    if user is None:
+        return RedirectResponse("/auth/login")
+    return RedirectResponse("/ui/dashboard")
+
 </code></pre>
             <p>After running your app, you can access the built-in UI at <a href="/ui/dashboard">/ui/dashboard</a> and authentication forms at <a href="/auth/login">/auth/login</a>.</p>
         `;
