@@ -7,10 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Highlight.js for Syntax Highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <!-- Load required language definitions -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
 
@@ -28,7 +26,7 @@
         .doc-content-area::-webkit-scrollbar-track { background: #1f2937; }
 
         /* Prose styling equivalent for generated content */
-        .prose h1, .prose h2, .prose h3 {
+        .prose h1, .prose h2, .prose h3, .prose h4 {
             color: #f3f4f6; /* White */
             margin-top: 2rem;
             margin-bottom: 1rem;
@@ -36,8 +34,11 @@
         .prose h1 { font-size: 2.5rem; font-weight: 800; }
         .prose h2 { font-size: 1.75rem; font-weight: 700; border-bottom: 1px solid #374151; padding-bottom: 0.5rem; }
         .prose h3 { font-size: 1.25rem; font-weight: 600; }
+        .prose h4 { font-size: 1.1rem; font-weight: 600; color: #a5b4fc; }
         .prose p, .prose li { color: #d1d5db; line-height: 1.7; }
-        .prose ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
+        .prose ul, .prose ol { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
+        .prose a { color: #a5b4fc; text-decoration: none; }
+        .prose a:hover { text-decoration: underline; }
         .prose code {
             background-color: #1f2937; /* Gray-800 */
             padding: 0.2rem 0.4rem;
@@ -60,17 +61,18 @@
             padding: 0;
             font-size: 1rem;
         }
+        .prose table { width: 100%; }
+        .prose th { background-color: #1f2937; }
     </style>
 </head>
 <body class="text-gray-200">
 
     <div class="flex h-screen overflow-hidden">
 
-        <!-- Sidebar Navigation -->
-        <nav id="sidebar" class="w-64 bg-gray-900 p-6 border-r border-gray-800 flex-shrink-0 overflow-y-auto">
+        <nav id="sidebar" class="w-64 bg-gray-900 p-6 border-r border-gray-800 flex-shrink-0 overflow-y-auto absolute md:relative transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out z-30">
             <div class="sticky top-0 pb-6 bg-gray-900 z-10">
                 <h1 class="text-3xl font-extrabold text-indigo-400">AuthTuna 🐟</h1>
-                <p class="text-sm text-gray-500 mt-1">v0.1.x Docs</p>
+                <p class="text-sm text-gray-500 mt-1">v0.1.8 Docs</p>
             </div>
 
             <div class="space-y-2">
@@ -92,8 +94,8 @@
                 <a href="#permission-dependencies" onclick="navigate('permission-dependencies')" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800" data-page="permission-dependencies">
                     Role & Permission Checks
                 </a>
-                <a href="#rbac-management" onclick="navigate('rbac-management')" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800" data-page="rbac-management">
-                    RBAC Management (Admin API)
+                 <a href="#rbac-management" onclick="navigate('rbac-management')" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800" data-page="rbac-management">
+                    RBAC Management
                 </a>
 
                 <h2 class="text-lg font-semibold text-gray-400 mt-6 mb-2 uppercase tracking-wider">Built-in Features</h2>
@@ -106,15 +108,21 @@
                 <a href="#middleware-session" onclick="navigate('middleware-session')" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800" data-page="middleware-session">
                     Middleware & Session Mgmt
                 </a>
+                 <a href="#ui-dashboard" onclick="navigate('ui-dashboard')" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800" data-page="ui-dashboard">
+                    UI Dashboard
+                </a>
 
             </div>
         </nav>
 
-        <!-- Main Content Area -->
+        <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
+
         <main class="flex-1 overflow-y-auto p-8 lg:p-12 doc-content-area">
+             <button id="menu-button" class="md:hidden fixed top-4 right-4 bg-gray-800 p-2 rounded-lg z-40">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
             <div id="content" class="prose max-w-4xl mx-auto">
-                <!-- Content will be injected here -->
-            </div>
+                </div>
         </main>
     </div>
 
@@ -132,37 +140,41 @@
             <ul>
                 <li><strong>Async-First:</strong> Built entirely with asynchronous managers and SQLAlchemy 2.0.</li>
                 <li><strong>Robust Sessions:</strong> DB-backed sessions with anti-hijack checks (device/region/IP mismatch).</li>
-                <li><strong>Comprehensive RBAC:</strong> Hierarchical roles, fine-grained **Scoped Permissions**.</li>
+                <li><strong>Comprehensive RBAC:</strong> Hierarchical roles and fine-grained **Scoped Permissions**.</li>
                 <li><strong>Built-in Flows:</strong> Ready-to-use routers for Login, Signup, MFA, Password Reset, and Social SSO.</li>
                 <li><strong>Auditing:</strong> Logs all critical security events (login, password change, suspension).</li>
+                <li><strong>UI Components:</strong> Includes pre-built HTML templates for login, user dashboard, settings, and admin pages.</li>
             </ul>
 
             <h2>Getting Started (Minimal Setup)</h2>
             <p>Install dependencies and initialize your FastAPI application:</p>
-            <pre><code class="language-bash">pip install authtuna fastapi uvicorn aiosqlite python-dotenv</code></pre>
+            <pre><code class="language-bash">pip install authtuna</code></pre>
 
-            <h3>1. Create a minimal .env file</h3>
+            <h4>1. Create a minimal .env file</h4>
             <pre><code class="language-bash"># .env
 API_BASE_URL=http://localhost:8000
-# Mandatory encryption keys (rotate periodically!)
+# Mandatory encryption keys (generate with Fernet.generate_key().decode())
 FERNET_KEYS='["YOUR_PRIMARY_KEY", "YOUR_SECONDARY_KEY"]'
 JWT_SECRET_KEY="a-strong-jwt-secret"
 DEFAULT_DATABASE_URI=sqlite+aiosqlite:///./authtuna.db
 </code></pre>
 
-            <h3>2. Initialize the App</h3>
+            <h4>2. Initialize the App</h4>
             <pre><code class="language-python">from fastapi import FastAPI, Depends
 from authtuna import init_app
 from authtuna.integrations import get_current_user
 from authtuna.core.database import User
 
 app = FastAPI(title="AuthTuna Demo API")
-init_app(app) # Adds middleware and all routers
+
+# This single function adds all middleware and routers
+init_app(app)
 
 @app.get("/me")
 async def read_user_self(user: User = Depends(get_current_user)):
     return {"username": user.username, "mfa_enabled": user.mfa_enabled}
 </code></pre>
+            <p>After running your app, you can access the built-in UI at <a href="/ui/dashboard">/ui/dashboard</a> and authentication forms at <a href="/auth/login">/auth/login</a>.</p>
         `;
 
         pages['configuration'] = `
@@ -175,65 +187,51 @@ async def read_user_self(user: User = Depends(get_current_user)):
                     <thead class="text-xs uppercase bg-gray-800 text-gray-300">
                         <tr>
                             <th scope="col" class="py-3 px-6">Variable</th>
-                            <th scope="col" class="py-3 px-6">Default</th>
                             <th scope="col" class="py-3 px-6">Description</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr class="bg-gray-900 border-b border-gray-800">
                             <th scope="row" class="py-4 px-6 font-medium whitespace-nowrap text-white">API_BASE_URL</th>
-                            <td class="py-4 px-6">Required</td>
-                            <td class="py-4 px-6">Base URL for generating email links and OAuth redirects.</td>
+                            <td class="py-4 px-6">Base URL for generating email links and OAuth redirects. (Required)</td>
                         </tr>
                         <tr class="bg-gray-900 border-b border-gray-800">
                             <th scope="row" class="py-4 px-6 font-medium whitespace-nowrap text-white">FERNET_KEYS</th>
-                            <td class="py-4 px-6">Required</td>
-                            <td class="py-4 px-6">Comma-separated list of base64 keys for session/sensitive data encryption (supports rotation).</td>
+                            <td class="py-4 px-6">List of base64 keys for session encryption. The first is for encryption, others for decryption during rotation. (Required)</td>
                         </tr>
                         <tr class="bg-gray-900 border-b border-gray-800">
                             <th scope="row" class="py-4 px-6 font-medium whitespace-nowrap text-white">DEFAULT_DATABASE_URI</th>
-                            <td class="py-4 px-6">sqlite+aiosqlite:///./authtuna_dev.db</td>
-                            <td class="py-4 px-6">Async SQLAlchemy connection string.</td>
+                            <td class="py-4 px-6">Async SQLAlchemy connection string. Defaults to <code>sqlite+aiosqlite:///./authtuna_dev.db</code>.</td>
                         </tr>
                         <tr class="bg-gray-900 border-b border-gray-800">
                             <th scope="row" class="py-4 px-6 font-medium whitespace-nowrap text-white">AUTO_CREATE_DATABASE</th>
-                            <td class="py-4 px-6">True</td>
-                            <td class="py-4 px-6">Creates tables and provisions default roles/users on startup.</td>
+                            <td class="py-4 px-6">If <code>True</code>, creates tables and provisions default roles/users on startup. Defaults to <code>True</code>.</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
             <h2>Session & Security Settings</h2>
-            <div class="overflow-x-auto">
+             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-400 rounded-lg">
-                    <thead class="text-xs uppercase bg-gray-800 text-gray-300">
+                     <thead class="text-xs uppercase bg-gray-800 text-gray-300">
                         <tr>
                             <th scope="col" class="py-3 px-6">Variable</th>
-                            <th scope="col" class="py-3 px-6">Default</th>
                             <th scope="col" class="py-3 px-6">Description</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr class="bg-gray-900 border-b border-gray-800">
-                            <th scope="row" class="py-4 px-6 font-medium whitespace-nowrap text-white">SESSION_LIFETIME_SECONDS</th>
-                            <td class="py-4 px-6">604800 (7 days)</td>
-                            <td class="py-4 px-6">Time until session times out from inactivity.</td>
+                            <th scope="row" class="py-4 px-6 font-medium whitespace-nowrap text-white">SESSION_DB_VERIFICATION_INTERVAL</th>
+                            <td class="py-4 px-6">Seconds between database re-checks for a session's validity. Defaults to <code>10</code>.</td>
                         </tr>
                         <tr class="bg-gray-900 border-b border-gray-800">
-                            <th scope="row" class="py-4 px-6 font-medium whitespace-nowrap text-white">SESSION_ABSOLUTE_LIFETIME_SECONDS</th>
-                            <td class="py-4 px-6">31536000 (1 year)</td>
-                            <td class="py-4 px-6">Absolute maximum session duration.</td>
+                            <th scope="row" class="py-4 px-6 font-medium whitespace-nowrap text-white">SESSION_LIFETIME_SECONDS</th>
+                            <td class="py-4 px-6">Time until session times out from inactivity. Defaults to 7 days.</td>
                         </tr>
                         <tr class="bg-gray-900 border-b border-gray-800">
                             <th scope="row" class="py-4 px-6 font-medium whitespace-nowrap text-white">STRATEGY</th>
-                            <td class="py-4 px-6">COOKIE</td>
-                            <td class="py-4 px-6">Authentication mechanism: <code>COOKIE</code> or <code>BEARER</code>.</td>
-                        </tr>
-                         <tr class="bg-gray-900 border-b border-gray-800">
-                            <th scope="row" class="py-4 px-6 font-medium whitespace-nowrap text-white">FINGERPRINT_HEADERS</th>
-                            <td class="py-4 px-6">["User-Agent", "Accept-Language"]</td>
-                            <td class="py-4 px-6">Headers used by the middleware to detect session hijacking.</td>
+                            <td class="py-4 px-6">Authentication mechanism: <code>COOKIE</code> (default) or <code>BEARER</code>. Curr it dosent return the Token in bearer so if cookie accessible in app then you can use it, will be returning soon after implementing and testing.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -242,9 +240,9 @@ async def read_user_self(user: User = Depends(get_current_user)):
 
         pages['core-managers'] = `
             <h1>Core Service Layer (\`AuthTunaAsync\`)</h1>
-            <p>The entire library core is exposed through asynchronous manager classes found in <code>authtuna.manager.asynchronous.py</code>. The main entry point is the <code>auth_service</code> instance from the FastAPI integration.</p>
+            <p>The entire library core is exposed through asynchronous manager classes. The main entry point is the <code>auth_service</code> instance from <code>authtuna.integrations</code>.</p>
 
-            <h2>UserManager</h2>
+            <h4>UserManager</h4>
             <p>Handles user lifecycle and data management.</p>
             <pre><code class="language-python"># Example: Suspending a user
 from authtuna.integrations import auth_service
@@ -255,10 +253,10 @@ async def suspend(user_id, admin_id):
         admin_id=admin_id,
         reason="Violated ToS"
     )
-    return suspended_user.is_active # Should be False
+    return suspended_user.is_active # Returns False
 </code></pre>
 
-            <h2>SessionManager</h2>
+            <h4>SessionManager</h4>
             <p>Directly manages database sessions, terminations, and retrieval.</p>
             <pre><code class="language-python"># Example: Terminate all other sessions for a user
 async def cleanup_sessions(user_id, current_session_id, ip_address):
@@ -269,83 +267,60 @@ async def cleanup_sessions(user_id, current_session_id, ip_address):
     )
 </code></pre>
 
-            <h2>MFAManager & TokenManager</h2>
-            <p>Handle Multi-Factor Authentication setups (TOTP) and time-limited security tokens (email verification, password reset, MFA validation).</p>
-            <pre><code class="language-python"># Example: Creating a password reset token
-token = await auth_service.tokens.create(
-    user_id="user_id_abc",
-    purpose="password_reset",
-    expiry_seconds=3600
-)
-</code></pre>
+            <h4>RoleManager & PermissionManager</h4>
+            <p>Manages the RBAC system, including creating roles/permissions and assigning them. See the <a href="#rbac-management" onclick="navigate('rbac-management')">RBAC Management</a> section for details.</p>
         `;
 
         pages['dependencies'] = `
             <h1>FastAPI Integration: Dependencies</h1>
-            <p>AuthTuna provides powerful FastAPI dependencies to handle authentication and authorization efficiently, relying on the middleware to inject session details into <code>request.state</code>.</p>
+            <p>AuthTuna provides powerful FastAPI dependencies to handle authentication and authorization efficiently.</p>
 
-            <h2>\`get_current_user\`</h2>
-            <p>The standard authentication dependency. Retrieves the complete <code>User</code> object from the database (with roles/permissions pre-loaded once per request) or raises <code>401 Unauthorized</code>.</p>
+            <h4>\`get_current_user\`</h4>
+            <p>The standard authentication dependency. It retrieves the complete <code>User</code> object from the database or raises a <code>401 Unauthorized</code> error.</p>
             <pre><code class="language-python">from fastapi import Depends
 from authtuna.integrations import get_current_user
 from authtuna.core.database import User
 
-@router.get("/profile/full")
-async def get_full_user(user: User = Depends(get_current_user)):
-    return {"username": user.username, "roles": user.roles}
+@app.get("/profile")
+async def get_my_profile(user: User = Depends(get_current_user)):
+    return {"username": user.username, "roles": [r.name for r in user.roles]}
 </code></pre>
 
-            <h2>\`get_current_user_optional\`</h2>
-            <p>Used for routes accessible to both authenticated and unauthenticated users (e.g., a public homepage).</p>
+            <h4>\`get_current_user_optional\`</h4>
+            <p>Used for routes accessible to both authenticated and unauthenticated users. Returns <code>User</code> or <code>None</code>.</p>
             <pre><code class="language-python">from typing import Optional
 from authtuna.integrations import get_current_user_optional
 
-@router.get("/")
+@app.get("/")
 async def homepage(user: Optional[User] = Depends(get_current_user_optional)):
     if user:
         return f"Hello, {user.username}"
     return "Hello, Guest"
 </code></pre>
-
-            <h2>\`get_user_ip\`</h2>
-            <p>A simple dependency to retrieve the client's determined IP address from the request state.</p>
-            <pre><code class="language-python">from authtuna.integrations import get_user_ip
-
-@router.get("/ip")
-async def show_ip(ip: str = Depends(get_user_ip)):
-    return {"ip_address": ip}
-</code></pre>
         `;
 
         pages['permission-dependencies'] = `
             <h1>Role & Permission Checks</h1>
-            <p>The AuthTuna RBAC system supports role hierarchy, explicit role-to-role assignment permissions, and fine-grained permissions attached to roles.</p>
+            <p>Protect your endpoints by requiring specific roles or fine-grained permissions.</p>
 
-            <h2>\`RoleChecker\` (Simple Role Enforcement)</h2>
-            <p>Enforces that the user has all specified roles. Raises <code>403 Forbidden</code> if roles are missing.</p>
+            <h4>\`RoleChecker\`</h4>
+            <p>Enforces that the user has all specified roles. Raises <code>403 Forbidden</code> if any role is missing.</p>
             <pre><code class="language-python">from authtuna.integrations import RoleChecker
 
 # Requires BOTH 'Admin' AND 'Moderator' roles
-@router.delete("/content/{id}", dependencies=[Depends(RoleChecker("Admin", "Moderator"))])
+@app.delete("/content/{id}", dependencies=[Depends(RoleChecker("Admin", "Moderator"))])
 async def delete_content():
     return {"status": "Deletion authorized"}
 </code></pre>
 
-            <h2>\`PermissionChecker\` (Scoped Authorization)</h2>
-            <p>The most flexible authorization dependency. Checks for a named permission and supports scoping based on URL parameters.</p>
+            <h4>\`PermissionChecker\` (Scoped Authorization)</h4>
+            <p>The most flexible dependency. It checks for a named permission and supports scoping based on URL parameters.</p>
 
-            <h3>1. Basic Permission Check (Global)</h3>
-            <pre><code class="language-python">@router.get("/analytics", dependencies=[Depends(PermissionChecker("data:view:analytics"))])
-async def get_analytics():
-    return {"data": "viewing allowed"}
-</code></pre>
-
-            <h3>2. Scoped Permission Check (Context-Aware)</h3>
-            <p>The <code>scope_from_path</code> parameter automatically constructs the scope string (e.g., <code>project:456</code>) and checks only permissions valid in that scope OR the <code>global</code> scope.</p>
-            <pre><code class="language-python">@router.patch("/project/{project_id}/settings")
+            <p>The <code>scope_from_path</code> parameter automatically constructs a scope string (e.g., <code>project:456</code>) and checks for permissions valid in that specific scope or the <code>global</code> scope.</p>
+            <pre><code class="language-python">@app.patch("/project/{project_id}/settings")
 async def update_project(
     project_id: str,
-    # Checks for permission "project:write:settings" in scope "project:{project_id}"
+    # Checks for "project:write:settings" in scope "project:{project_id}"
     user = Depends(PermissionChecker("project:write:settings", scope_from_path="project_id"))
 ):
     return {"status": "Project update authorized"}
@@ -353,109 +328,19 @@ async def update_project(
         `;
 
         pages['rbac-management'] = `
-            <h1>RBAC Management (Admin API)</h1>
-            <p>The <code>auth_service</code> exposes powerful asynchronous methods in its <code>roles</code> and <code>permissions</code> managers for administrative control over the RBAC system.</p>
-            <p class="p-3 bg-red-900/50 rounded-lg">
-                <strong>NOTE:</strong> The built-in Admin routes are currently subject to change. For stable, custom administration and integration with your application logic, it is highly recommended to use the core <b>Service Manager methods</b> (<code>auth_service.roles</code> and <code>auth_service.permissions</code>) directly.
-            </p>
+            <h1>RBAC Management</h1>
+            <p>The <code>auth_service.roles</code> manager handles all logic for creating, assigning, and checking roles and permissions. The built-in <code>/admin</code> router provides API endpoints for these actions.</p>
 
-            <h2>Authorization for Management</h2>
-            <p>AuthTuna uses a hybrid model combining hierarchy and explicit grants for managing roles. Management operations (like role/permission creation and user assignment) are controlled by three authorization rules, checked in order:</p>
+            <h4>Authorization for Management</h4>
+            <p>AuthTuna uses a hybrid model for managing roles. An admin can assign a role if any of these are true:</p>
             <ol class="list-decimal pl-6 space-y-2">
-                <li><strong>Specific Permission Override:</strong> Does the administrator have a permission like <code>roles:assign:SomeRole</code>?</li>
-                <li><strong>Role Hierarchy:</strong> Does the administrator's <b>highest role level</b> exceed the target role's <b>level</b>? (e.g., Admin level 90 can assign Moderator level 50).</li>
-                <li><strong>Explicit Role Grant:</strong> Is the administrator's role explicitly granted permission to assign the target role (managed via <code>/admin/roles/grants/assign-role</code>)?</li>
+                <li><strong>Specific Permission:</strong> The admin has a permission like <code>roles:assign:Moderator</code>.</li>
+                <li><strong>Role Hierarchy:</strong> The admin's highest role level is greater than the target role's level (e.g., Admin at level 90 can assign Moderator at level 50).</li>
+                <li><strong>Explicit Grant:</strong> The admin's role is explicitly granted permission to assign the target role.</li>
             </ol>
-            <p class="mt-4 p-3 bg-indigo-900/50 rounded-lg">
-                <strong>Role Level Configuration:</strong>
-                <ul>
-                    <li>Set a role's <code>level</code> to a positive integer to enable <b>Hierarchical</b> authorization (Rule 2).</li>
-                    <li>Set a role's <code>level</code> to <b>0</b> if you want the "system" default user to be able to assign it without explicit grants, but restrict human admins to using <b>Explicit Grants</b> (Rule 3).</li>
-                    <li>Set a role's <code>level</code> to <b>None</b> (the default) to use a pure <b>Explicit Grant-based system</b> (Rule 3) only, requiring explicit grants for *all* assigners.</li>
-                </ul>
-            </p>
 
-            <h2>Role and Permission CRUD (Service Layer)</h2>
-            <p>The recommended way to manage the RBAC structure is directly through the <code>auth_service</code> methods.</p>
-
-            <h3>1. Permission Creation and Management</h3>
-            <p>The <code>PermissionManager</code> handles the creation and management of permissions.</p>
-            <pre><code class="language-python">from authtuna.integrations import auth_service
-from authtuna.manager.asynchronous import PermissionManager
-
-# Create a new permission (Perm Creation)
-new_perm = await auth_service.permissions.create(
-    name="dashboard:view:summary",
-    description="Allows viewing the analytics dashboard."
-)
-
-# Use get_or_create to safely ensure a permission exists
-perm, created = await auth_service.permissions.get_or_create("data:view:summary")
-
-# Permission Update: Permissions are generally managed by linking/unlinking them from roles,
-# or by directly updating the database object via the PermissionManager if needed.
-</code></pre>
-
-            <h3>2. Role Creation and Management</h3>
-            <p>The <code>RoleManager</code> handles core role definition.</p>
-            <pre><code class="language-python">from authtuna.manager.asynchronous import RoleManager
-
-# Role Creation
-new_role = await auth_service.roles.create(
-    name="VIP",
-    description="High-priority customer role",
-    level=75
-)
-
-# Adding/Linking Permissions to a Role
-await auth_service.roles.add_permission_to_role(
-    role_name="VIP",
-    permission_name="dashboard:view:summary",
-    adder_id="system" # The entity performing the action
-)
-</code></pre>
-
-            <h3>3. Managing Assignment Grants (The Core of Role Management)</h3>
-            <p>The <code>grant_relationship</code> method is crucial for configuring explicit authorization rules (Rule 3).</p>
-            <pre><code class="language-python">from authtuna.manager.asynchronous import RoleManager, PermissionManager
-
-# Grant Role Assignment (AssignerRole -> AssignableRole)
-# 'can_assign_roles' enables Rule #3 for role management checks.
-await auth_service.roles.grant_relationship(
-    granter_role_name="Admin",
-    grantable_name="Moderator",
-    grantable_manager=auth_service.roles, # Use RoleManager for assigning roles
-    relationship_attr="can_assign_roles"
-)
-
-# Grant Permission Assignment (GranterRole -> GrantablePermission)
-await auth_service.roles.grant_relationship(
-    granter_role_name="SuperAdmin",
-    grantable_name="admin:manage:roles",
-    grantable_manager=auth_service.permissions, # Use PermissionManager for granting perms
-    relationship_attr="can_grant_permissions"
-)
-</code></pre>
-
-            <h3>4. Assigning Users to Roles</h3>
-            <p>This central operation triggers the three-part authorization check to ensure the <code>assigner_id</code> is authorized.</p>
-            <pre><code class="language-python"># Add/Assign Users to a Role
-await auth_service.roles.assign_to_user(
-    user_id="user-12345",
-    role_name="VIP",
-    assigner_id="default-admin", # Must be an authorized admin/user
-    scope="global" # Scope can be 'global' or resource-specific (e.g., 'project:42')
-)
-</code></pre>
-
-            <h2>Default Roles and Users</h2>
-            <p>When <code>AUTO_CREATE_DATABASE</code> is enabled, AuthTuna provisions essential roles and users for immediate administration and system security (defined in <code>authtuna/core/defaults.py</code>).</p>
-
-            <h3 class="mt-8">Important Default User Security Note</h3>
-            <p class="p-3 bg-red-900/50 rounded-lg">
-                The <code>superadmin</code> and <code>admin</code> users are created <b>without a usable password</b> by default, so they cannot be logged into unless <code>DEFAULT_SUPERADMIN_PASSWORD</code> or <code>DEFAULT_ADMIN_PASSWORD</code> were explicitly configured in the <code>.env</code> file <b>before the first database initialization</b>. If configuration is missed, you must set the password directly via the Admin UI or programmatically using <code>auth_service.users.set_password()</code>.
-            </p>
-
+            <h4>Default Roles & Users</h4>
+            <p>When <code>AUTO_CREATE_DATABASE</code> is enabled, AuthTuna provisions essential roles and users for immediate administration.</p>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-400 rounded-lg">
                     <thead class="text-xs uppercase bg-gray-800 text-gray-300">
@@ -466,109 +351,109 @@ await auth_service.roles.assign_to_user(
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6 font-medium text-white">System</td><td class="py-4 px-6">999</td><td class="py-4 px-6">Internal processes. Highest level, can assign any role (via hierarchy).</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6 font-medium text-white">SuperAdmin</td><td class="py-4 px-6">100</td><td class="py-4 px-6"><code>admin:manage:permissions</code>, <code>admin:manage:roles</code>, full management access.</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6 font-medium text-white">Admin</td><td class="py-4 px-6">90</td><td class="py-4 px-6"><code>admin:manage:users</code>, <code>admin:manage:roles</code> (limited by level).</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6 font-medium text-white">Moderator</td><td class="py-4 px-6">50</td><td class="py-4 px-6"><code>admin:access:panel</code>, <code>admin:manage:users</code> (suspend/edit).</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6 font-medium text-white">User</td><td class="py-4 px-6">10</td><td class="py-4 px-6">Standard application access.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>System</td><td>999</td><td>This user is for automated tasks requiring permissions like assign-ing project owner on when creating new project or smth.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>SuperAdmin</td><td>100</td><td>Full system access.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>Admin</td><td>90</td><td>User and role management.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>Moderator</td><td>50</td><td>Basic user management.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>User</td><td>10</td><td>Standard application access.</td></tr>
                     </tbody>
+                    <ul>
+                       <li><strong>system:</strong> Internal ID: <code>system</code>. Used for audit logging and initial role assignments. Due to its high level (999), it can be used for automated role assignments without requiring explicit grants (if the role being assigned has a level < 999).</li>
+                        <li><strong>superadmin:</strong> Default Email: <code>settings.DEFAULT_SUPERADMIN_EMAIL</code>. Assigned <code>SuperAdmin</code> role.</li>
+                        <li><strong>admin:</strong> Default Email: <code>settings.DEFAULT_ADMIN_EMAIL</code>. Assigned <code>Admin</code> role.</li>
+                    </ul>
                 </table>
             </div>
-
-            <h3 class="mt-8">Default Users</h3>
-            <p>Three default users are created. The <b>system</b> user is an internal utility account and cannot be logged into by humans.</p>
-            <ul>
-                <li><strong>system:</strong> Internal ID: <code>system</code>. Used for audit logging and initial role assignments. Due to its high level (999), it can be used for automated role assignments without requiring explicit grants (if the role being assigned has a level < 999).</li>
-                <li><strong>superadmin:</strong> Default Email: <code>settings.DEFAULT_SUPERADMIN_EMAIL</code>. Assigned <code>SuperAdmin</code> role.</li>
-                <li><strong>admin:</strong> Default Email: <code>settings.DEFAULT_ADMIN_EMAIL</code>. Assigned <code>Admin</code> role.</li>
-            </ul>
         `;
 
         pages['auth-flows'] = `
             <h1>Authentication Flows & Endpoints</h1>
-            <p>The <code>auth_router</code>, <code>mfa_router</code>, and <code>social_router</code> provide all necessary API endpoints and HTML pages (templates) for a complete security system.</p>
+            <p>The <code>auth_router</code> provides all necessary API endpoints and HTML pages for a complete security system.</p>
+            <p>Just use the pages included in the router and if you want custom pages update the env var for templates dir ALL THE PAGES NEED TO BE INCLUDED IN THE NEW FOLDER AS I HAVE NOT IMPLEMENTED FALLBACK YET. Just copy paste dir if you want to update theme. (Maybe ima add theme configuration so that ppl wont have to copy pasta all files, no guarantee just thinking.)</p>
 
-            <h2>Standard Authentication (\`/auth\`)</h2>
-            <p>These endpoints handle credentials and password security.</p>
-            <div class="overflow-x-auto">
+            <h4>Standard Authentication (\`/auth\`)</h4>
+            <p>These endpoints handle user credentials and password security.</p>
+             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-400 rounded-lg">
-                    <thead class="text-xs uppercase bg-gray-800 text-gray-300">
-                        <tr>
-                            <th scope="col" class="py-3 px-6">Endpoint</th>
-                            <th scope="col" class="py-3 px-6">Method</th>
-                            <th scope="col" class="py-3 px-6">Function</th>
-                        </tr>
+                     <thead class="text-xs uppercase bg-gray-800 text-gray-300">
+                        <tr><th class="py-3 px-6">Endpoint</th><th class="py-3 px-6">Method</th><th class="py-3 px-6">Function</th></tr>
                     </thead>
                     <tbody>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6">/auth/signup</td><td>GET/POST</td><td>User registration and template rendering.</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6">/auth/login</td><td>GET/POST</td><td>User login (returns session or MFA token) and template rendering.</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6">/auth/logout</td><td>GET/POST</td><td>Terminates current session and clears cookie.</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6">/auth/verify</td><td>GET</td><td>Validates email verification token.</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6">/auth/change-password</td><td>POST</td><td>Allows authenticated users to update their password.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>/auth/signup</td><td>POST</td><td>User registration.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>/auth/login</td><td>POST</td><td>User login.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>/auth/logout</td><td>POST</td><td>Terminates the current session.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>/auth/forgot-password</td><td>POST</td><td>Initiates password reset flow.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>/auth/reset-password</td><td>POST</td><td>Completes password reset with a valid token.</td></tr>
                     </tbody>
                 </table>
             </div>
+
+            <h4>Redirect on Login</h4>
+            <p>To enhance user experience, you can redirect users to a specific page after login by appending a <code>return_url</code> query parameter to the login page URL. The middleware will store this URL in a temporary cookie.</p>
+            <pre><code class="language-bash"># Example: This will redirect the user to /settings after they log in.
+http://localhost:8000/auth/login?return_url=/ui/settings</code></pre>
         `;
 
         pages['mfa'] = `
             <h1>MFA & Social Login (SSO)</h1>
 
-            <h2>Multi-Factor Authentication (\`/mfa\`)</h2>
+            <h4>Multi-Factor Authentication (\`/mfa\`)</h4>
             <p>AuthTuna implements the TOTP standard (compatible with Google Authenticator, Authy, etc.) along with recovery codes.</p>
-            <div class="overflow-x-auto">
+             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-400 rounded-lg">
                     <thead class="text-xs uppercase bg-gray-800 text-gray-300">
-                        <tr>
-                            <th scope="col" class="py-3 px-6">Endpoint</th>
-                            <th scope="col" class="py-3 px-6">Method</th>
-                            <th scope="col" class="py-3 px-6">Purpose</th>
-                        </tr>
+                        <tr><th class="py-3 px-6">Endpoint</th><th class="py-3 px-6">Function</th></tr>
                     </thead>
                     <tbody>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6">/mfa/setup</td><td>GET/POST</td><td>Generates TOTP secret/QR code URI and template.</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6">/mfa/verify</td><td>POST</td><td>Verifies code to enable MFA and returns backup codes.</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6">/mfa/validate-login</td><td>POST</td><td>Completes login using MFA code or recovery code.</td></tr>
-                        <tr class="bg-gray-900 border-b border-gray-800"><td class="py-4 px-6">/mfa/disable</td><td>POST</td><td>Disables MFA for the current user.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>/mfa/setup</td><td>Generates TOTP secret/QR code URI for setup.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>/mfa/verify</td><td>Verifies the setup code to enable MFA.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>/mfa/validate-login</td><td>Completes login using an MFA code or recovery code.</td></tr>
+                        <tr class="bg-gray-900 border-b border-gray-800"><td>/mfa/disable</td><td>Disables MFA for the current user.</td></tr>
                     </tbody>
                 </table>
             </div>
 
-            <h2>Social Login (\`/auth/{provider}\`)</h2>
-            <p>If configured, the <code>social_router</code> handles OAuth2/OIDC flows for providers like Google and GitHub, automatically linking or creating user accounts.</p>
-            <pre><code class="language-python"># Example: Google Login
-/auth/google/login
-/auth/google/callback
-</code></pre>
+            <h4>Social Login (\`/auth/{provider}\`)</h4>
+            <p>If configured with client IDs and secrets, the <code>social_router</code> handles OAuth2 flows for providers like Google and GitHub, automatically linking or creating user accounts.</p>
         `;
 
         pages['middleware-session'] = `
             <h1>Middleware & Session Management</h1>
             <p>The <code>DatabaseSessionMiddleware</code> is the core security component that executes on every request.</p>
 
-            <h2>Middleware Logic</h2>
-            <p>The middleware performs the following steps:</p>
+            <h4>Middleware Logic</h4>
             <ol class="list-decimal pl-6 space-y-2">
-                <li>Extracts the encrypted JWT session token from the cookie (or Bearer header).</li>
-                <li>Decodes the token to get the <code>session_id</code>, <code>user_id</code>, and <code>random_string</code>.</li>
-                <li>If a database check is needed (controlled by <code>SESSION_DB_VERIFICATION_INTERVAL</code>):
-                    <ul>
-                        <li>Fetches the full session record from the database.</li>
-                        <li>Verifies the session is active and not expired.</li>
-                        <li>Checks for <b>Session Hijack</b> (mismatch in Region, Device, or Random String). If detected, session is <b>invalidated</b>.</li>
-                        <li>Updates the session's <code>last_ip</code> and <code>mtime</code>.</li>
-                        <li><b>Rotates</b> the <code>random_string</code> in the DB for the next request.</li>
-                    </ul>
-                </li>
-                <li>Sets <code>request.state.user_id</code>, <code>request.state.session_id</code>, and <code>request.state.user_ip_address</code> for use by dependencies.</li>
-                <li>Updates the response cookie with the new token (containing the rotated random string).</li>
+                <li>Extracts and decodes the JWT session token from the cookie or Bearer header.</li>
+                <li>Periodically fetches the full session record from the database to ensure it's still active.</li>
+                <li>Performs <strong>Session Hijack Detection</strong> by comparing the request's device and region with the session record. If they don't match, the session is invalidated.</li>
+                <li>Rotates a per-request token (<code>random_string</code>) within the session to mitigate replay attacks.</li>
+                <li>Injects <code>user_id</code> and <code>session_id</code> into <code>request.state</code> for dependencies.</li>
             </ol>
+        `;
 
-            <h2>Session Hijack Protection</h2>
-            <p>AuthTuna actively validates session integrity using device fingerprints collected by the middleware. If a request claims to be an active session but originates from a different device, the session is terminated immediately.</p>
+        pages['ui-dashboard'] = `
+            <h1>UI Dashboard & Settings</h1>
+            <p>AuthTuna includes a set of pre-built, user-facing pages for account management, served by the <code>ui_router</code>.</p>
+
+            <h4>Endpoints</h4>
+            <ul>
+                <li><code>/ui/dashboard</code>: A welcome page showing basic account status.</li>
+                <li><code>/ui/profile</code>: Allows the user to update their username.</li>
+                <li><code>/ui/settings</code>: Provides forms for changing the password, managing MFA, and viewing/terminating active sessions.</li>
+            </ul>
+            <p>These templates are built with Tailwind CSS and are designed to be easily customized or replaced by pointing <code>DASHBOARD_AND_USER_INFO_PAGES_TEMPLATE_DIR</code> to your own template directory.</p>
         `;
 
 
         // --- Navigation Logic ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            sidebar.classList.toggle('translate-x-0');
+            overlay.classList.toggle('hidden');
+        }
+
         function navigate(pageId) {
             // 1. Update Content
             contentDiv.innerHTML = pages[pageId] || `<h1>404</h1><p>Documentation page not found for "\${pageId}".</p>`;
@@ -589,14 +474,18 @@ await auth_service.roles.assign_to_user(
             // 4. Update URL Hash
             history.pushState(null, null, '#' + pageId);
 
-            // 5. Scroll to top on new page load
+            // 5. Scroll to top on new page load & close sidebar on mobile
             document.querySelector('.doc-content-area').scrollTop = 0;
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
         }
 
         // Initialize on load
         document.addEventListener('DOMContentLoaded', () => {
             const initialPage = window.location.hash.substring(1) || 'introduction';
             navigate(initialPage);
+            document.getElementById('menu-button').addEventListener('click', toggleSidebar);
         });
 
         // Handle browser back/forward buttons
