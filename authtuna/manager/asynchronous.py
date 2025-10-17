@@ -538,7 +538,7 @@ class RoleManager:
             if scope_prefix:
                 stmt = stmt.where(
                     or_(user_roles_association.c.scope == 'global',
-                        user_roles_association.c.scope.startswith(scope_prefix))
+                        user_roles_association.c.scope == scope_prefix)
                 )
             result = (await session.execute(stmt)).first()
             return result is not None
