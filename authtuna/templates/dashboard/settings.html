@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Account Settings</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
           rel="stylesheet">
     <style>
@@ -12,31 +13,43 @@
             --bg-start-dark: hsla(252, 40%, 29%, 1);
             --bg-end-dark: hsla(270, 77%, 71%, 1);
         }
+
         body {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(90deg, var(--bg-start-dark), var(--bg-end-dark));
             background-size: 400% 400%;
             animation: gradientAnimation 15s ease infinite;
         }
+
         @keyframes gradientAnimation {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
         }
+
         .bg-card {
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             background-color: rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.15);
         }
+
         .form-input {
-             background-color: rgba(0, 0, 0, 0.2);
-             border: 1px solid rgba(255, 255, 255, 0.15);
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
+
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+
         #confirm-modal {
             transition: opacity 0.3s ease;
         }
@@ -50,19 +63,23 @@
         <div>
             <h1 class="text-2xl font-bold text-white mb-8">AuthTuna</h1>
             <nav class="space-y-4">
-                <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
+                <a href="{{ url_for('ui_dashboard') }}"
+                   class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
                     <span class="ml-3">Dashboard</span>
                 </a>
-                <a href="{{ url_for('ui_profile') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
+                <a href="{{ url_for('ui_profile') }}"
+                   class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
                     <span class="ml-3">Profile</span>
                 </a>
-                <a href="{{ url_for('ui_settings') }}" class="flex items-center p-2 text-base font-normal text-white rounded-lg bg-white/10">
+                <a href="{{ url_for('ui_settings') }}"
+                   class="flex items-center p-2 text-base font-normal text-white rounded-lg bg-white/10">
                     <span class="ml-3">Settings</span>
                 </a>
             </nav>
         </div>
         <div>
-            <a href="/auth/logout" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
+            <a href="/auth/logout"
+               class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
                 <span class="ml-3">Logout</span>
             </a>
         </div>
@@ -79,18 +96,25 @@
                 <h2 class="text-2xl font-semibold text-white mb-6">Change Password</h2>
                 <form id="password-form" class="space-y-6">
                     <div>
-                        <label for="current-password" class="block text-sm font-medium text-gray-300 mb-2">Current Password</label>
-                        <input type="password" id="current-password" required class="form-input w-full text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label for="current-password" class="block text-sm font-medium text-gray-300 mb-2">Current
+                            Password</label>
+                        <input type="password" id="current-password" required
+                               class="form-input w-full text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                     <div>
-                        <label for="new-password" class="block text-sm font-medium text-gray-300 mb-2">New Password</label>
-                        <input type="password" id="new-password" required class="form-input w-full text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label for="new-password" class="block text-sm font-medium text-gray-300 mb-2">New
+                            Password</label>
+                        <input type="password" id="new-password" required
+                               class="form-input w-full text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
-                     <div>
-                        <label for="confirm-password" class="block text-sm font-medium text-gray-300 mb-2">Confirm New Password</label>
-                        <input type="password" id="confirm-password" required class="form-input w-full text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div>
+                        <label for="confirm-password" class="block text-sm font-medium text-gray-300 mb-2">Confirm New
+                            Password</label>
+                        <input type="password" id="confirm-password" required
+                               class="form-input w-full text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                    <button type="submit"
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
                         Update Password
                     </button>
                 </form>
@@ -101,45 +125,70 @@
             <div class="bg-card p-8 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-semibold text-white mb-4">Two-Factor Authentication (2FA)</h2>
                 {% if user.mfa_enabled %}
-                    <p class="text-green-400 mb-4">2FA is currently <strong>enabled</strong> on your account.</p>
-                    <button id="disable-mfa-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                        Disable Two-Factor Authentication
-                    </button>
+                <p class="text-green-400 mb-4">2FA is currently <strong>enabled</strong> on your account.</p>
+                <button id="disable-mfa-button"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                    Disable Two-Factor Authentication
+                </button>
                 {% else %}
-                    <p class="text-gray-400 mb-4">Protect your account with an extra layer of security.</p>
-                    <a href="/mfa/setup" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                        Setup Two-Factor Authentication
-                    </a>
+                <p class="text-gray-400 mb-4">Protect your account with an extra layer of security.</p>
+                <a href="/mfa/setup"
+                   class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                    Setup Two-Factor Authentication
+                </a>
                 {% endif %}
                 <div id="mfa-message-box" class="mt-4 text-center text-sm font-medium"></div>
             </div>
 
+            <div class="bg-card p-8 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-4">Passkeys</h2>
+                <p class="text-gray-400 mb-4">Add a passkey for a fast and secure passwordless login experience.</p>
+
+                <div id="passkey-list" class="space-y-2"></div>
+
+                <button id="add-passkey-button"
+                        class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
+                    Add a New Passkey
+                </button>
+                <div id="passkey-message-box" class="mt-4 text-center text-sm font-medium"></div>
+            </div>
+
             <!-- Active Sessions Section -->
             <div class="bg-card p-8 rounded-lg shadow-lg">
-                 <div class="flex justify-between items-center mb-4">
+                <div class="flex justify-between items-center mb-4">
                     <div>
                         <h2 class="text-2xl font-semibold text-white">Active Sessions</h2>
                         <p class="text-gray-400 mt-1">This is a list of devices that have logged into your account.</p>
                     </div>
-                    <button id="terminate-all-button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Terminate All Others</button>
+                    <button id="terminate-all-button"
+                            class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm">
+                        Terminate All Others
+                    </button>
                 </div>
                 <div id="sessions-list" class="space-y-4">
                     <!-- Sessions will be loaded here -->
                 </div>
-                 <div id="sessions-message-box" class="mt-4 text-center text-sm font-medium"></div>
+                <div id="sessions-message-box" class="mt-4 text-center text-sm font-medium"></div>
             </div>
         </div>
     </main>
 </div>
 
 <!-- Confirmation Modal -->
-<div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden opacity-0 z-50">
+<div id="confirm-modal"
+     class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden opacity-0 z-50">
     <div class="bg-card rounded-lg shadow-xl p-8 max-w-sm w-full">
         <h3 id="modal-title" class="text-xl font-bold text-white mb-4">Are you sure?</h3>
         <p id="modal-body" class="text-gray-300 mb-6">This action cannot be undone.</p>
         <div class="flex justify-end space-x-4">
-            <button id="modal-cancel-button" class="px-6 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors">Cancel</button>
-            <button id="modal-confirm-button" class="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">Confirm</button>
+            <button id="modal-cancel-button"
+                    class="px-6 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors">
+                Cancel
+            </button>
+            <button id="modal-confirm-button"
+                    class="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">
+                Confirm
+            </button>
         </div>
     </div>
 </div>
@@ -152,7 +201,9 @@
 
         box.textContent = text;
         box.className = `mt-4 text-center text-sm font-medium ${colorClass}`;
-        setTimeout(() => { box.textContent = ''; }, 4000);
+        setTimeout(() => {
+            box.textContent = '';
+        }, 4000);
     }
 
     // --- Confirmation Modal ---
@@ -206,7 +257,7 @@
         try {
             const response = await fetch('/auth/change-password', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     current_password: currentPassword,
                     new_password: newPassword
@@ -235,8 +286,8 @@
                 'Disable Two-Factor Authentication?',
                 'This will reduce the security of your account. Are you sure you want to proceed?',
                 async () => {
-                     try {
-                        const response = await fetch('/mfa/disable', { method: 'POST' });
+                    try {
+                        const response = await fetch('/mfa/disable', {method: 'POST'});
                         const data = await response.json();
                         if (response.ok) {
                             showMessage(mfaMessageBox, data.message || 'MFA disabled successfully! Page will reload.', 'success');
@@ -245,7 +296,7 @@
                             showMessage(mfaMessageBox, data.detail || 'An error occurred.', 'error');
                         }
                     } catch (error) {
-                         showMessage(mfaMessageBox, 'A network error occurred.', 'error');
+                        showMessage(mfaMessageBox, 'A network error occurred.', 'error');
                     }
                 }
             );
@@ -266,7 +317,7 @@
             if (sessions.length <= 1) { // Only the current session
                 terminateAllButton.style.display = 'none';
             } else {
-                 terminateAllButton.style.display = 'inline-block';
+                terminateAllButton.style.display = 'inline-block';
             }
 
             sessionsList.innerHTML = sessions.map(session => `
@@ -294,7 +345,7 @@
             'The user will be logged out on this device. Are you sure?',
             async () => {
                 try {
-                    const response = await fetch(`/ui/settings/sessions/${sessionId}/terminate`, { method: 'POST' });
+                    const response = await fetch(`/ui/settings/sessions/${sessionId}/terminate`, {method: 'POST'});
                     const data = await response.json();
                     if (response.ok) {
                         showMessage(sessionsMessageBox, data.message || 'Session terminated.', 'success');
@@ -315,7 +366,7 @@
             'This will log you out from all other devices. Your current session will remain active.',
             async () => {
                 try {
-                    const response = await fetch('/ui/settings/sessions/terminate-all', { method: 'POST' });
+                    const response = await fetch('/ui/settings/sessions/terminate-all', {method: 'POST'});
                     const data = await response.json();
                     if (response.ok) {
                         showMessage(sessionsMessageBox, data.message || 'All other sessions terminated.', 'success');
@@ -330,6 +381,33 @@
         )
     });
 
+    const addPasskeyButton = document.getElementById('add-passkey-button');
+    const passkeyMessageBox = document.getElementById('passkey-message-box');
+
+    addPasskeyButton.addEventListener('click', async () => {
+        try {
+            const optionsResp = await fetch('/passkeys/register-options', { method: 'POST' });
+            const options = await optionsResp.json();
+            const registrationResp = await SimpleWebAuthnBrowser.startRegistration(options);
+            const verificationResp = await fetch('/passkeys/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: `Passkey for ${new Date().toLocaleDateString()}`,
+                    registration_response: registrationResp,
+                }),
+            });
+
+            if (verificationResp.ok) {
+                showMessage(passkeyMessageBox, 'Passkey registered successfully!', 'success');
+            } else {
+                const error = await verificationResp.json();
+                showMessage(passkeyMessageBox, error.detail || 'Failed to register passkey.', 'error');
+            }
+        } catch (err) {
+            showMessage(passkeyMessageBox, 'Passkey registration was cancelled or failed.', 'error');
+        }
+    });
     document.addEventListener('DOMContentLoaded', () => {
         loadSessions();
     });

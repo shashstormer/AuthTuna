@@ -55,7 +55,7 @@ def init_app(app: FastAPI):
     :param app:
     :return:
     """
-    from authtuna.routers import admin_router, auth_router, social_router, mfa_router, ui_router
+    from authtuna.routers import admin_router, auth_router, social_router, mfa_router, ui_router, passkey_router
     from authtuna.middlewares import DatabaseSessionMiddleware
     from starlette.middleware.sessions import SessionMiddleware
 
@@ -66,6 +66,7 @@ def init_app(app: FastAPI):
     app.include_router(mfa_router)
     app.include_router(admin_router)
     app.include_router(ui_router)
+    app.include_router(passkey_router)
 
 
 __all__ = [
