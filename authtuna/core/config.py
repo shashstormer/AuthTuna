@@ -91,6 +91,17 @@ class Settings(BaseSettings):
     RPC_TLS_KEY_FILE: Optional[str] = None
     RPC_ADDRESS: str = "[::]:50051"
 
+    # Webauthn settings
+    WEBAUTHN_ENABLED: bool = False  # Currently Does not respect this setting.
+    # WEBAUTHN_AUTHENTICATOR_ATTACHMENT: Optional[str]  # "platform" or "cross-platform"
+    # WEBAUTHN_USER_VERIFICATION: Optional[str]  # "required" or "preferred" or "discouraged"
+    # WEBAUTHN_PUBLIC_KEY_CREDENTIALS_CHARSET: Optional[str] = "ascii"
+    # WEBAUTHN_PUBLIC_KEY_CREDENTIALS_LENGTH: int = 32
+    # WEBAUTHN_PUBLIC_KEY_CREDENTIALS_COUNT: int = 10
+    WEBAUTHN_RP_ID: str = "localhost"  # The domain of your site
+    WEBAUTHN_RP_NAME: str = "AuthTuna"
+    WEBAUTHN_ORIGIN: str = "http://localhost:8000"
+
     # Authentication strategy: "COOKIE" or "BEARER"
     STRATEGY: str = "COOKIE"  # Options: "COOKIE", "BEARER"
 
