@@ -24,7 +24,7 @@ from authtuna.core.config import settings
 from authtuna.core.database import User, PasskeyCredential as DBPasskeyCredential
 
 
-class PasskeyLogic:
+class PasskeyCore:
     """Handles the server-side logic for the WebAuthn protocol."""
 
     def __init__(self):
@@ -38,7 +38,6 @@ class PasskeyLogic:
         """
         Generate the options for the browser to create a new passkey credential.
         """
-        # Exclude already registered credentials to prevent re-registration of the same device
         exclude_credentials = [
             PublicKeyCredentialDescriptor(id=cred.id.encode()) for cred in existing_credentials
         ]
@@ -62,7 +61,7 @@ class PasskeyLogic:
             expected_challenge=challenge,
             expected_origin=self.expected_origin,
             expected_rp_id=self.rp_id,
-            require_user_verification=True,  # Enforce user presence (e.g., biometrics/PIN)
+            require_user_verification=True,
         )
 
     def generate_authentication_options(
