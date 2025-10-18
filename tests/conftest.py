@@ -85,15 +85,9 @@ async def authenticated_user(auth_tuna_async):
 @pytest.fixture(scope="session")
 def app():
     """Define a minimal FastAPI app for testing."""
-    from authtuna.routers import admin_router, auth_router, social_router, mfa_router
-    from authtuna.middlewares import DatabaseSessionMiddleware
+    from authtuna import init_app
     app = FastAPI()
-    app.add_middleware(DatabaseSessionMiddleware)
-    app.include_router(auth_router)
-    app.include_router(social_router)
-    app.include_router(mfa_router)
-    app.include_router(admin_router)
-    print('DEBUG ROUTES:', [route.path for route in app.routes])
+    init_app(app)
     return app
 
 @pytest.fixture
