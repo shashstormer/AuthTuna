@@ -536,9 +536,15 @@ class RoleManager:
                 user_roles_association.c.user_id == user_id, Permission.name == permission_name
             )
             if scope_prefix:
+                scopes_to_check = ['global']
+                if scope_prefix:
+                    parts = scope_prefix.split('/')
+                    current_path = ""
+                    for part in parts:
+                        current_path = f"{current_path}/{part}" if current_path else part
+                        scopes_to_check.append(current_path)
                 stmt = stmt.where(
-                    or_(user_roles_association.c.scope == 'global',
-                        user_roles_association.c.scope == scope_prefix)
+                    user_roles_association.c.scope.in_(scopes_to_check)
                 )
             result = (await session.execute(stmt)).first()
             return result is not None
