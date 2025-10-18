@@ -1,6 +1,7 @@
 """
 API endpoints for managing and authenticating with passkeys (WebAuthn).
 """
+import base64
 from fastapi import APIRouter, Depends, Request, HTTPException, status, Body
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -60,10 +61,9 @@ async def generate_registration_options(request: Request, user: User = Depends(g
         user=user,
         existing_credentials=existing_credentials
     )
-
-    request.session['passkey_registration_challenge'] = options.challenge.decode('utf-8')
-
-    return options.model_dump()
+    options.challenge = base64.urlsafe_b64encode(options.challenge).decode('ascii')
+    request.session['passkey_registration_challenge'] = options.challenge
+    return options
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -75,8 +75,8 @@ async def verify_and_save_registration(
     """
     Verify the browser's registration response and save the new passkey credential.
     """
-    challenge_str = request.session.pop('passkey_registration_challenge', None)
-    if not challenge_str:
+    challenge_b64 = request.session.pop('passkey_registration_challenge', None)
+    if not challenge_b64:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="No registration challenge found in session.")
 
@@ -85,7 +85,7 @@ async def verify_and_save_registration(
             user=user,
             name=payload.name,
             registration_response=payload.registration_response.model_dump(),
-            challenge=challenge_str.encode('utf-8')
+            challenge=base64.urlsafe_b64decode(challenge_b64)
         )
         return {"message": f"Passkey '{payload.name}' registered successfully."}
     except InvalidTokenError as e:
@@ -98,8 +98,7 @@ async def generate_authentication_options(request: Request):
     Generate authentication options to challenge the user for a passkey login.
     """
     options = auth_service.passkeys.logic.generate_authentication_options()
-
-    request.session['passkey_authentication_challenge'] = options['challenge'].decode('utf-8')
+    request.session['passkey_authentication_challenge'] = base64.urlsafe_b64encode(options['challenge']).decode('ascii')
 
     return options
 
@@ -112,16 +111,15 @@ async def verify_authentication(
     """
     Verify a passkey authentication and, if successful, create a new session for the user.
     """
-    challenge_str = request.session.pop('passkey_authentication_challenge', None)
-    if not challenge_str :
+    challenge_b64 = request.session.pop('passkey_authentication_challenge', None)
+    if not challenge_b64:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="No authentication challenge found in session.")
-    if not isinstance(challenge_str, str):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Unexpected error: challenge str is not str")
+
     try:
         user = await auth_service.passkeys.verify_authentication_and_get_user(
             authentication_response=response_data.model_dump(),
-            challenge=challenge_str.encode('utf-8')
+            challenge=base64.urlsafe_b64decode(challenge_b64)
         )
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not authenticate user.")
