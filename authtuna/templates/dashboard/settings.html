@@ -383,31 +383,60 @@
 
     const addPasskeyButton = document.getElementById('add-passkey-button');
     const passkeyMessageBox = document.getElementById('passkey-message-box');
+    const passkeyList = document.getElementById('passkey-list');
+    async function loadPasskeys() {
+        try {
+            const response = await fetch('/passkeys/');
+            if (!response.ok) throw new Error('Failed to load passkeys.');
+            const passkeys = await response.json();
+
+            passkeyList.innerHTML = passkeys.map(key => `
+                <div class="bg-black/20 p-3 rounded-lg flex items-center justify-between border border-white/10">
+                    <p class="font-semibold text-white">${key.name}</p>
+                    <button class="text-red-400 hover:text-red-300 text-sm font-semibold">Remove</button>
+                </div>
+            `).join('') || '<p class="text-sm text-gray-400">No passkeys registered yet.</p>';
+        } catch (error) {
+            showMessage(passkeyMessageBox, error.message, 'error');
+        }
+    }
 
     addPasskeyButton.addEventListener('click', async () => {
+        showMessage(passkeyMessageBox, '', 'hidden');
+        addPasskeyButton.disabled = true;
+
         try {
             const optionsResp = await fetch('/passkeys/register-options', { method: 'POST' });
+            if (!optionsResp.ok) throw new Error('Could not get registration options from server.');
             const options = await optionsResp.json();
             const registrationResp = await SimpleWebAuthnBrowser.startRegistration(options);
+            const keyName = prompt("Please enter a name for this new passkey (e.g., 'My Laptop'):", `Passkey ${new Date().toLocaleDateString()}`);
+            if (!keyName) {
+                throw new Error("Registration cancelled.");
+            }
             const verificationResp = await fetch('/passkeys/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: `Passkey for ${new Date().toLocaleDateString()}`,
+                    name: keyName,
                     registration_response: registrationResp,
                 }),
             });
 
             if (verificationResp.ok) {
                 showMessage(passkeyMessageBox, 'Passkey registered successfully!', 'success');
+                loadPasskeys();
             } else {
                 const error = await verificationResp.json();
-                showMessage(passkeyMessageBox, error.detail || 'Failed to register passkey.', 'error');
+                throw new Error(error.detail || 'Failed to register passkey.');
             }
         } catch (err) {
-            showMessage(passkeyMessageBox, 'Passkey registration was cancelled or failed.', 'error');
+            showMessage(passkeyMessageBox, err.message, 'error');
+        } finally {
+            addPasskeyButton.disabled = false;
         }
     });
+
     document.addEventListener('DOMContentLoaded', () => {
         loadSessions();
     });
