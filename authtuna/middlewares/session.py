@@ -128,6 +128,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                                     region=request.state.device_data["region"],
                                     device=request.state.device_data["device"],
                                     random_string=session_data.get("random_string"),
+                                    ip=request.state.user_ip_address,
                                     db=db
                             ):
                                 await db_session.update_last_ip(await get_remote_address(request), db=db)
