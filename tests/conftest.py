@@ -64,6 +64,24 @@ def auth_tuna_async(dbsession):
     )
     return AuthTunaAsync(db_manager)
 
+
+@pytest.fixture
+async def authenticated_user(auth_tuna_async):
+    """
+    Creates and returns a new user for testing authenticated endpoints.
+    """
+    # Use a unique email/username for each test run to avoid conflicts
+    import time
+    timestamp = int(time.time() * 1000)
+    user = await auth_tuna_async.users.create(
+        email=f"testuser_{timestamp}@example.com",
+        username=f"testuser_{timestamp}",
+        password="password123",
+        ip_address="127.0.0.1"
+    )
+    return user
+
+
 @pytest.fixture(scope="session")
 def app():
     """Define a minimal FastAPI app for testing."""
