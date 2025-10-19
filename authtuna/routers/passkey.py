@@ -31,7 +31,7 @@ def convert_keys_to_camel_case(obj):
         return [convert_keys_to_camel_case(item) for item in obj]
     else:
         try:
-            obj = obj.__dict__
+            obj = obj.__dict__()
             return convert_keys_to_camel_case(obj)
         except (AttributeError, ValueError, TypeError):
             pass
