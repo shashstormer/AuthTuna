@@ -130,7 +130,7 @@ async def verify_and_save_registration(
                             detail="No registration challenge found in session.")
 
     try:
-        reg_resp = to_snake_case(payload.registration_response.model_dump())
+        reg_resp = payload.registration_response.model_dump()
         print(reg_resp)
         print(type(reg_resp))
         await auth_service.passkeys.register_new_credential(
