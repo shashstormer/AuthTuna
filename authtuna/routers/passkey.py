@@ -80,7 +80,7 @@ async def generate_registration_options(request: Request, user: User = Depends(g
         user=user,
         existing_credentials=existing_credentials
     )
-
+    options = options.__dict__
     options_dict = convert_keys_to_camel_case(options)
     options_dict['challenge'] = base64.urlsafe_b64encode(options.challenge).decode('ascii')
     request.session['passkey_registration_challenge'] = options_dict['challenge']
@@ -122,7 +122,7 @@ async def generate_authentication_options(request: Request):
     Generate authentication options to challenge the user for a passkey login.
     """
     options = auth_service.passkeys.logic.generate_authentication_options()
-
+    options = options.__dict__
     options_camel_case = convert_keys_to_camel_case(options)
 
     options_camel_case['challenge'] = base64.urlsafe_b64encode(options['challenge']).decode('ascii')
