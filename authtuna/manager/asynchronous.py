@@ -753,7 +753,62 @@ class PasskeyManager:
     def __init__(self, db_manager: DatabaseManager):
         self._db_manager = db_manager
         self._core = PasskeysCore()
-        # WILL IMPLEMENT LATER.
+
+    async def get_for_user(self, user_id: str) -> List[PasskeyCredential]:
+        """Retrieve all passkeys for a given user."""
+        async with self._db_manager.get_db() as db:
+            stmt = select(PasskeyCredential).where(PasskeyCredential.user_id == user_id)
+            result = await db.execute(stmt)
+            return list(result.scalars().all())
+
+    async def get_credential_by_id(self, credential_id: bytes) -> Optional[PasskeyCredential]:
+        """Retrieve a single credential by its raw ID."""
+        async with self._db_manager.get_db() as db:
+            return await db.get(PasskeyCredential, credential_id)
+
+    async def save_new_credential(self, user_id: str, cred_data: Dict[str, Any], nickname: str) -> PasskeyCredential:
+        """Saves a new, verified passkey to the database, including all metadata."""
+        async with self._db_manager.get_db() as db:
+            new_passkey = PasskeyCredential(
+                id=cred_data["credential_id"],
+                user_id=user_id,
+                nickname=nickname,
+                public_key=cred_data["public_key"],
+                sign_count=cred_data["sign_count"],
+                aaguid=cred_data.get("aaguid"),
+                transports=cred_data.get("transports", []),
+                is_discoverable=cred_data.get("is_discoverable", False),
+                is_backup_eligible=cred_data.get("is_backup_eligible", False),
+                is_backed_up=cred_data.get("is_backed_up", False),
+            )
+            db.add(new_passkey)
+            await db.commit()
+            return new_passkey
+
+    async def update_credential_on_login(self, credential_id: bytes, new_sign_count: int):
+        """Updates the sign count and last_used_at timestamp after a successful login."""
+        async with self._db_manager.get_db() as db:
+            cred = await db.get(PasskeyCredential, credential_id)
+            if cred:
+                cred.sign_count = new_sign_count
+                cred.last_used_at = time.time()
+                await db.commit()
+
+    async def delete_credential(self, user_id: str, credential_id_b64: str) -> bool:
+        """Deletes a credential for a user, identified by its base64url ID."""
+        try:
+            credential_id = encryption_utils.base64url_decode(credential_id_b64)
+        except Exception:
+            return False
+
+        async with self._db_manager.get_db() as db:
+            stmt = delete(PasskeyCredential).where(
+                PasskeyCredential.id == credential_id,
+                PasskeyCredential.user_id == user_id
+            )
+            result = await db.execute(stmt)
+            await db.commit()
+            return result.rowcount > 0
 
 class AuditManager:
     """Manages querying the audit trail for security and administrative purposes."""
