@@ -9,7 +9,7 @@ from typing import List, Optional
 from webauthn.helpers import bytes_to_base64url
 
 from authtuna.integrations import get_current_user, auth_service
-from webauthn.helpers.structs import PublicKeyCredentialUserEntity
+from webauthn.helpers.structs import PublicKeyCredentialUserEntity, AuthenticatorAttestationResponse
 from authtuna.core.database import User
 from authtuna.core.exceptions import InvalidTokenError
 from authtuna.helpers import create_session_and_set_cookie
@@ -139,13 +139,13 @@ async def verify_and_save_registration(
         reg_resp = payload.registration_response.model_dump()
         reg_resp["id"] = bytes_to_base64url(reg_resp["id"].encode('ascii'))
         reg_resp["raw_id"] = reg_resp["raw_id"].encode('ascii')
-        reg_resp["response"]["client_data_json"] = reg_resp["response"]["clientDataJSON"].encode('ascii')
-        reg_resp["response"]["attestation_object"] = reg_resp["response"]["attestationObject"].encode('ascii')
+        reg_resp["response"] = AuthenticatorAttestationResponse(
+            client_data_json=reg_resp["response"]["clientDataJSON"].encode('ascii'),
+            attestation_object=reg_resp["response"]["attestationObject"].encode('ascii'),
+        )
         reg_resp.pop("clientExtensionResults", None)
         reg_resp.pop("client_extension_results", None)
         reg_resp.pop("rawId", None)
-        reg_resp["response"].pop("clientDataJSON", None)
-        reg_resp["response"].pop("attestationObject", None)
         print(reg_resp)
         print(type(reg_resp))
         await auth_service.passkeys.register_new_credential(
