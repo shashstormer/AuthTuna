@@ -140,6 +140,8 @@ async def verify_and_save_registration(
         # reg_resp = to_snake_case(reg_resp)
         # print(reg_resp)
         # print(type(reg_resp))
+        reg_resp.pop("clientExtensionResults", None)
+        reg_resp.pop("client_extension_results", None)
         await auth_service.passkeys.register_new_credential(
             user=user,
             name=payload.name,
