@@ -130,10 +130,13 @@ async def verify_and_save_registration(
                             detail="No registration challenge found in session.")
 
     try:
+        reg_resp = to_snake_case(payload.registration_response.model_dump())
+        print(reg_resp)
+        print(type(reg_resp))
         await auth_service.passkeys.register_new_credential(
             user=user,
             name=payload.name,
-            registration_response=to_snake_case(payload.registration_response.model_dump()),
+            registration_response=reg_resp,
             challenge=base64.urlsafe_b64decode(challenge_b64)
         )
         return {"message": f"Passkey '{payload.name}' registered successfully."}
