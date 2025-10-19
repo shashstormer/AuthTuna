@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     RPC_ADDRESS: str = "[::]:50051"
 
     # Webauthn settings
-    WEBAUTHN_ENABLED: bool = False  # Currently Does not respect this setting.
+    WEBAUTHN_ENABLED: bool = False  # Currently NOT IMPLEMENTED.
     # WEBAUTHN_AUTHENTICATOR_ATTACHMENT: Optional[str]  # "platform" or "cross-platform"
     # WEBAUTHN_USER_VERIFICATION: Optional[str]  # "required" or "preferred" or "discouraged"
     # WEBAUTHN_PUBLIC_KEY_CREDENTIALS_CHARSET: Optional[str] = "ascii"

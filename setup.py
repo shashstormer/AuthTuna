@@ -52,7 +52,6 @@ setup(
         "httpx",
         "itsdangerous",
         "uvicorn",
-        "webauthn>=2.7.0",
     ],
     extras_require={
         "dev": [
