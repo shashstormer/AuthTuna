@@ -2,13 +2,12 @@
 API endpoints for managing and authenticating with passkeys (WebAuthn).
 """
 import base64
-
-import webauthn.helpers.structs
 from fastapi import APIRouter, Depends, Request, HTTPException, status, Body
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from authtuna.integrations import get_current_user, auth_service
+from webauthn.helpers.structs import PublicKeyCredentialUserEntity
 from authtuna.core.database import User
 from authtuna.core.exceptions import InvalidTokenError
 from authtuna.helpers import create_session_and_set_cookie
@@ -29,14 +28,9 @@ def convert_keys_to_camel_case(obj):
         return new_obj
     elif isinstance(obj, list):
         return [convert_keys_to_camel_case(item) for item in obj]
+    elif isinstance(obj, PublicKeyCredentialUserEntity):
+        return convert_keys_to_camel_case(obj.__dict__)
     else:
-        try:
-            obj = obj.__dict__()
-            return convert_keys_to_camel_case(obj)
-        except (AttributeError, ValueError, TypeError):
-            pass
-        except Exception as e:
-            print(e)
         return obj
 
 
@@ -89,7 +83,6 @@ async def generate_registration_options(request: Request, user: User = Depends(g
         user=user,
         existing_credentials=existing_credentials
     )
-    print(options)
     options = options.__dict__
     options_dict = convert_keys_to_camel_case(options)
     options_dict['challenge'] = base64.urlsafe_b64encode(options["challenge"]).decode('ascii')
