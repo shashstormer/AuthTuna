@@ -135,13 +135,16 @@ async def verify_and_save_registration(
 
     try:
         reg_resp = payload.registration_response.model_dump()
-        print(reg_resp)
-        print(type(reg_resp))
-        # reg_resp = to_snake_case(reg_resp)
-        # print(reg_resp)
-        # print(type(reg_resp))
+        reg_resp["raw_id"] = reg_resp["rawId"].encode('ascii')
+        reg_resp["response"]["client_data_json"] = reg_resp["response"]["clientDataJSON"].encode('ascii')
+        reg_resp["response"]["attestation_object"] = reg_resp["response"]["attestationObject"].encode('ascii')
         reg_resp.pop("clientExtensionResults", None)
         reg_resp.pop("client_extension_results", None)
+        reg_resp.pop("rawId", None)
+        reg_resp["response"].pop("clientDataJSON", None)
+        reg_resp["response"].pop("attestationObject", None)
+        print(reg_resp)
+        print(type(reg_resp))
         await auth_service.passkeys.register_new_credential(
             user=user,
             name=payload.name,
