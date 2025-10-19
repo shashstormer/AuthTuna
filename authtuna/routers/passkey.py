@@ -89,6 +89,7 @@ async def generate_registration_options(request: Request, user: User = Depends(g
         user=user,
         existing_credentials=existing_credentials
     )
+    print(options)
     options = options.__dict__
     options_dict = convert_keys_to_camel_case(options)
     options_dict['challenge'] = base64.urlsafe_b64encode(options["challenge"]).decode('ascii')
