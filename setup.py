@@ -52,6 +52,7 @@ setup(
         "httpx",
         "itsdangerous",
         "uvicorn",
+        "cbor2>=5.4.6",
     ],
     extras_require={
         "dev": [
