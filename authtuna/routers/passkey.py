@@ -28,6 +28,7 @@ def convert_keys_to_camel_case(obj):
     elif isinstance(obj, list):
         return [convert_keys_to_camel_case(item) for item in obj]
     else:
+        print(type(obj))
         return obj
 
 
