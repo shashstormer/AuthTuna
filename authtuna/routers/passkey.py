@@ -3,7 +3,7 @@ API endpoints for managing and authenticating with passkeys (WebAuthn).
 """
 import base64
 from fastapi import APIRouter, Depends, Request, HTTPException, status, Body
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
 from authtuna.integrations import get_current_user, auth_service
@@ -56,21 +56,25 @@ def convert_keys_to_snake_case(obj):
         return obj
 
 class PasskeyRegistrationResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
-    rawId: str
+    raw_id: str = Field(..., alias='rawId')
     response: dict
     type: str
-    clientExtensionResults: dict
-    authenticatorAttachment: Optional[str] = None
+    client_extension_results: dict = Field(..., alias='clientExtensionResults')
+    authenticator_attachment: Optional[str] = Field(None, alias='authenticatorAttachment')
 
 
 class PasskeyAuthenticationResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
-    rawId: str
+    raw_id: str = Field(..., alias='rawId')
     response: dict
     type: str
-    clientExtensionResults: dict
-    authenticatorAttachment: Optional[str] = None
+    client_extension_results: dict = Field(..., alias='clientExtensionResults')
+    authenticator_attachment: Optional[str] = Field(None, alias='authenticatorAttachment')
 
 
 class NewPasskey(BaseModel):
