@@ -135,7 +135,7 @@ async def verify_and_save_registration(
 
     try:
         reg_resp = payload.registration_response.model_dump()
-        reg_resp["raw_id"] = reg_resp["rawId"].encode('ascii')
+        reg_resp["raw_id"] = reg_resp["raw_id"].encode('ascii')
         reg_resp["response"]["client_data_json"] = reg_resp["response"]["clientDataJSON"].encode('ascii')
         reg_resp["response"]["attestation_object"] = reg_resp["response"]["attestationObject"].encode('ascii')
         reg_resp.pop("clientExtensionResults", None)
