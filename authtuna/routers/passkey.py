@@ -63,7 +63,10 @@ async def generate_registration_options(request: Request, user: User = Depends(g
     )
     options.challenge = base64.urlsafe_b64encode(options.challenge).decode('ascii')
     request.session['passkey_registration_challenge'] = options.challenge
-    return options
+    options_dict = options.__dict__
+    if options_dict.get("hints") is None:
+        options_dict["hints"] = []
+    return options_dict
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
