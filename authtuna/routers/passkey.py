@@ -31,9 +31,6 @@ def convert_keys_to_camel_case(obj):
     elif isinstance(obj, PublicKeyCredentialUserEntity):
         return convert_keys_to_camel_case(obj.__dict__)
     else:
-        if isinstance(obj, dict):
-            if obj.get("hints", False) is None:
-                obj["hints"] = []
         return obj
 
 
@@ -92,7 +89,8 @@ async def generate_registration_options(request: Request, user: User = Depends(g
     request.session['passkey_registration_challenge'] = options_dict['challenge']
     if options_dict.get("excludeCredentials") is None:
         options_dict["excludeCredentials"] = []
-
+    if options_dict.get("hints") is None:
+        options_dict["hints"] = []
     return options_dict
 
 
