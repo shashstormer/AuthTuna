@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 import cbor2
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding
+from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519
 from cryptography.exceptions import InvalidSignature
 
 from authtuna.core.config import settings
@@ -45,6 +45,7 @@ class PasskeysCore:
             "challenge": encryption_utils.base64url_encode(challenge),
             "pubKeyCredParams": [
                 {"type": "public-key", "alg": -7},  # ES256
+                {"type": "public-key", "alg": -8},  # EdDSA (Ed25519)
                 {"type": "public-key", "alg": -257},  # RS256
                 {"type": "public-key", "alg": -35},  # ES384
                 {"type": "public-key", "alg": -36},  # ES512
@@ -60,6 +61,8 @@ class PasskeysCore:
             "extensions": {
                 "credProps": True,
                 "largeBlob": {"support": "preferred"},
+                # Level 2 protection: User verification required for credential use.
+                "credProtect": 2,
             },
         }
 
@@ -108,13 +111,12 @@ class PasskeysCore:
             cred_id_len = int.from_bytes(auth_data[53:55], "big")
             credential_id = auth_data[55: 55 + cred_id_len]
 
-            # Use a stream to safely parse the CBOR-encoded public key and any remaining extension data.
             cose_stream = BytesIO(auth_data[55 + cred_id_len:])
             public_key_cose = cbor2.load(cose_stream)
             remaining_bytes = cose_stream.read()
 
             is_backup_eligible, is_backed_up = False, False
-            if flags & 0x80 and remaining_bytes:  # ED (Extension Data) flag is set
+            if flags & 0x80 and remaining_bytes:  # ED (Extension Data) flag
                 auth_data_extensions = cbor2.loads(remaining_bytes)
                 is_backup_eligible = auth_data_extensions.get("be", False)
                 is_backed_up = auth_data_extensions.get("bs", False)
@@ -124,7 +126,7 @@ class PasskeysCore:
 
             return {
                 "credential_id": credential_id,
-                "public_key": cbor2.dumps(public_key_cose),  # Store the raw CBOR bytes
+                "public_key": cbor2.dumps(public_key_cose),
                 "sign_count": sign_count,
                 "aaguid": aaguid,
                 "transports": response.get("response", {}).get("transports", []),
@@ -191,7 +193,12 @@ class PasskeysCore:
             cose_key = cbor2.loads(credential.public_key)
             key_type, alg = cose_key.get(1), cose_key.get(3)
 
-            if key_type == 2:  # EC2 Key Type
+            if key_type == 1 and alg == -8:  # OKP / EdDSA
+                x = cose_key.get(-2)
+                public_key = ed25519.Ed25519PublicKey.from_public_bytes(x)
+                public_key.verify(signature, signed_data)
+
+            elif key_type == 2:  # EC2
                 crv, x, y = cose_key.get(-1), cose_key.get(-2), cose_key.get(-3)
                 curve_map = {1: ec.SECP256R1(), 2: ec.SECP384R1(), 3: ec.SECP521R1()}
                 hash_map = {-7: hashes.SHA256(), -35: hashes.SHA384(), -36: hashes.SHA512()}
@@ -201,18 +208,17 @@ class PasskeysCore:
                                                            curve).public_key()
                 public_key.verify(signature, signed_data, ec.ECDSA(hash_alg))
 
-            elif key_type == 3:  # RSA Key Type
+            elif key_type == 3:  # RSA
                 n, e = cose_key.get(-1), cose_key.get(-2)
                 public_key = rsa.RSAPublicNumbers(int.from_bytes(e, 'big'), int.from_bytes(n, 'big')).public_key()
 
                 if alg == -257:  # RS256
                     public_key.verify(signature, signed_data, padding.PKCS1v15(), hashes.SHA256())
-                elif alg in [-37, -38, -39]:  # PSS Algorithms
-                    hash_alg = {-37: hashes.SHA256(), -38: hashes.SHA384(), -39: hashes.SHA512()}[alg]
+                elif alg == -37:  # PS256
                     public_key.verify(
                         signature, signed_data,
-                        padding.PSS(mgf=padding.MGF1(hash_alg), salt_length=hash_alg.digest_size),
-                        hash_alg
+                        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=hashes.SHA256.digest_size),
+                        hashes.SHA256()
                     )
                 else:
                     raise ValueError(f"Unsupported RSA algorithm: {alg}")
