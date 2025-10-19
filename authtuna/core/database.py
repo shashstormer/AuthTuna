@@ -448,7 +448,13 @@ class PasskeyCredential(Base):
     nickname = Column(String(100), nullable=False)
     public_key = Column(LargeBinary, nullable=False)
     sign_count = Column(Integer, default=0, nullable=False)
+    aaguid = Column(LargeBinary(16), nullable=True)
+    is_discoverable = Column(Boolean, default=False, nullable=False)
+    is_backup_eligible = Column(Boolean, default=False, nullable=False)
+    is_backed_up = Column(Boolean, default=False, nullable=False)
     transports = Column(JsonType, nullable=True, default=list)
+    created_at = Column(Float, nullable=False, default=time.time)
+    last_used_at = Column(Float, nullable=False, default=time.time, onupdate=time.time)
     user = relationship("User", back_populates="passkey_credentials")
 
 
