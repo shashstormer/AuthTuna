@@ -2,6 +2,8 @@
 API endpoints for managing and authenticating with passkeys (WebAuthn).
 """
 import base64
+
+import webauthn.helpers.structs
 from fastapi import APIRouter, Depends, Request, HTTPException, status, Body
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -27,6 +29,8 @@ def convert_keys_to_camel_case(obj):
         return new_obj
     elif isinstance(obj, list):
         return [convert_keys_to_camel_case(item) for item in obj]
+    elif isinstance(obj, webauthn.helpers.structs.PublicKeyCredentialParameters):
+        return convert_keys_to_camel_case(obj.__dict__)
     else:
         print(type(obj))
         return obj
