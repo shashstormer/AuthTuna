@@ -18,6 +18,16 @@ def to_camel_case(snake_str: str) -> str:
     components = snake_str.split('_')
     return components[0] + ''.join(x.title() for x in components[1:])
 
+def to_snake_case(camel_str: str) -> str:
+    """Converts a camelCase string to snake_case."""
+    snake_str = ''
+    for char in camel_str:
+        if char.isupper():
+            snake_str += '_' + char.lower()
+        else:
+            snake_str += char
+    return snake_str.lstrip('_')
+
 def convert_keys_to_camel_case(obj):
     """Recursively converts keys in a dictionary or object to camelCase."""
     if isinstance(obj, dict):
@@ -33,6 +43,17 @@ def convert_keys_to_camel_case(obj):
     else:
         return obj
 
+def convert_keys_to_snake_case(obj):
+    if isinstance(obj, dict):
+        new_obj = {}
+        for k, v in obj.items():
+            new_key = to_snake_case(k)
+            new_obj[new_key] = convert_keys_to_snake_case(v)
+        return new_obj
+    elif isinstance(obj, list):
+        return [convert_keys_to_snake_case(item) for item in obj]
+    else:
+        return obj
 
 class PasskeyRegistrationResponse(BaseModel):
     id: str
@@ -112,7 +133,7 @@ async def verify_and_save_registration(
         await auth_service.passkeys.register_new_credential(
             user=user,
             name=payload.name,
-            registration_response=payload.registration_response.model_dump(),
+            registration_response=to_snake_case(payload.registration_response.model_dump()),
             challenge=base64.urlsafe_b64decode(challenge_b64)
         )
         return {"message": f"Passkey '{payload.name}' registered successfully."}
