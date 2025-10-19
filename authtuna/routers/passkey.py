@@ -29,10 +29,12 @@ def convert_keys_to_camel_case(obj):
         return new_obj
     elif isinstance(obj, list):
         return [convert_keys_to_camel_case(item) for item in obj]
-    elif isinstance(obj, webauthn.helpers.structs.PublicKeyCredentialParameters):
-        return convert_keys_to_camel_case(obj.__dict__)
     else:
-        print(type(obj))
+        try:
+            obj = obj.__dict__
+            return convert_keys_to_camel_case(obj)
+        except AttributeError:
+            pass
         return obj
 
 
