@@ -1,15 +1,15 @@
-import os
-import json
 import hashlib
+import json
+import os
 import time
 from io import BytesIO
 from typing import List, Optional, Dict, Any
 from urllib.parse import urlparse
 
 import cbor2
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, rsa, padding, ed25519
-from cryptography.exceptions import InvalidSignature
 
 from authtuna.core.config import settings
 from authtuna.core.database import PasskeyCredential as DBPasskey
@@ -61,8 +61,7 @@ class PasskeysCore:
             "extensions": {
                 "credProps": True,
                 "largeBlob": {"support": "preferred"},
-                # Level 2 protection: User verification required for credential use.
-                "credProtect": 2,
+                "credProtect": 2,  # Level 2 protection: User verification required.
             },
         }
 
@@ -78,6 +77,7 @@ class PasskeysCore:
         challenge = session_challenge.get("challenge")
         timestamp = session_challenge.get("timestamp")
 
+        # 1.  Robust Challenge Validation with Skew Tolerance
         if not isinstance(timestamp, (int, float)) or abs(time.time() - timestamp) > CHALLENGE_LIFETIME_SECONDS:
             raise ValueError("Challenge expired or has an invalid timestamp.")
 
@@ -89,6 +89,7 @@ class PasskeysCore:
             if encryption_utils.base64url_decode(client_data["challenge"]) != challenge: raise ValueError(
                 "Challenge mismatch.")
 
+            # 2.  Robust Origin Parsing
             origin_host = urlparse(client_data["origin"]).hostname or ""
             if not (origin_host == settings.WEBAUTHN_RP_ID or origin_host.endswith("." + settings.WEBAUTHN_RP_ID)):
                 raise ValueError(f"Origin host '{origin_host}' not valid for RP ID.")
@@ -96,6 +97,8 @@ class PasskeysCore:
             attestation_object = cbor2.loads(
                 encryption_utils.base64url_decode(response["response"]["attestationObject"]))
             auth_data = attestation_object["authData"]
+
+            # 3.  Attestation Format Fallback
             fmt = attestation_object.get("fmt")
             if fmt not in ("none", "packed", "fido-u2f"):
                 raise ValueError(f"Unsupported attestation format: {fmt}")
@@ -107,16 +110,18 @@ class PasskeysCore:
             if not (flags & 0x01): raise ValueError("User Present flag not set.")
             if not (flags & 0x40): raise ValueError("Attested Credential Data flag not set.")
 
+            # 4.  AAGUID and Safe Remaining Bytes Parsing
             aaguid = auth_data[37:53]
             cred_id_len = int.from_bytes(auth_data[53:55], "big")
             credential_id = auth_data[55: 55 + cred_id_len]
 
+            # Use a stream to safely parse the CBOR-encoded public key and extensions.
             cose_stream = BytesIO(auth_data[55 + cred_id_len:])
             public_key_cose = cbor2.load(cose_stream)
             remaining_bytes = cose_stream.read()
 
             is_backup_eligible, is_backed_up = False, False
-            if flags & 0x80 and remaining_bytes:  # ED (Extension Data) flag
+            if flags & 0x80 and remaining_bytes:  # ED (Extension Data) flag is set
                 auth_data_extensions = cbor2.loads(remaining_bytes)
                 is_backup_eligible = auth_data_extensions.get("be", False)
                 is_backed_up = auth_data_extensions.get("bs", False)
@@ -193,7 +198,7 @@ class PasskeysCore:
             cose_key = cbor2.loads(credential.public_key)
             key_type, alg = cose_key.get(1), cose_key.get(3)
 
-            if key_type == 1 and alg == -8:  # OKP / EdDSA
+            if key_type == 1 and alg == -8:  # OKP / EdDSA (Ed25519)
                 x = cose_key.get(-2)
                 public_key = ed25519.Ed25519PublicKey.from_public_bytes(x)
                 public_key.verify(signature, signed_data)
@@ -214,11 +219,12 @@ class PasskeysCore:
 
                 if alg == -257:  # RS256
                     public_key.verify(signature, signed_data, padding.PKCS1v15(), hashes.SHA256())
-                elif alg == -37:  # PS256
+                elif alg in [-37, -38, -39]:  # PSS Algorithms
+                    hash_alg = {-37: hashes.SHA256(), -38: hashes.SHA384(), -39: hashes.SHA512()}[alg]
                     public_key.verify(
                         signature, signed_data,
-                        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=hashes.SHA256.digest_size),
-                        hashes.SHA256()
+                        padding.PSS(mgf=padding.MGF1(hash_alg), salt_length=hash_alg.digest_size),
+                        hash_alg
                     )
                 else:
                     raise ValueError(f"Unsupported RSA algorithm: {alg}")
