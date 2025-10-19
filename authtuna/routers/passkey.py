@@ -82,7 +82,7 @@ async def generate_registration_options(request: Request, user: User = Depends(g
     )
     options = options.__dict__
     options_dict = convert_keys_to_camel_case(options)
-    options_dict['challenge'] = base64.urlsafe_b64encode(options.challenge).decode('ascii')
+    options_dict['challenge'] = base64.urlsafe_b64encode(options["challenge"]).decode('ascii')
     request.session['passkey_registration_challenge'] = options_dict['challenge']
     if options_dict.get("excludeCredentials") is None:
         options_dict["excludeCredentials"] = []
