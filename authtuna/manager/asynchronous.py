@@ -752,7 +752,7 @@ class PasskeyManager:
 
     def __init__(self, db_manager: DatabaseManager):
         self._db_manager = db_manager
-        self._core = PasskeysCore()
+        self.core = PasskeysCore()
 
     async def get_for_user(self, user_id: str) -> List[PasskeyCredential]:
         """Retrieve all passkeys for a given user."""
