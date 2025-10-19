@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, Request, HTTPException, status, Body
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
+from webauthn.helpers import bytes_to_base64url
+
 from authtuna.integrations import get_current_user, auth_service
 from webauthn.helpers.structs import PublicKeyCredentialUserEntity
 from authtuna.core.database import User
@@ -135,7 +137,7 @@ async def verify_and_save_registration(
 
     try:
         reg_resp = payload.registration_response.model_dump()
-        reg_resp["id"] = reg_resp["id"].encode('ascii')
+        reg_resp["id"] = bytes_to_base64url(reg_resp["id"].encode('ascii'))
         reg_resp["raw_id"] = reg_resp["raw_id"].encode('ascii')
         reg_resp["response"]["client_data_json"] = reg_resp["response"]["clientDataJSON"].encode('ascii')
         reg_resp["response"]["attestation_object"] = reg_resp["response"]["attestationObject"].encode('ascii')
