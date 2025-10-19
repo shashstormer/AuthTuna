@@ -66,6 +66,9 @@ async def generate_registration_options(request: Request, user: User = Depends(g
     options_dict = options.__dict__
     if options_dict.get("hints") is None:
         options_dict["hints"] = []
+    options_dict["pubKeyCredParams"] = options_dict["pub_key_cred_params"]
+    options_dict["excludeCredentials"] = options_dict["exclude_credentials"]
+    options_dict["authenticatorSelection"] = options_dict["authenticator_selection"]
     return options_dict
 
 
