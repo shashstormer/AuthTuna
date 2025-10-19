@@ -2,6 +2,7 @@ import os
 import json
 import hashlib
 import time
+from io import BytesIO
 from typing import List, Optional, Dict, Any
 from urllib.parse import urlparse
 
@@ -14,6 +15,7 @@ from authtuna.core.config import settings
 from authtuna.core.database import PasskeyCredential as DBPasskey
 from authtuna.core.encryption import encryption_utils
 
+# Define a constant for challenge lifetime in seconds (e.g., 2 minutes)
 CHALLENGE_LIFETIME_SECONDS = 120
 
 
@@ -26,6 +28,7 @@ class PasskeysCore:
     def generate_registration_options(
             self, user_id: str, username: str, existing_credentials: List[DBPasskey]
     ) -> tuple[dict, dict]:
+        """Generate options for a passkey registration ceremony."""
         challenge = os.urandom(32)
         exclude_credentials = [
             {"type": "public-key", "id": encryption_utils.base64url_encode(cred.id)}
@@ -47,7 +50,7 @@ class PasskeysCore:
                 {"type": "public-key", "alg": -36},  # ES512
                 {"type": "public-key", "alg": -37},  # PS256
             ],
-            # Leave authenticatorAttachment unset for maximum compatibility (hybrid flow).
+            # Omit authenticatorAttachment for maximum compatibility (hybrid flow).
             "authenticatorSelection": {
                 "residentKey": "required",
                 "userVerification": "preferred",
@@ -66,6 +69,9 @@ class PasskeysCore:
     def verify_registration(
             self, response: dict, session_challenge: Dict[str, Any]
     ) -> Dict[str, Any]:
+        """
+        Manually verify the client's response from a registration ceremony.
+        """
         challenge = session_challenge.get("challenge")
         timestamp = session_challenge.get("timestamp")
 
@@ -101,23 +107,24 @@ class PasskeysCore:
             aaguid = auth_data[37:53]
             cred_id_len = int.from_bytes(auth_data[53:55], "big")
             credential_id = auth_data[55: 55 + cred_id_len]
-            public_key_cose = auth_data[55 + cred_id_len:]
 
-            # Correctly parse extensions from the end of authData
+            # Use a stream to safely parse the CBOR-encoded public key and any remaining extension data.
+            cose_stream = BytesIO(auth_data[55 + cred_id_len:])
+            public_key_cose = cbor2.load(cose_stream)
+            remaining_bytes = cose_stream.read()
+
             is_backup_eligible, is_backed_up = False, False
-            if flags & 0x80:  # ED (Extension Data) flag is set
-                remaining_bytes = auth_data[55 + cred_id_len + len(public_key_cose):]
-                if remaining_bytes:
-                    auth_data_extensions = cbor2.loads(remaining_bytes)
-                    is_backup_eligible = auth_data_extensions.get("be", False)
-                    is_backed_up = auth_data_extensions.get("bs", False)
+            if flags & 0x80 and remaining_bytes:  # ED (Extension Data) flag is set
+                auth_data_extensions = cbor2.loads(remaining_bytes)
+                is_backup_eligible = auth_data_extensions.get("be", False)
+                is_backed_up = auth_data_extensions.get("bs", False)
 
             client_extensions = response.get("clientExtensionResults", {})
             is_discoverable = client_extensions.get("credProps", {}).get("rk", False)
 
             return {
                 "credential_id": credential_id,
-                "public_key": public_key_cose,
+                "public_key": cbor2.dumps(public_key_cose),  # Store the raw CBOR bytes
                 "sign_count": sign_count,
                 "aaguid": aaguid,
                 "transports": response.get("response", {}).get("transports", []),
@@ -125,7 +132,7 @@ class PasskeysCore:
                 "is_backup_eligible": is_backup_eligible,
                 "is_backed_up": is_backed_up,
             }
-        except (ValueError, KeyError, IndexError) as e:
+        except (ValueError, KeyError, IndexError, cbor2.CBORDecodeError) as e:
             raise ValueError(f"Registration verification failed: {e}")
 
     def generate_authentication_options(
@@ -184,7 +191,7 @@ class PasskeysCore:
             cose_key = cbor2.loads(credential.public_key)
             key_type, alg = cose_key.get(1), cose_key.get(3)
 
-            if key_type == 2:
+            if key_type == 2:  # EC2 Key Type
                 crv, x, y = cose_key.get(-1), cose_key.get(-2), cose_key.get(-3)
                 curve_map = {1: ec.SECP256R1(), 2: ec.SECP384R1(), 3: ec.SECP521R1()}
                 hash_map = {-7: hashes.SHA256(), -35: hashes.SHA384(), -36: hashes.SHA512()}
@@ -194,13 +201,13 @@ class PasskeysCore:
                                                            curve).public_key()
                 public_key.verify(signature, signed_data, ec.ECDSA(hash_alg))
 
-            elif key_type == 3:
+            elif key_type == 3:  # RSA Key Type
                 n, e = cose_key.get(-1), cose_key.get(-2)
                 public_key = rsa.RSAPublicNumbers(int.from_bytes(e, 'big'), int.from_bytes(n, 'big')).public_key()
 
-                if alg == -257:
+                if alg == -257:  # RS256
                     public_key.verify(signature, signed_data, padding.PKCS1v15(), hashes.SHA256())
-                elif alg in [-37, -38, -39]:
+                elif alg in [-37, -38, -39]:  # PSS Algorithms
                     hash_alg = {-37: hashes.SHA256(), -38: hashes.SHA384(), -39: hashes.SHA512()}[alg]
                     public_key.verify(
                         signature, signed_data,
@@ -213,5 +220,6 @@ class PasskeysCore:
                 raise ValueError(f"Unsupported key type: {key_type}")
 
             return new_sign_count
-        except (InvalidSignature, ValueError, KeyError, IndexError) as e:
+
+        except (InvalidSignature, ValueError, KeyError, IndexError, cbor2.CBORDecodeError) as e:
             raise ValueError(f"Authentication verification failed: {e}")
