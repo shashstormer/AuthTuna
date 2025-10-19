@@ -20,12 +20,15 @@ def to_camel_case(snake_str: str) -> str:
 def convert_keys_to_camel_case(obj):
     """Recursively converts keys in a dictionary or object to camelCase."""
     if isinstance(obj, dict):
-        return {to_camel_case(k): convert_keys_to_camel_case(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [convert_keys_to_camel_case(elem) for elem in obj]
-    if hasattr(obj, '__dict__'):
-        return {to_camel_case(k): convert_keys_to_camel_case(v) for k, v in obj.__dict__.items()}
-    return obj
+        new_obj = {}
+        for k, v in obj.items():
+            new_key = to_camel_case(k)
+            new_obj[new_key] = convert_keys_to_camel_case(v)
+        return new_obj
+    elif isinstance(obj, list):
+        return [convert_keys_to_camel_case(item) for item in obj]
+    else:
+        return obj
 
 
 class PasskeyRegistrationResponse(BaseModel):
