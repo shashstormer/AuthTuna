@@ -1,0 +1,3 @@
+# WAS USING WEBAUTHN the library too trash. IMA BUILD NEW PASSKEY SYSTEM FROM SCRATCH WITH W3C STANDARDS.
+class PasskeysCore:
+    pass

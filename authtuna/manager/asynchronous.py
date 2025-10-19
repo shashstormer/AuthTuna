@@ -19,7 +19,7 @@ from authtuna.core.exceptions import (
     SessionNotFoundError, RoleNotFoundError, PermissionNotFoundError, OperationForbiddenError
 )
 from authtuna.core.mfa import MFAManager
-from authtuna.core.passkeys import PasskeyCore
+from authtuna.core.passkeys import PasskeysCore
 
 
 class UserManager:
@@ -752,78 +752,8 @@ class PasskeyManager:
 
     def __init__(self, db_manager: DatabaseManager):
         self._db_manager = db_manager
-        self.logic = PasskeyCore()
-
-    async def get_credentials_for_user(self, user_id: str) -> List[PasskeyCredential]:
-        """Retrieves all passkey credentials registered to a specific user."""
-        async with self._db_manager.get_db() as db:
-            stmt = select(PasskeyCredential).where(PasskeyCredential.user_id == user_id)
-            result = await db.execute(stmt)
-            return list(result.scalars().all())
-
-    async def get_credential_by_id(self, credential_id: str) -> Optional[PasskeyCredential]:
-        """Retrieves a single passkey credential by its unique ID."""
-        async with self._db_manager.get_db() as db:
-            return await db.get(PasskeyCredential, credential_id)
-
-    async def register_new_credential(
-            self, user: User, name: str, registration_response: dict, challenge: bytes
-    ) -> PasskeyCredential:
-        """
-        Verifies a new passkey registration and saves the credential to the database.
-        """
-        try:
-            verified_registration = self.logic.verify_registration(
-                response_data=registration_response,
-                challenge=challenge
-            )
-        except Exception as e:
-            raise InvalidTokenError(f"Passkey registration verification failed: {e}")
-
-        async with self._db_manager.get_db() as db:
-            new_passkey = PasskeyCredential(
-                id=verified_registration.credential_id.decode('utf-8'),
-                user_id=user.id,
-                name=name,
-                public_key=verified_registration.credential_public_key.decode('utf-8'),
-                sign_count=verified_registration.sign_count,
-            )
-            db.add(new_passkey)
-            await db.commit()
-            return new_passkey
-
-    async def verify_authentication_and_get_user(
-            self, authentication_response: dict, challenge: bytes
-    ) -> Optional[User]:
-        """
-        Verifies a passkey authentication and updates the credential's sign count.
-        Returns the authenticated User object if successful.
-        """
-        credential_id = authentication_response.get("id")
-        if not credential_id:
-            raise InvalidTokenError("Credential ID missing from authentication response.")
-
-        async with self._db_manager.get_db() as db:
-            stored_credential = await db.get(PasskeyCredential, credential_id)
-            if not stored_credential:
-                raise InvalidTokenError("Passkey not registered for this user.")
-
-            try:
-                verified_auth = self.logic.verify_authentication(
-                    response_data=authentication_response,
-                    stored_credential=stored_credential,
-                    challenge=challenge,
-                )
-            except Exception as e:
-                raise InvalidTokenError(f"Passkey authentication failed: {e}")
-
-            stored_credential.sign_count = verified_auth.new_sign_count
-
-            user = await db.get(User, stored_credential.user_id)
-            await db.commit()
-
-            return user
-
+        self._core = PasskeysCore()
+        # WILL IMPLEMENT LATER.
 
 class AuditManager:
     """Manages querying the audit trail for security and administrative purposes."""
