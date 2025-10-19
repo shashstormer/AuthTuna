@@ -12,6 +12,22 @@ from authtuna.core.exceptions import InvalidTokenError
 from authtuna.helpers import create_session_and_set_cookie
 
 
+def to_camel_case(snake_str: str) -> str:
+    """Converts a snake_case string to camelCase."""
+    components = snake_str.split('_')
+    return components[0] + ''.join(x.title() for x in components[1:])
+
+def convert_keys_to_camel_case(obj):
+    """Recursively converts keys in a dictionary or object to camelCase."""
+    if isinstance(obj, dict):
+        return {to_camel_case(k): convert_keys_to_camel_case(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [convert_keys_to_camel_case(elem) for elem in obj]
+    if hasattr(obj, '__dict__'):
+        return {to_camel_case(k): convert_keys_to_camel_case(v) for k, v in obj.__dict__.items()}
+    return obj
+
+
 class PasskeyRegistrationResponse(BaseModel):
     id: str
     rawId: str
@@ -61,14 +77,13 @@ async def generate_registration_options(request: Request, user: User = Depends(g
         user=user,
         existing_credentials=existing_credentials
     )
-    options.challenge = base64.urlsafe_b64encode(options.challenge).decode('ascii')
-    request.session['passkey_registration_challenge'] = options.challenge
-    options_dict = options.__dict__
-    if options_dict.get("hints") is None:
-        options_dict["hints"] = []
-    options_dict["pubKeyCredParams"] = options_dict["pub_key_cred_params"]
-    options_dict["excludeCredentials"] = options_dict["exclude_credentials"]
-    options_dict["authenticatorSelection"] = options_dict["authenticator_selection"]
+
+    options_dict = convert_keys_to_camel_case(options)
+    options_dict['challenge'] = base64.urlsafe_b64encode(options.challenge).decode('ascii')
+    request.session['passkey_registration_challenge'] = options_dict['challenge']
+    if options_dict.get("excludeCredentials") is None:
+        options_dict["excludeCredentials"] = []
+
     return options_dict
 
 
@@ -104,9 +119,16 @@ async def generate_authentication_options(request: Request):
     Generate authentication options to challenge the user for a passkey login.
     """
     options = auth_service.passkeys.logic.generate_authentication_options()
-    request.session['passkey_authentication_challenge'] = base64.urlsafe_b64encode(options['challenge']).decode('ascii')
 
-    return options
+    options_camel_case = convert_keys_to_camel_case(options)
+
+    options_camel_case['challenge'] = base64.urlsafe_b64encode(options['challenge']).decode('ascii')
+    request.session['passkey_authentication_challenge'] = options_camel_case['challenge']
+
+    if options_camel_case.get("allowCredentials") is None:
+        options_camel_case["allowCredentials"] = []
+
+    return options_camel_case
 
 
 @router.post("/authenticate", status_code=status.HTTP_200_OK)
