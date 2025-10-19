@@ -58,7 +58,6 @@
 <body class="bg-gray-900 text-gray-200">
 
 <div class="flex min-h-screen">
-    <!-- Sidebar -->
     <aside class="w-64 bg-card p-6 flex flex-col justify-between">
         <div>
             <h1 class="text-2xl font-bold text-white mb-8">AuthTuna</h1>
@@ -85,13 +84,11 @@
         </div>
     </aside>
 
-    <!-- Main content -->
     <main class="flex-1 p-10">
         <h1 class="text-3xl font-bold text-white">Account Settings</h1>
         <p class="text-gray-400 mb-8">Manage your account security.</p>
 
         <div class="max-w-4xl space-y-8">
-            <!-- Change Password Section -->
             <div class="bg-card p-8 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-semibold text-white mb-6">Change Password</h2>
                 <form id="password-form" class="space-y-6">
@@ -121,7 +118,6 @@
                 <div id="password-message-box" class="mt-4 text-center text-sm font-medium"></div>
             </div>
 
-            <!-- MFA Section -->
             <div class="bg-card p-8 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-semibold text-white mb-4">Two-Factor Authentication (2FA)</h2>
                 {% if user.mfa_enabled %}
@@ -153,7 +149,6 @@
                 <div id="passkey-message-box" class="mt-4 text-center text-sm font-medium"></div>
             </div>
 
-            <!-- Active Sessions Section -->
             <div class="bg-card p-8 rounded-lg shadow-lg">
                 <div class="flex justify-between items-center mb-4">
                     <div>
@@ -166,15 +161,13 @@
                     </button>
                 </div>
                 <div id="sessions-list" class="space-y-4">
-                    <!-- Sessions will be loaded here -->
-                </div>
+                    </div>
                 <div id="sessions-message-box" class="mt-4 text-center text-sm font-medium"></div>
             </div>
         </div>
     </main>
 </div>
 
-<!-- Confirmation Modal -->
 <div id="confirm-modal"
      class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden opacity-0 z-50">
     <div class="bg-card rounded-lg shadow-xl p-8 max-w-sm w-full">
@@ -303,7 +296,6 @@
         });
     }
 
-    // --- Active Sessions ---
     const sessionsList = document.getElementById('sessions-list');
     const sessionsMessageBox = document.getElementById('sessions-message-box');
     const terminateAllButton = document.getElementById('terminate-all-button');
@@ -314,7 +306,7 @@
             if (!response.ok) throw new Error('Failed to load sessions.');
             const sessions = await response.json();
 
-            if (sessions.length <= 1) { // Only the current session
+            if (sessions.length <= 1) {
                 terminateAllButton.style.display = 'none';
             } else {
                 terminateAllButton.style.display = 'inline-block';
@@ -349,7 +341,7 @@
                     const data = await response.json();
                     if (response.ok) {
                         showMessage(sessionsMessageBox, data.message || 'Session terminated.', 'success');
-                        loadSessions(); // Refresh the list
+                        loadSessions();
                     } else {
                         showMessage(sessionsMessageBox, data.detail || 'Failed to terminate session.', 'error');
                     }
@@ -370,7 +362,7 @@
                     const data = await response.json();
                     if (response.ok) {
                         showMessage(sessionsMessageBox, data.message || 'All other sessions terminated.', 'success');
-                        loadSessions(); // Refresh the list
+                        loadSessions();
                     } else {
                         showMessage(sessionsMessageBox, data.detail || 'Failed to terminate sessions.', 'error');
                     }
@@ -445,4 +437,3 @@
 </script>
 </body>
 </html>
-
