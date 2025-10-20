@@ -43,8 +43,8 @@ async def generate_register_options(request: Request, user: User = Depends(get_c
     options, session_challenge = auth_service.passkeys.core.generate_registration_options(
         user_id=user.id, username=user.username, existing_credentials=existing_credentials
     )
+    print(session_challenge)
     request.session["passkey_registration_challenge"] = session_challenge
-    options = json.dumps(options)
     return options
 
 
