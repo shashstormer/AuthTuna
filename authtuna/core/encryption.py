@@ -123,5 +123,20 @@ class EncryptionUtils:
             logger.debug(f"JWT decoding failed: {e}")
             return None
 
+    @staticmethod
+    def base64url_encode(data: bytes) -> str:
+        """
+        Encodes bytes to a base64url string without padding.
+        """
+        return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
+
+    @staticmethod
+    def base64url_decode(data: str) -> bytes:
+        """
+        Decodes a base64url string without padding to bytes.
+        """
+        padding = '=' * (4 - (len(data) % 4)) if len(data) % 4 != 0 else ''
+        return base64.urlsafe_b64decode(data + padding)
+
 
 encryption_utils = EncryptionUtils()
