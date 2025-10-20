@@ -1,13 +1,13 @@
+from typing import List, Dict, Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
-import json
 
-from authtuna.integrations import get_current_user, auth_service
 from authtuna.core.database import User
 from authtuna.core.encryption import encryption_utils
+from authtuna.core.exceptions import UserNotFoundError, InvalidTokenError, TokenExpiredError
 from authtuna.helpers import create_session_and_set_cookie
-from authtuna.core.exceptions import UserNotFoundError
+from authtuna.integrations import get_current_user, auth_service
 
 router = APIRouter(prefix="/passkeys", tags=["Passkeys"])
 
@@ -27,7 +27,11 @@ class PasskeyResponse(BaseModel):
     name: str
 
 
-# --- Endpoints ---
+class PasskeyMFALoginRequest(BaseModel):
+    mfa_token: str
+    response: Dict[str, Any]
+
+
 
 @router.post("/register-options", summary="Generate options for passkey registration")
 async def generate_register_options(request: Request, user: User = Depends(get_current_user)):
@@ -135,6 +139,47 @@ async def delete_passkey(credential_id_b64: str, user: User = Depends(get_curren
     success = await auth_service.passkeys.delete_credential(user.id, credential_id_b64)
     if not success:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Passkey not found or you do not have permission to delete it.")
+
+
+@router.post("/mfa-login", summary="Verify passkey as a second factor and create a session")
+async def mfa_login_with_passkey(payload: PasskeyMFALoginRequest, request: Request, response: Response):
+    """
+    Handles the second factor of a login flow using a passkey.
+    It validates the initial mfa_token and the passkey assertion.
+    """
+    # 1. Validate the MFA token from the first login step
+    try:
+        async with auth_service.db_manager.get_db() as db:
+            ip_address = request.state.user_ip_address
+            user = await auth_service.tokens.validate(db, payload.mfa_token, "mfa_validation", ip_address)
+            await db.commit()  # Commit the token usage
+    except (InvalidTokenError, TokenExpiredError) as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+    # 2. Proceed with passkey verification
+    session_challenge = request.session.pop("passkey_authentication_challenge", None)
+    if not session_challenge:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No authentication challenge found. Please try again.")
+
+    try:
+        credential_id = encryption_utils.base64url_decode(payload.response["id"])
+        db_credential = await auth_service.passkeys.get_credential_by_id(credential_id)
+
+        if not db_credential or db_credential.user_id != user.id:
+            raise ValueError("This passkey is not registered to your account.")
+
+        new_sign_count = auth_service.passkeys.core.verify_authentication(
+            response=payload.response, session_challenge=session_challenge, credential=db_credential
+        )
+
+        await auth_service.passkeys.update_credential_on_login(credential_id, new_sign_count)
+
+        # 3. If verification is successful, create a new session for the user
+        await create_session_and_set_cookie(user, request, response, auth_service.db_manager.get_db())
+
+        return {"status": "ok", "message": "Login successful."}
+    except (ValueError, UserNotFoundError) as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
 
 
 passkey_router = router
