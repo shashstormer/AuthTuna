@@ -290,7 +290,7 @@
             const verificationResp = await fetch('/passkeys/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, registration_response: registrationResp }),
+                body: JSON.stringify({ name: nickname, registration_response: registrationResp }),
             });
             if (!verificationResp.ok) throw new Error('Server verification failed.');
             showMessage(passkeyMessageBox, 'Passkey registered successfully!', 'success');
