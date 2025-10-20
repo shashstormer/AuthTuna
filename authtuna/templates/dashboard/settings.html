@@ -251,7 +251,7 @@
             const passkeys = await response.json();
             passkeyList.innerHTML = passkeys.map(key => `
                 <div class="bg-black/20 p-3 rounded-lg flex items-center justify-between border border-white/10">
-                    <p class="font-semibold text-white">${key.nickname}</p>
+                    <p class="font-semibold text-white">${key.name}</p>
                     <button onclick="removePasskey('${key.id}')" class="text-red-400 hover:text-red-300 text-sm font-semibold">Remove</button>
                 </div>
             `).join('') || '<p class="text-sm text-gray-400">No passkeys registered yet.</p>';
@@ -290,7 +290,7 @@
             const verificationResp = await fetch('/passkeys/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nickname, response: registrationResp }),
+                body: JSON.stringify({ name, registration_response: registrationResp }),
             });
             if (!verificationResp.ok) throw new Error('Server verification failed.');
             showMessage(passkeyMessageBox, 'Passkey registered successfully!', 'success');
