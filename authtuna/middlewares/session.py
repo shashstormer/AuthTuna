@@ -56,8 +56,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
         self.raise_errors = raise_errors
         self.public_fastapi_docs = public_docs
         self.default_public_routes = {
-            "/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/reset-password",
-            "/auth/logout", "/auth/verify", "/mfa/validate-login"
+            "/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/reset-password", "/auth/verify", "/mfa/validate-login"
         }
         if public_routes is None:
             self.public_routes = self.default_public_routes_function

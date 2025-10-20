@@ -165,7 +165,6 @@ async def logout_user(request: Request, response: Response):
     Log out the current user by terminating the session and deleting the session cookie.
     """
     session_id = getattr(request.state, "session_id", None)
-    print("SID:", session_id)
     if session_id:
         ip_address = request.state.user_ip_address
         deleted = await auth_service.sessions.terminate(session_id, ip_address)

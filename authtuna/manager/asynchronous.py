@@ -673,7 +673,6 @@ class SessionManager:
 
     async def terminate(self, session_id: str, ip_address: str, errors="ignore"):
         async with self._db_manager.get_db() as db:
-            print("SID2:", session_id)
             stmt = select(DBSession).where(DBSession.session_id == session_id)
             session = (await db.execute(stmt)).unique().scalar_one_or_none()
             if session:
