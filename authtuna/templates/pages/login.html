@@ -5,15 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Light Mode Gradient (Teal/Cyan) */
             --bg-start: hsla(202, 71%, 27%, 1);
             --bg-end: hsla(176, 45%, 66%, 1);
         }
         .dark {
-            /* Dark Mode Gradient (Purple) */
             --bg-start: hsla(252, 40%, 29%, 1);
             --bg-end: hsla(270, 77%, 71%, 1);
         }
@@ -29,7 +28,6 @@
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-        /* Glassmorphism card effect */
         .bg-card {
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -43,7 +41,6 @@
             background-color: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.25);
         }
-        /* Input field styling */
         .form-input {
             border: 1px solid transparent;
             transition: all 0.2s ease-in-out;
@@ -70,7 +67,6 @@
         .light .form-input::placeholder { color: rgba(255, 255, 255, 0.7); }
     </style>
     <script>
-        // Theme toggling logic (original)
         function setTheme(theme) {
             document.documentElement.classList.toggle('dark', theme === 'dark');
             localStorage.setItem('theme', theme);
@@ -90,7 +86,6 @@
 
     <div class="bg-card shadow-2xl rounded-3xl p-8 w-full max-w-sm relative">
         <button onclick="toggleTheme()" class="absolute top-4 right-4 p-2 rounded-full text-white/70 hover:text-white hover:bg-white/20 dark:hover:bg-black/20 transition-colors duration-200">
-            <!-- Theme toggle SVG -->
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 7.625A.75.75 0 018.25 7.5h.75a.75.75 0 01.75.75v.75a.75.75 0 01-.75.75h-.75A.75.75 0 017.5 8.375v-.75zM15 7.5a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zM17.65 6.33a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0L17.65 7.39a.75.75 0 010-1.06zM6.34 17.65a.75.75 0 010-1.06l1.06-1.06a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0zM12 17.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V18a.75.75 0 01.75-.75zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM18 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5h-2.25a.75.75 0 01-.75-.75zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" /></svg>
         </button>
         <div id="card-header" class="text-center mb-8">
@@ -103,7 +98,6 @@
 
         <div id="message-box" class="mb-4 text-center text-sm font-medium hidden"></div>
 
-        <!-- Form 1: Password Login -->
         <form id="password-form" class="space-y-6">
             <div>
                 <label for="username_or_email" class="block text-sm font-medium text-gray-700/90 dark:text-white/80 mb-2">Username or Email</label>
@@ -128,23 +122,16 @@
             </button>
         </form>
 
-        <!-- Form 2: MFA Login (hidden by default) -->
         <form id="mfa-form" class="space-y-6 hidden">
-            <input type="hidden" id="mfa-token-input" name="mfa_token">
-            <div>
-                <label for="mfa-code" class="block text-sm font-medium text-gray-700/90 dark:text-white/80 mb-2">Verification Code</label>
-                <input id="mfa-code" name="mfa_code" type="text" autocomplete="one-time-code" required placeholder="123456 or ABC-DEF-GHI"
-                       class="form-input block w-full px-5 py-3 rounded-xl text-gray-800 dark:text-white text-center text-xl tracking-wider">
-                <p class="text-xs text-center text-white/60 mt-2">
-                    Lost your device? <a href="#" class="font-semibold text-purple-300 hover:text-purple-200">Use a recovery code.</a>
-                </p>
-            </div>
-            <button type="submit" class="w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 focus:ring-4 focus:ring-teal-300 dark:focus:ring-cyan-700 shadow-xl transition-all duration-300 ease-in-out">
-                Verify
-            </button>
-        </form>
+            </form>
 
-        <!-- Social Login Section -->
+        <div id="passkey-login-section" class="hidden">
+            <div class="relative mt-6"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/20"></div></div><div class="relative flex justify-center text-sm"><span class="px-2 bg-white/10 dark:bg-black/20 text-white/70 rounded-full">Or</span></div></div>
+            <button id="passkey-login-btn" type="button" class="mt-6 w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all">
+                Sign in with a Passkey
+            </button>
+        </div>
+
         <div id="social-login-section">
             {% if google_login_enabled or github_login_enabled %}
             <div class="mt-6">
@@ -188,43 +175,40 @@
 
     // --- DOM Elements ---
     const passwordForm = document.getElementById('password-form');
-    const mfaForm = document.getElementById('mfa-form');
     const messageBox = document.getElementById('message-box');
-
     const usernameInput = document.getElementById('username_or_email');
     const passwordInput = document.getElementById('password');
     const usernameError = document.getElementById('username-error');
     const passwordError = document.getElementById('password-error');
-    const mfaTokenInput = document.getElementById('mfa-token-input');
-    const mfaCodeInput = document.getElementById('mfa-code');
+
+    const passkeyLoginSection = document.getElementById('passkey-login-section');
+    const passkeyLoginBtn = document.getElementById('passkey-login-btn');
 
     // --- On Page Load ---
     document.addEventListener('DOMContentLoaded', () => {
-        // This is separate from the theme logic to avoid conflicts.
+        // Show passkey button if supported
+        if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+            PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(available => {
+                if (available) {
+                    passkeyLoginSection.classList.remove('hidden');
+                }
+            });
+        }
+        // Store return_url if present
         const urlParams = new URLSearchParams(window.location.search);
         const returnUrl = urlParams.get('return_url');
         if (returnUrl) {
-            // Store for 10 minutes
             setCookie('return_url', returnUrl, 10);
         }
     });
 
     // --- Validation Logic ---
     function validateUsernameOrEmail(input) {
-        if (input.includes('@')) {
-            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
-        }
-        if (input.length < 3) return false;
-        if (input.includes(" ")) return false;
-        const alphanumericOrHyphenUnderscore = /^[a-zA-Z0-9_-]+$/.test(input);
-        if (!alphanumericOrHyphenUnderscore) return false;
-        return (input.match(/[a-zA-Z]/g) || []).length >= 3;
+        if (input.includes('@')) return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+        return input.length >= 3 && !input.includes(" ");
     }
-
     function validatePassword(password) {
-        if (password.length < 8) return false;
-        if (!/[a-z]/.test(password)) return false;
-        return /[A-Z]/.test(password);
+        return password.length >= 8 && /[a-z]/.test(password) && /[A-Z]/.test(password);
     }
 
     // --- UI Functions ---
@@ -234,24 +218,12 @@
       messageBox.classList.remove('hidden');
     }
 
-    function switchToMfaStep(token) {
-        mfaTokenInput.value = token;
-        passwordForm.classList.add('hidden');
-        document.getElementById('social-login-section').classList.add('hidden');
-        mfaForm.classList.remove('hidden');
-
-        document.getElementById('card-icon').textContent = '🛡️';
-        document.getElementById('card-title').textContent = 'Verification Required';
-        document.getElementById('card-subtitle').textContent = 'Enter your verification code.';
-        mfaCodeInput.focus();
-    }
-
     // --- API Handlers ---
     async function handlePasswordSubmit(event) {
         event.preventDefault();
         const button = event.target.querySelector('button[type="submit"]');
         button.disabled = true;
-        showMessage('', 'hidden'); // Clear previous messages
+        showMessage('', 'hidden');
 
         if (!validateUsernameOrEmail(usernameInput.value)) {
             usernameError.classList.remove('hidden');
@@ -273,7 +245,7 @@
             const data = await response.json();
             if (response.ok) {
                 if (data.mfa_required && data.mfa_token) {
-                    switchToMfaStep(data.mfa_token);
+                    window.location.href = `/mfa/challenge?mfa_token=${data.mfa_token}`;
                 } else {
                     showMessage(data.message, 'text-green-400');
                     const returnUrl = getCookie('return_url');
@@ -290,53 +262,48 @@
         }
     }
 
-    async function handleMfaSubmit(event) {
-        event.preventDefault();
-        const button = event.target.querySelector('button[type="submit"]');
-        button.disabled = true;
+    // --- Event Listeners ---
+    usernameInput.addEventListener('input', () => {
+        usernameError.classList.toggle('hidden', validateUsernameOrEmail(usernameInput.value));
+    });
+    passwordInput.addEventListener('input', () => {
+        passwordError.classList.toggle('hidden', validatePassword(passwordInput.value));
+    });
+    passwordForm.addEventListener('submit', handlePasswordSubmit);
+
+    // Passkey Login Handler
+    passkeyLoginBtn.addEventListener('click', async () => {
+        passkeyLoginBtn.disabled = true;
         showMessage('', 'hidden');
 
-        const code = mfaCodeInput.value;
-        if (!code || code.length < 6) {
-             showMessage('Please enter a valid code.', 'text-red-400');
-             button.disabled = false;
-             return;
-        }
-
         try {
-            const response = await fetch('/mfa/validate-login', {
+            const optionsResp = await fetch('/passkeys/login-options', { method: 'POST' });
+            const options = await optionsResp.json();
+            if (!optionsResp.ok) throw new Error(options.detail || 'Could not get passkey options.');
+
+            const assertion = await SimpleWebAuthnBrowser.startAuthentication(options);
+
+            const verificationResp = await fetch('/passkeys/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mfa_token: mfaTokenInput.value, code: code })
+                body: JSON.stringify({ response: assertion }),
             });
-            const data = await response.json();
-            if (response.ok) {
+
+            const data = await verificationResp.json();
+            if (verificationResp.ok) {
                 showMessage(data.message, 'text-green-400');
                 const returnUrl = getCookie('return_url');
                 deleteCookie('return_url');
                 setTimeout(() => window.location.href = returnUrl || '/ui/dashboard', 1500);
             } else {
-                showMessage(data.detail || 'Invalid code.', 'text-red-400');
-                mfaCodeInput.value = '';
+                throw new Error(data.detail || 'Passkey login failed.');
             }
         } catch (error) {
-            showMessage('Network error. Please try again.', 'text-red-400');
+            showMessage(error.message, 'text-red-400');
         } finally {
-            button.disabled = false;
+            passkeyLoginBtn.disabled = false;
         }
-    }
-
-    // --- Event Listeners ---
-    usernameInput.addEventListener('input', () => {
-        usernameError.classList.toggle('hidden', validateUsernameOrEmail(usernameInput.value));
     });
-
-    passwordInput.addEventListener('input', () => {
-        passwordError.classList.toggle('hidden', validatePassword(passwordInput.value));
-    });
-
-    passwordForm.addEventListener('submit', handlePasswordSubmit);
-    mfaForm.addEventListener('submit', handleMfaSubmit);
     </script>
 </body>
 </html>

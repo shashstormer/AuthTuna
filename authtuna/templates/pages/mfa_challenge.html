@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>2-Factor Authentication</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -59,7 +60,6 @@
 <body class="min-h-screen flex items-center justify-center p-4 text-gray-800 dark:text-gray-100">
     <div class="bg-card shadow-2xl rounded-3xl p-8 w-full max-w-sm relative text-center">
          <button onclick="toggleTheme()" class="absolute top-4 right-4 p-2 rounded-full text-white/70 hover:text-white hover:bg-white/20 dark:hover:bg-black/20 transition-colors duration-200">
-            <!-- Theme toggle SVG -->
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 7.625A.75.75 0 018.25 7.5h.75a.75.75 0 01.75.75v.75a.75.75 0 01-.75.75h-.75A.75.75 0 017.5 8.375v-.75zM15 7.5a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zM17.65 6.33a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0L17.65 7.39a.75.75 0 010-1.06zM6.34 17.65a.75.75 0 010-1.06l1.06-1.06a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0zM12 17.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V18a.75.75 0 01.75-.75zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM18 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5h-2.25a.75.75 0 01-.75-.75zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" /></svg>
         </button>
         <div class="mb-6">
@@ -67,7 +67,7 @@
                 🛡️
             </div>
             <h1 class="text-3xl font-semibold text-white/95">Verification Required</h1>
-            <p class="text-white/70 mt-2">Enter your verification code to complete your login.</p>
+            <p class="text-white/70 mt-2">Enter your verification code or use a passkey.</p>
         </div>
 
         <form id="mfa-challenge-form" class="space-y-6">
@@ -84,9 +84,17 @@
                 Complete Login
             </button>
         </form>
+
+        <div id="passkey-section" class="mt-4 hidden">
+             <div class="relative"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/20"></div></div><div class="relative flex justify-center text-sm"><span class="px-2 bg-white/10 dark:bg-black/20 text-white/70 rounded-full">Or</span></div></div>
+            <button id="use-passkey-btn" class="mt-4 w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all">
+                Sign in with Passkey
+            </button>
+        </div>
     </div>
 
     <script>
+        // --- Cookie Helpers ---
         function getCookie(name) {
             const nameEQ = name + "=";
             const ca = document.cookie.split(';');
@@ -101,25 +109,46 @@
             document.cookie = name +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
         }
 
+        // --- DOM Elements ---
         const mfaForm = document.getElementById('mfa-challenge-form');
         const messageBox = document.getElementById('message-box');
         const mfaCodeInput = document.getElementById('mfa-code');
+        const passkeySection = document.getElementById('passkey-section');
+        const usePasskeyBtn = document.getElementById('use-passkey-btn');
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const mfaToken = urlParams.get('mfa_token');
+
+        // --- On Page Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) {
+                PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(available => {
+                    if (available) {
+                        passkeySection.classList.remove('hidden');
+                    }
+                });
+            }
+            if (!mfaToken) {
+                showMessage('MFA token missing from URL. Please log in again.', 'text-red-300/90');
+                mfaForm.querySelector('button').disabled = true;
+            }
+        });
+
+        // --- UI Functions ---
+        function showMessage(text, colorClass) {
+            messageBox.textContent = text;
+            messageBox.className = `text-center text-sm font-medium ${colorClass}`;
+            messageBox.style.display = 'block';
+        }
+
+        // --- Event Handlers ---
         mfaForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const button = e.target.querySelector('button[type="submit"]');
             button.disabled = true;
+            showMessage('', 'hidden');
 
-            const urlParams = new URLSearchParams(window.location.search);
-            const mfaToken = urlParams.get('mfa_token');
             const code = mfaCodeInput.value;
-
-            if (!mfaToken) {
-                showMessage('MFA token missing from URL.', 'text-red-300/90');
-                button.disabled = false;
-                return;
-            }
-
             if (!code || code.length < 6) {
                  showMessage('Please enter a valid code.', 'text-red-300/90');
                  button.disabled = false;
@@ -138,7 +167,7 @@
                     showMessage(data.message, 'text-green-300/90');
                     const returnUrl = getCookie('return_url');
                     deleteCookie('return_url');
-                    setTimeout(() => window.location.href = returnUrl || '/ui/dashboard', 2000);
+                    setTimeout(() => window.location.href = returnUrl || '/ui/dashboard', 1500);
                 } else {
                     showMessage(data.detail || 'Verification failed.', 'text-red-300/90');
                 }
@@ -149,11 +178,41 @@
             }
         });
 
-        function showMessage(text, colorClass) {
-            messageBox.textContent = text;
-            messageBox.className = `text-center text-sm font-medium ${colorClass}`;
-            messageBox.style.display = 'block';
-        }
+        usePasskeyBtn.addEventListener('click', async () => {
+            usePasskeyBtn.disabled = true;
+            showMessage('', 'hidden');
+
+            try {
+                // 1. Get login options from server
+                const optionsResp = await fetch('/passkeys/login-options', { method: 'POST' });
+                const options = await optionsResp.json();
+                if (!optionsResp.ok) throw new Error(options.detail || 'Could not get passkey options.');
+
+                // 2. Prompt browser for passkey
+                const assertion = await SimpleWebAuthnBrowser.startAuthentication(options);
+
+                // 3. Send assertion and mfa_token to the new MFA endpoint
+                const verificationResp = await fetch('/passkeys/mfa-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mfa_token: mfaToken, response: assertion }),
+                });
+
+                const data = await verificationResp.json();
+                if (verificationResp.ok) {
+                    showMessage(data.message, 'text-green-300/90');
+                    const returnUrl = getCookie('return_url');
+                    deleteCookie('return_url');
+                    setTimeout(() => window.location.href = returnUrl || '/ui/dashboard', 1500);
+                } else {
+                    throw new Error(data.detail || 'Passkey verification failed.');
+                }
+            } catch (error) {
+                showMessage(error.message, 'text-red-300/90');
+            } finally {
+                usePasskeyBtn.disabled = false;
+            }
+        });
     </script>
 </body>
 </html>
