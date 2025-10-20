@@ -13,43 +13,31 @@
             --bg-start-dark: hsla(252, 40%, 29%, 1);
             --bg-end-dark: hsla(270, 77%, 71%, 1);
         }
-
         body {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(90deg, var(--bg-start-dark), var(--bg-end-dark));
             background-size: 400% 400%;
             animation: gradientAnimation 15s ease infinite;
         }
-
         @keyframes gradientAnimation {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
-
         .bg-card {
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             background-color: rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.15);
         }
-
         .form-input {
             background-color: rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.15);
         }
-
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-
         #confirm-modal {
             transition: opacity 0.3s ease;
         }
@@ -84,7 +72,7 @@
         </div>
     </aside>
 
-    <main class="flex-1 p-10">
+    <main class="flex-1 p-10 overflow-y-auto">
         <h1 class="text-3xl font-bold text-white">Account Settings</h1>
         <p class="text-gray-400 mb-8">Manage your account security.</p>
 
@@ -93,21 +81,18 @@
                 <h2 class="text-2xl font-semibold text-white mb-6">Change Password</h2>
                 <form id="password-form" class="space-y-6">
                     <div>
-                        <label for="current-password" class="block text-sm font-medium text-gray-300 mb-2">Current
-                            Password</label>
-                        <input type="password" id="current-password" required
+                        <label for="current-password" class="block text-sm font-medium text-gray-300 mb-2">Current Password</label>
+                        <input type="password" id="current-password" required autocomplete="current-password"
                                class="form-input w-full text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                     <div>
-                        <label for="new-password" class="block text-sm font-medium text-gray-300 mb-2">New
-                            Password</label>
-                        <input type="password" id="new-password" required
+                        <label for="new-password" class="block text-sm font-medium text-gray-300 mb-2">New Password</label>
+                        <input type="password" id="new-password" required autocomplete="new-password"
                                class="form-input w-full text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                     <div>
-                        <label for="confirm-password" class="block text-sm font-medium text-gray-300 mb-2">Confirm New
-                            Password</label>
-                        <input type="password" id="confirm-password" required
+                        <label for="confirm-password" class="block text-sm font-medium text-gray-300 mb-2">Confirm New Password</label>
+                        <input type="password" id="confirm-password" required autocomplete="new-password"
                                class="form-input w-full text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                     <button type="submit"
@@ -127,7 +112,7 @@
                     Disable Two-Factor Authentication
                 </button>
                 {% else %}
-                <p class="text-gray-400 mb-4">Protect your account with an extra layer of security.</p>
+                <p class="text-gray-400 mb-4">Protect your account with an extra layer of security using an authenticator app.</p>
                 <a href="/mfa/setup"
                    class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
                     Setup Two-Factor Authentication
@@ -140,7 +125,8 @@
                 <h2 class="text-2xl font-semibold text-white mb-4">Passkeys</h2>
                 <p class="text-gray-400 mb-4">Add a passkey for a fast and secure passwordless login experience.</p>
 
-                <div id="passkey-list" class="space-y-2"></div>
+                <div id="passkey-list" class="space-y-2">
+                    </div>
 
                 <button id="add-passkey-button"
                         class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
@@ -168,18 +154,15 @@
     </main>
 </div>
 
-<div id="confirm-modal"
-     class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden opacity-0 z-50">
+<div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden opacity-0 z-50">
     <div class="bg-card rounded-lg shadow-xl p-8 max-w-sm w-full">
         <h3 id="modal-title" class="text-xl font-bold text-white mb-4">Are you sure?</h3>
         <p id="modal-body" class="text-gray-300 mb-6">This action cannot be undone.</p>
         <div class="flex justify-end space-x-4">
-            <button id="modal-cancel-button"
-                    class="px-6 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors">
+            <button id="modal-cancel-button" class="px-6 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors">
                 Cancel
             </button>
-            <button id="modal-confirm-button"
-                    class="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">
+            <button id="modal-confirm-button" class="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors">
                 Confirm
             </button>
         </div>
@@ -187,205 +170,89 @@
 </div>
 
 <script>
+    // --- Utility Functions ---
     function showMessage(box, text, type) {
-        let colorClass = '';
-        if (type === 'success') colorClass = 'text-green-400';
-        if (type === 'error') colorClass = 'text-red-400';
-
+        const colorClass = type === 'success' ? 'text-green-400' : 'text-red-400';
         box.textContent = text;
         box.className = `mt-4 text-center text-sm font-medium ${colorClass}`;
-        setTimeout(() => {
-            box.textContent = '';
-        }, 4000);
+        setTimeout(() => { box.textContent = ''; }, 5000);
     }
 
-    // --- Confirmation Modal ---
+    // --- Confirmation Modal Logic ---
     const modal = document.getElementById('confirm-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalBody = document.getElementById('modal-body');
-    const modalCancelButton = document.getElementById('modal-cancel-button');
-    const modalConfirmButton = document.getElementById('modal-confirm-button');
     let confirmCallback = null;
-
+    document.getElementById('modal-cancel-button').addEventListener('click', () => {
+        modal.classList.add('opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+    document.getElementById('modal-confirm-button').addEventListener('click', () => {
+        if (confirmCallback) confirmCallback();
+        document.getElementById('modal-cancel-button').click();
+    });
     function showModal(title, body, onConfirm) {
-        modalTitle.textContent = title;
-        modalBody.textContent = body;
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-body').textContent = body;
         confirmCallback = onConfirm;
         modal.classList.remove('hidden');
         setTimeout(() => modal.classList.remove('opacity-0'), 10);
     }
 
-    modalCancelButton.addEventListener('click', () => {
-        modal.classList.add('opacity-0');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-        confirmCallback = null;
-    });
-
-    modalConfirmButton.addEventListener('click', () => {
-        if (confirmCallback) {
-            confirmCallback();
-        }
-        modalCancelButton.click();
-    });
-
-    // --- Change Password ---
-    const passwordForm = document.getElementById('password-form');
-    const passwordMessageBox = document.getElementById('password-message-box');
-    passwordForm.addEventListener('submit', async (e) => {
+    // --- Password Change Logic ---
+    document.getElementById('password-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const button = e.target.querySelector('button[type="submit"]');
-        showMessage(passwordMessageBox, '', 'hidden');
-
-        const currentPassword = document.getElementById('current-password').value;
+        const box = document.getElementById('password-message-box');
         const newPassword = document.getElementById('new-password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-
-        if (newPassword !== confirmPassword) {
-            showMessage(passwordMessageBox, "New passwords do not match.", 'error');
-            return;
+        if (newPassword !== document.getElementById('confirm-password').value) {
+            return showMessage(box, "New passwords do not match.", 'error');
         }
-
-        button.disabled = true;
-
         try {
             const response = await fetch('/auth/change-password', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
-                    current_password: currentPassword,
+                    current_password: document.getElementById('current-password').value,
                     new_password: newPassword
                 })
             });
             const data = await response.json();
-            if (response.ok) {
-                showMessage(passwordMessageBox, data.message || 'Password updated successfully!', 'success');
-                passwordForm.reset();
-            } else {
-                showMessage(passwordMessageBox, data.detail || 'Failed to update password.', 'error');
-            }
-        } catch (error) {
-            showMessage(passwordMessageBox, 'A network error occurred.', 'error');
-        } finally {
-            button.disabled = false;
+            showMessage(box, data.detail || data.message, response.ok ? 'success' : 'error');
+            if (response.ok) e.target.reset();
+        } catch (err) {
+            showMessage(box, 'A network error occurred.', 'error');
         }
     });
 
-    // --- Disable MFA ---
+    // --- MFA Logic ---
     const disableMfaButton = document.getElementById('disable-mfa-button');
-    const mfaMessageBox = document.getElementById('mfa-message-box');
     if (disableMfaButton) {
         disableMfaButton.addEventListener('click', () => {
-            showModal(
-                'Disable Two-Factor Authentication?',
-                'This will reduce the security of your account. Are you sure you want to proceed?',
-                async () => {
-                    try {
-                        const response = await fetch('/mfa/disable', {method: 'POST'});
-                        const data = await response.json();
-                        if (response.ok) {
-                            showMessage(mfaMessageBox, data.message || 'MFA disabled successfully! Page will reload.', 'success');
-                            setTimeout(() => window.location.reload(), 2000);
-                        } else {
-                            showMessage(mfaMessageBox, data.detail || 'An error occurred.', 'error');
-                        }
-                    } catch (error) {
-                        showMessage(mfaMessageBox, 'A network error occurred.', 'error');
-                    }
+            showModal('Disable Two-Factor Authentication?', 'This will reduce your account security. Are you sure?', async () => {
+                const box = document.getElementById('mfa-message-box');
+                try {
+                    const response = await fetch('/mfa/disable', {method: 'POST'});
+                    const data = await response.json();
+                    showMessage(box, data.detail || data.message, response.ok ? 'success' : 'error');
+                    if (response.ok) setTimeout(() => window.location.reload(), 2000);
+                } catch (err) {
+                    showMessage(box, 'A network error occurred.', 'error');
                 }
-            );
+            });
         });
     }
 
-    const sessionsList = document.getElementById('sessions-list');
-    const sessionsMessageBox = document.getElementById('sessions-message-box');
-    const terminateAllButton = document.getElementById('terminate-all-button');
-
-    async function loadSessions() {
-        try {
-            const response = await fetch('/ui/settings/sessions');
-            if (!response.ok) throw new Error('Failed to load sessions.');
-            const sessions = await response.json();
-
-            if (sessions.length <= 1) {
-                terminateAllButton.style.display = 'none';
-            } else {
-                terminateAllButton.style.display = 'inline-block';
-            }
-
-            sessionsList.innerHTML = sessions.map(session => `
-                <div class="bg-black/20 p-4 rounded-lg flex items-center justify-between border border-white/10">
-                    <div>
-                        <p class="font-semibold text-white">${session.device}</p>
-                        <p class="text-sm text-gray-400">
-                            ${session.region} &bull; IP: ${session.last_ip}
-                            ${session.is_current ? '<span class="text-green-400 font-semibold ml-2">(Current Session)</span>' : ''}
-                        </p>
-                        <p class="text-xs text-gray-500 mt-1">Last active: ${new Date(session.mtime * 1000).toLocaleString()}</p>
-                    </div>
-                    ${!session.is_current ? `<button onclick="terminateSession('${session.session_id}')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Terminate</button>` : ''}
-                </div>
-            `).join('');
-
-        } catch (error) {
-            showMessage(sessionsMessageBox, error.message, 'error');
-        }
-    }
-
-    async function terminateSession(sessionId) {
-        showModal(
-            'Terminate Session?',
-            'The user will be logged out on this device. Are you sure?',
-            async () => {
-                try {
-                    const response = await fetch(`/ui/settings/sessions/${sessionId}/terminate`, {method: 'POST'});
-                    const data = await response.json();
-                    if (response.ok) {
-                        showMessage(sessionsMessageBox, data.message || 'Session terminated.', 'success');
-                        loadSessions();
-                    } else {
-                        showMessage(sessionsMessageBox, data.detail || 'Failed to terminate session.', 'error');
-                    }
-                } catch (error) {
-                    showMessage(sessionsMessageBox, 'A network error occurred.', 'error');
-                }
-            }
-        );
-    }
-
-    terminateAllButton.addEventListener('click', () => {
-        showModal(
-            'Terminate All Other Sessions?',
-            'This will log you out from all other devices. Your current session will remain active.',
-            async () => {
-                try {
-                    const response = await fetch('/ui/settings/sessions/terminate-all', {method: 'POST'});
-                    const data = await response.json();
-                    if (response.ok) {
-                        showMessage(sessionsMessageBox, data.message || 'All other sessions terminated.', 'success');
-                        loadSessions();
-                    } else {
-                        showMessage(sessionsMessageBox, data.detail || 'Failed to terminate sessions.', 'error');
-                    }
-                } catch (error) {
-                    showMessage(sessionsMessageBox, 'A network error occurred.', 'error');
-                }
-            }
-        )
-    });
-
-    const addPasskeyButton = document.getElementById('add-passkey-button');
+    // --- Passkey Logic ---
     const passkeyMessageBox = document.getElementById('passkey-message-box');
     const passkeyList = document.getElementById('passkey-list');
+
     async function loadPasskeys() {
         try {
             const response = await fetch('/passkeys/');
             if (!response.ok) throw new Error('Failed to load passkeys.');
             const passkeys = await response.json();
-
             passkeyList.innerHTML = passkeys.map(key => `
                 <div class="bg-black/20 p-3 rounded-lg flex items-center justify-between border border-white/10">
-                    <p class="font-semibold text-white">${key.name}</p>
-                    <button class="text-red-400 hover:text-red-300 text-sm font-semibold">Remove</button>
+                    <p class="font-semibold text-white">${key.nickname}</p>
+                    <button onclick="removePasskey('${key.id}')" class="text-red-400 hover:text-red-300 text-sm font-semibold">Remove</button>
                 </div>
             `).join('') || '<p class="text-sm text-gray-400">No passkeys registered yet.</p>';
         } catch (error) {
@@ -393,47 +260,106 @@
         }
     }
 
-    addPasskeyButton.addEventListener('click', async () => {
-        showMessage(passkeyMessageBox, '', 'hidden');
-        addPasskeyButton.disabled = true;
+    async function removePasskey(credentialId) {
+        showModal('Remove this Passkey?', 'You will no longer be able to use this passkey to sign in. This action cannot be undone.', async () => {
+            try {
+                const response = await fetch(`/passkeys/${credentialId}`, {method: 'DELETE'});
+                if (response.ok) {
+                    showMessage(passkeyMessageBox, 'Passkey removed successfully.', 'success');
+                    loadPasskeys();
+                } else {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'Failed to remove passkey.');
+                }
+            } catch (error) {
+                showMessage(passkeyMessageBox, error.message, 'error');
+            }
+        });
+    }
 
+    document.getElementById('add-passkey-button').addEventListener('click', async () => {
+        const button = document.getElementById('add-passkey-button');
+        button.disabled = true;
         try {
             const optionsResp = await fetch('/passkeys/register-options', { method: 'POST' });
-            if (!optionsResp.ok) throw new Error('Could not get registration options from server.');
+            if (!optionsResp.ok) throw new Error('Could not get registration options.');
             const options = await optionsResp.json();
             const registrationResp = await SimpleWebAuthnBrowser.startRegistration(options);
-            const keyName = prompt("Please enter a name for this new passkey (e.g., 'My Laptop'):", `Passkey ${new Date().toLocaleDateString()}`);
-            if (!keyName) {
-                throw new Error("Registration cancelled.");
-            }
+            const nickname = prompt("Please enter a name for this passkey (e.g., 'My iPhone'):", `Passkey on ${new Date().toLocaleDateString()}`);
+            if (!nickname) throw new Error("Registration cancelled.");
             const verificationResp = await fetch('/passkeys/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: keyName,
-                    registration_response: registrationResp,
-                }),
+                body: JSON.stringify({ nickname, response: registrationResp }),
             });
-
-            if (verificationResp.ok) {
-                showMessage(passkeyMessageBox, 'Passkey registered successfully!', 'success');
-                loadPasskeys();
-            } else {
-                const error = await verificationResp.json();
-                throw new Error(error.detail || 'Failed to register passkey.');
-            }
+            if (!verificationResp.ok) throw new Error('Server verification failed.');
+            showMessage(passkeyMessageBox, 'Passkey registered successfully!', 'success');
+            loadPasskeys();
         } catch (err) {
             showMessage(passkeyMessageBox, err.message, 'error');
         } finally {
-            addPasskeyButton.disabled = false;
+            button.disabled = false;
         }
     });
 
+    // --- Active Sessions Logic ---
+    const sessionsMessageBox = document.getElementById('sessions-message-box');
+    const sessionsList = document.getElementById('sessions-list');
+
+    async function loadSessions() {
+        try {
+            const response = await fetch('/ui/settings/sessions');
+            if (!response.ok) throw new Error('Failed to load sessions.');
+            const sessions = await response.json();
+            document.getElementById('terminate-all-button').style.display = sessions.length > 1 ? 'inline-block' : 'none';
+            sessionsList.innerHTML = sessions.map(session => `
+                <div class="bg-black/20 p-4 rounded-lg flex items-center justify-between border border-white/10">
+                    <div>
+                        <p class="font-semibold text-white">${session.device}</p>
+                        <p class="text-sm text-gray-400">${session.region} &bull; IP: ${session.last_ip}
+                            ${session.is_current ? '<span class="text-green-400 font-semibold ml-2">(Current Session)</span>' : ''}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">Last active: ${new Date(session.mtime * 1000).toLocaleString()}</p>
+                    </div>
+                    ${!session.is_current ? `<button onclick="terminateSession('${session.session_id}')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Terminate</button>` : ''}
+                </div>
+            `).join('');
+        } catch (error) {
+            showMessage(sessionsMessageBox, error.message, 'error');
+        }
+    }
+
+    function terminateSession(sessionId) {
+        showModal('Terminate Session?', 'The user will be logged out on this device.', async () => {
+            try {
+                const response = await fetch(`/ui/settings/sessions/${sessionId}/terminate`, {method: 'POST'});
+                if (!response.ok) throw new Error('Failed to terminate session.');
+                showMessage(sessionsMessageBox, 'Session terminated.', 'success');
+                loadSessions();
+            } catch (error) {
+                showMessage(sessionsMessageBox, error.message, 'error');
+            }
+        });
+    }
+
+    document.getElementById('terminate-all-button').addEventListener('click', () => {
+        showModal('Terminate All Other Sessions?', 'This will log you out from all other devices.', async () => {
+            try {
+                const response = await fetch('/ui/settings/sessions/terminate-all', {method: 'POST'});
+                if (!response.ok) throw new Error('Failed to terminate sessions.');
+                showMessage(sessionsMessageBox, 'All other sessions terminated.', 'success');
+                loadSessions();
+            } catch (error) {
+                showMessage(sessionsMessageBox, error.message, 'error');
+            }
+        });
+    });
+
+    // --- Initial Load ---
     document.addEventListener('DOMContentLoaded', () => {
         loadSessions();
         loadPasskeys();
     });
-
 </script>
 </body>
 </html>
