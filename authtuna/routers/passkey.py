@@ -43,6 +43,7 @@ async def generate_register_options(request: Request, user: User = Depends(get_c
         user_id=user.id, username=user.username, existing_credentials=existing_credentials
     )
     request.session["passkey_registration_challenge"] = session_challenge
+    print(options)
     return options
 
 
