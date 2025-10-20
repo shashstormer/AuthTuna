@@ -167,10 +167,11 @@ async def logout_user(request: Request, response: Response):
     session_id = getattr(request.state, "session_id", None)
     if session_id:
         ip_address = request.state.user_ip_address
-        await auth_service.sessions.terminate(session_id, ip_address)
-
-    response.delete_cookie(settings.SESSION_TOKEN_NAME)
-    return {"message": "Logged out successfully."}
+        deleted = await auth_service.sessions.terminate(session_id, ip_address)
+        if deleted:
+            response.delete_cookie(settings.SESSION_TOKEN_NAME)
+            return {"message": "Logged out successfully."}
+    return {"message": "Logout failed or no active session found."}
 
 
 @router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
