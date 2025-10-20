@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
+import json
 
 from authtuna.integrations import get_current_user, auth_service
 from authtuna.core.database import User
@@ -43,7 +44,7 @@ async def generate_register_options(request: Request, user: User = Depends(get_c
         user_id=user.id, username=user.username, existing_credentials=existing_credentials
     )
     request.session["passkey_registration_challenge"] = session_challenge
-    print(options)
+    options = json.dumps(options)
     return options
 
 
