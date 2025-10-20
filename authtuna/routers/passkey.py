@@ -14,8 +14,8 @@ router = APIRouter(prefix="/passkeys", tags=["Passkeys"])
 
 # --- Pydantic Models ---
 class PasskeyRegistrationRequest(BaseModel):
-    nickname: str = Field(..., min_length=1, max_length=100)
-    response: Dict[str, Any]
+    name: str = Field(..., min_length=1, max_length=100)
+    registration_response: Dict[str, Any]
 
 
 class PasskeyAuthenticationRequest(BaseModel):
@@ -24,7 +24,7 @@ class PasskeyAuthenticationRequest(BaseModel):
 
 class PasskeyResponse(BaseModel):
     id: str
-    nickname: str
+    name: str
 
 
 # --- Endpoints ---
@@ -58,10 +58,10 @@ async def register_passkey(payload: PasskeyRegistrationRequest, request: Request
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No registration challenge found. Please try again.")
     try:
         verified_data = auth_service.passkeys.core.verify_registration(
-            response=payload.response, session_challenge=session_challenge
+            response=payload.registration_response, session_challenge=session_challenge
         )
         await auth_service.passkeys.save_new_credential(
-            user_id=user.id, cred_data=verified_data, nickname=payload.nickname
+            user_id=user.id, cred_data=verified_data, nickname=payload.name
         )
         return {"status": "ok", "verified": True}
     except ValueError as e:
@@ -122,7 +122,7 @@ async def list_passkeys(user: User = Depends(get_current_user)):
     """
     credentials = await auth_service.passkeys.get_for_user(user.id)
     return [
-        PasskeyResponse(id=encryption_utils.base64url_encode(cred.id), nickname=cred.nickname)
+        PasskeyResponse(id=encryption_utils.base64url_encode(cred.id), name=cred.nickname)
         for cred in credentials
     ]
 
