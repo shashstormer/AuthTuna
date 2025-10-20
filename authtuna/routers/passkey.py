@@ -43,7 +43,6 @@ async def generate_register_options(request: Request, user: User = Depends(get_c
     options, session_challenge = auth_service.passkeys.core.generate_registration_options(
         user_id=user.id, username=user.username, existing_credentials=existing_credentials
     )
-    print(session_challenge)
     request.session["passkey_registration_challenge"] = session_challenge
     return options
 
@@ -57,7 +56,6 @@ async def register_passkey(payload: PasskeyRegistrationRequest, request: Request
     session_challenge = request.session.pop("passkey_registration_challenge", None)
     if not session_challenge:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No registration challenge found. Please try again.")
-
     try:
         verified_data = auth_service.passkeys.core.verify_registration(
             response=payload.response, session_challenge=session_challenge

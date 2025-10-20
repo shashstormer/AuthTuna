@@ -65,7 +65,7 @@ class PasskeysCore:
             },
         }
 
-        session_challenge = {"challenge": challenge, "timestamp": time.time()}
+        session_challenge = {"challenge": encryption_utils.base64url_encode(challenge), "timestamp": time.time()}
         return options, session_challenge
 
     def verify_registration(
@@ -74,7 +74,7 @@ class PasskeysCore:
         """
         Manually verify the client's response from a registration ceremony.
         """
-        challenge = session_challenge.get("challenge")
+        challenge = encryption_utils.base64url_decode(session_challenge.get("challenge"))
         timestamp = session_challenge.get("timestamp")
 
         # 1.  Robust Challenge Validation with Skew Tolerance
@@ -158,13 +158,13 @@ class PasskeysCore:
             "timeout": 120000,
             "extensions": {"largeBlob": {"read": True}},
         }
-        session_challenge = {"challenge": challenge, "timestamp": time.time()}
+        session_challenge = {"challenge": encryption_utils.base64url_encode(challenge), "timestamp": time.time()}
         return options, session_challenge
 
     def verify_authentication(
             self, response: dict, session_challenge: Dict[str, Any], credential: DBPasskey,
     ) -> int:
-        challenge = session_challenge.get("challenge")
+        challenge = encryption_utils.base64url_decode(session_challenge.get("challenge"))
         timestamp = session_challenge.get("timestamp")
 
         if not isinstance(timestamp, (int, float)) or abs(time.time() - timestamp) > CHALLENGE_LIFETIME_SECONDS:
