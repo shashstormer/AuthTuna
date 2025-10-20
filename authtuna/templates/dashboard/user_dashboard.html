@@ -35,11 +35,23 @@
 </head>
 <body class="bg-gray-900 text-gray-200">
 
-<div class="flex min-h-screen">
+<div class="relative min-h-screen lg:flex">
+
+    <!-- Mobile menu button -->
+    <div class="lg:hidden flex justify-between items-center p-4">
+        <h1 class="text-2xl font-bold text-white">AuthTuna</h1>
+        <button id="menu-toggle-button" class="text-white focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+            </svg>
+        </button>
+    </div>
+
     <!-- Sidebar -->
-    <aside class="w-64 bg-card p-6 flex flex-col justify-between">
+    <aside id="sidebar"
+           class="w-64 bg-card p-6 flex-col justify-between fixed inset-y-0 left-0 z-30 transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex">
         <div>
-            <h1 class="text-2xl font-bold text-white mb-8">AuthTuna</h1>
+            <h1 class="text-2xl font-bold text-white mb-8 hidden lg:block">AuthTuna</h1>
             <nav class="space-y-4">
                 <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal text-white rounded-lg bg-white/10">
                     <span class="ml-3">Dashboard</span>
@@ -60,7 +72,7 @@
     </aside>
 
     <!-- Main content -->
-    <main class="flex-1 p-10">
+    <main class="flex-1 p-6 lg:p-10">
         <h1 class="text-3xl font-bold text-white">Welcome, {{ user.username }}!</h1>
         <p class="text-gray-400 mb-8">Here's a quick overview of your account.</p>
 
@@ -84,6 +96,30 @@
         </div>
     </main>
 </div>
+
+<script>
+    // --- Mobile Menu Toggle ---
+    const sidebar = document.getElementById('sidebar');
+    const menuButton = document.getElementById('menu-toggle-button');
+
+    function toggleMenu() {
+        sidebar.classList.toggle('-translate-x-full');
+    }
+
+    menuButton.addEventListener('click', toggleMenu);
+
+    // Close menu if clicking outside of it on mobile
+    document.addEventListener('click', (event) => {
+        const isClickInsideSidebar = sidebar.contains(event.target);
+        const isClickOnMenuButton = menuButton.contains(event.target);
+
+        if (!isClickInsideSidebar && !isClickOnMenuButton && !sidebar.classList.contains('-translate-x-full')) {
+             if (window.innerWidth < 1024) { // 1024px is lg breakpoint
+                toggleMenu();
+             }
+        }
+    });
+</script>
+
 </body>
 </html>
-

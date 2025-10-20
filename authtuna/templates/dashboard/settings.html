@@ -45,10 +45,21 @@
 </head>
 <body class="bg-gray-900 text-gray-200">
 
-<div class="flex min-h-screen">
-    <aside class="w-64 bg-card p-6 flex flex-col justify-between">
+<div class="relative min-h-screen lg:flex">
+
+    <div class="lg:hidden flex justify-between items-center p-4">
+        <h1 class="text-2xl font-bold text-white">AuthTuna</h1>
+        <button id="menu-toggle-button" class="text-white focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+            </svg>
+        </button>
+    </div>
+
+    <aside id="sidebar"
+           class="w-64 bg-card p-6 flex-col justify-between fixed inset-y-0 left-0 z-30 transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex">
         <div>
-            <h1 class="text-2xl font-bold text-white mb-8">AuthTuna</h1>
+            <h1 class="text-2xl font-bold text-white mb-8 hidden lg:block">AuthTuna</h1>
             <nav class="space-y-4">
                 <a href="{{ url_for('ui_dashboard') }}"
                    class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
@@ -72,12 +83,12 @@
         </div>
     </aside>
 
-    <main class="flex-1 p-10 overflow-y-auto">
+    <main class="flex-1 p-6 lg:p-10 overflow-y-auto">
         <h1 class="text-3xl font-bold text-white">Account Settings</h1>
         <p class="text-gray-400 mb-8">Manage your account security.</p>
 
         <div class="max-w-4xl space-y-8">
-            <div class="bg-card p-8 rounded-lg shadow-lg">
+            <div class="bg-card p-6 md:p-8 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-semibold text-white mb-6">Change Password</h2>
                 <form id="password-form" class="space-y-6">
                     <div>
@@ -103,7 +114,7 @@
                 <div id="password-message-box" class="mt-4 text-center text-sm font-medium"></div>
             </div>
 
-            <div class="bg-card p-8 rounded-lg shadow-lg">
+            <div class="bg-card p-6 md:p-8 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-semibold text-white mb-4">Two-Factor Authentication (2FA)</h2>
                 {% if user.mfa_enabled %}
                 <p class="text-green-400 mb-4">2FA is currently <strong>enabled</strong> on your account.</p>
@@ -121,7 +132,7 @@
                 <div id="mfa-message-box" class="mt-4 text-center text-sm font-medium"></div>
             </div>
 
-            <div class="bg-card p-8 rounded-lg shadow-lg">
+            <div class="bg-card p-6 md:p-8 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-semibold text-white mb-4">Passkeys</h2>
                 <p class="text-gray-400 mb-4">Add a passkey for a fast and secure passwordless login experience.</p>
 
@@ -135,14 +146,14 @@
                 <div id="passkey-message-box" class="mt-4 text-center text-sm font-medium"></div>
             </div>
 
-            <div class="bg-card p-8 rounded-lg shadow-lg">
-                <div class="flex justify-between items-center mb-4">
+            <div class="bg-card p-6 md:p-8 rounded-lg shadow-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                     <div>
                         <h2 class="text-2xl font-semibold text-white">Active Sessions</h2>
                         <p class="text-gray-400 mt-1">This is a list of devices that have logged into your account.</p>
                     </div>
                     <button id="terminate-all-button"
-                            class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm">
+                            class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm mt-4 sm:mt-0 w-full sm:w-auto">
                         Terminate All Others
                     </button>
                 </div>
@@ -155,7 +166,7 @@
 </div>
 
 <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden opacity-0 z-50">
-    <div class="bg-card rounded-lg shadow-xl p-8 max-w-sm w-full">
+    <div class="bg-card rounded-lg shadow-xl p-8 max-w-sm w-full mx-4">
         <h3 id="modal-title" class="text-xl font-bold text-white mb-4">Are you sure?</h3>
         <p id="modal-body" class="text-gray-300 mb-6">This action cannot be undone.</p>
         <div class="flex justify-end space-x-4">
@@ -170,6 +181,28 @@
 </div>
 
 <script>
+    // --- Mobile Menu Toggle ---
+    const sidebar = document.getElementById('sidebar');
+    const menuButton = document.getElementById('menu-toggle-button');
+
+    function toggleMenu() {
+        sidebar.classList.toggle('-translate-x-full');
+    }
+
+    menuButton.addEventListener('click', toggleMenu);
+
+    // Close menu if clicking outside of it on mobile
+    document.addEventListener('click', (event) => {
+        const isClickInsideSidebar = sidebar.contains(event.target);
+        const isClickOnMenuButton = menuButton.contains(event.target);
+
+        if (!isClickInsideSidebar && !isClickOnMenuButton && !sidebar.classList.contains('-translate-x-full')) {
+             if (window.innerWidth < 1024) { // 1024px is lg breakpoint
+                toggleMenu();
+             }
+        }
+    });
+
     // --- Utility Functions ---
     function showMessage(box, text, type) {
         const colorClass = type === 'success' ? 'text-green-400' : 'text-red-400';
@@ -251,8 +284,8 @@
             const passkeys = await response.json();
             passkeyList.innerHTML = passkeys.map(key => `
                 <div class="bg-black/20 p-3 rounded-lg flex items-center justify-between border border-white/10">
-                    <p class="font-semibold text-white">${key.name}</p>
-                    <button onclick="removePasskey('${key.id}')" class="text-red-400 hover:text-red-300 text-sm font-semibold">Remove</button>
+                    <p class="font-semibold text-white truncate pr-2">${key.name}</p>
+                    <button onclick="removePasskey('${key.id}')" class="text-red-400 hover:text-red-300 text-sm font-semibold flex-shrink-0">Remove</button>
                 </div>
             `).join('') || '<p class="text-sm text-gray-400">No passkeys registered yet.</p>';
         } catch (error) {
@@ -313,7 +346,7 @@
             const sessions = await response.json();
             document.getElementById('terminate-all-button').style.display = sessions.length > 1 ? 'inline-block' : 'none';
             sessionsList.innerHTML = sessions.map(session => `
-                <div class="bg-black/20 p-4 rounded-lg flex items-center justify-between border border-white/10">
+                <div class="bg-black/20 p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between border border-white/10 space-y-3 sm:space-y-0">
                     <div>
                         <p class="font-semibold text-white">${session.device}</p>
                         <p class="text-sm text-gray-400">${session.region} &bull; IP: ${session.last_ip}
@@ -321,7 +354,7 @@
                         </p>
                         <p class="text-xs text-gray-500 mt-1">Last active: ${new Date(session.mtime * 1000).toLocaleString()}</p>
                     </div>
-                    ${!session.is_current ? `<button onclick="terminateSession('${session.session_id}')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Terminate</button>` : ''}
+                    ${!session.is_current ? `<button onclick="terminateSession('${session.session_id}')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm w-full sm:w-auto">Terminate</button>` : ''}
                 </div>
             `).join('');
         } catch (error) {
