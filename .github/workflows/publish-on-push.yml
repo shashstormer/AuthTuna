@@ -5,7 +5,7 @@ on:
     branches:
       - "master"
     paths:
-      - "setup.py"
+      - "pyproject.toml"
 
 jobs:
   pypi-publish:
