@@ -122,7 +122,7 @@ def init_settings(**kwargs: Any) -> "Settings":
     global _settings_instance, use_env
     if _settings_instance is not None:
         logger.warning("Settings have already been initialized. Re-initializing.")
-    use_env = kwargs.get("USE_ENV", False)
+    use_env = kwargs.get("use_env", False)
     _settings_instance = Settings(**kwargs)
     return _settings_instance
 
@@ -138,16 +138,14 @@ def get_settings() -> "Settings":
 
     global _settings_instance
     if _settings_instance is None:
-        # Check if the user has explicitly disabled auto-initialization
         if use_env:
             raise RuntimeError(
                 "AUTHTUNA_NO_ENV is set. Settings must be initialized manually "
                 "by calling `init_settings()` at application startup."
             )
         else:
-            # Auto-initialize for backward compatibility and simple use cases.
             logger.debug("Auto-initializing settings on first access.")
-            _settings_instance = init_settings()
+            _settings_instance = init_settings(use_env=True)
 
     return _settings_instance
 
