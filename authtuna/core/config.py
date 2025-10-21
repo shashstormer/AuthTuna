@@ -116,12 +116,13 @@ def init_settings(**kwargs: Any) -> "Settings":
     testing or when using a secrets manager.
 
     Args:
-        **kwargs: Keyword arguments to override settings from the environment.
+        **kwargs: Keyword arguments to initialize settings with.
+        If you want to override specific settings in your environment, pass USE_ENV=True with params to override.
     """
-    global _settings_instance
+    global _settings_instance, use_env
     if _settings_instance is not None:
         logger.warning("Settings have already been initialized. Re-initializing.")
-    # The standard constructor loads from env/.env first, then overrides with kwargs.
+    use_env = kwargs.get("USE_ENV", False)
     _settings_instance = Settings(**kwargs)
     return _settings_instance
 
