@@ -120,7 +120,7 @@ async def login_with_passkey(payload: PasskeyAuthenticationRequest, request: Req
             await email_manager.send_new_login_email(user.email, background_tasks, {
                 "username": user.username,
                 "region": request.state.device_data["region"],
-                "ip_address": get_remote_address(request),
+                "ip_address": await get_remote_address(request),
                 "device": request.state.device_data["device"],
                 "login_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             })
