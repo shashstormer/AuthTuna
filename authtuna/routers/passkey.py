@@ -114,7 +114,6 @@ async def login_with_passkey(payload: PasskeyAuthenticationRequest, request: Req
         if not user or not user.is_active:
             raise UserNotFoundError("The user associated with this passkey is not found or is inactive.")
 
-        # Create a new session for the user and set the cookie
         await create_session_and_set_cookie(user, request, response, auth_service.db_manager.get_db())
         if settings.EMAIL_ENABLED:
             await email_manager.send_new_login_email(user.email, background_tasks, {
