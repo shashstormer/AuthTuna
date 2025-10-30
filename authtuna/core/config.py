@@ -51,7 +51,8 @@ class Settings(BaseSettings):
     SESSION_TOKEN_NAME: str = "session_token"
     SESSION_COOKIE_DOMAIN: Optional[str] = None
     LOCK_SESSION_REGION: bool = True  # Lock session to region based on IP geolocation, depending on security requirements and environments you may want to disable this.
-
+    DISABLE_RANDOM_STRING: bool = False  # IN ENVIRONMENTS WHERE YOU HAVE LONG RUNNING CONNECTIONS, AND HIGH CONCURRENCY, DISABLING THIS WILL HELP PREVENT LOGOUTS DUE TO RANDOM STRING MISMATCH.
+    RANDOM_STRING_GRACE: int = 300  # seconds, STORED RANDOM STRINGS IN THIS ROLLING TIMEFRAME WILL BE ACCEPTED.
     # Email settings (disabled by default)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: Optional[str] = None

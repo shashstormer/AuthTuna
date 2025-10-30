@@ -321,7 +321,10 @@ class Session(Base):
                 await db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip, {"reason": "device_mismatch"}, db=db)
                 await self.terminate(self.last_ip, db=db)
                 return False
-            is_token_valid = (self.random_string == random_string or
+            if settings.DISABLE_RANDOM_STRING:
+                is_token_valid = True
+            else:
+                is_token_valid = (self.random_string == random_string or
                               any(entry['value'] == random_string for entry in self.previous_random_strings))
 
             if is_token_valid:
@@ -363,8 +366,10 @@ class Session(Base):
         now = time.time()
 
         new_history = [{'value': self.random_string, 'timestamp': now}]
-
-        grace_period = settings.SESSION_DB_VERIFICATION_INTERVAL + 92 # HARDCODED AS REQUESTS MAY RUN FOR LIKE 60 SEC USUALLY BEFORE BEING PROCESSED BY SERVER AND TIMEOUT AFTER THAT, MINIMIZES FALSE INVALIDATIONS
+        if settings.DISABLE_RANDOM_STRING:
+            grace_period = 0
+        else:
+            grace_period = settings.SESSION_DB_VERIFICATION_INTERVAL + settings.RANDOM_STRING_GRACE # HARDCODED AS REQUESTS MAY RUN FOR LIKE 60 SEC USUALLY BEFORE BEING PROCESSED BY SERVER AND TIMEOUT AFTER THAT, MINIMIZES FALSE INVALIDATIONS
         for entry in self.previous_random_strings:                    # INCREASED GRACE PERIOD TO 92 SECS FROM 60 SECS TO HANDLE SSE SCENARIOS BETTER.
             if now - entry.get('timestamp', 0) < grace_period:
                 new_history.append(entry)
