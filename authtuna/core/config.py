@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     SESSION_SECURE: bool = True  # obvio its gon be httponly coz it auth bruh so not letting anyone config dat.
     SESSION_TOKEN_NAME: str = "session_token"
     SESSION_COOKIE_DOMAIN: Optional[str] = None
+    LOCK_SESSION_REGION: bool = True  # Lock session to region based on IP geolocation, depending on security requirements and environments you may want to disable this.
 
     # Email settings (disabled by default)
     EMAIL_ENABLED: bool = False

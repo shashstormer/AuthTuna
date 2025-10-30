@@ -313,7 +313,7 @@ class Session(Base):
         Invalidates and logs if any check fails.
         """
         if self.active and not self.is_expired():
-            if (self.region != region)  and (self.create_ip != ip):
+            if settings.LOCK_SESSION_REGION and (self.region != region)  and (self.create_ip != ip):
                 await db_manager.log_audit_event(self.user_id, "SESSION_INVALIDATED", self.last_ip, {"reason": "region_mismatch"}, db=db)
                 await self.terminate(self.last_ip, db=db)
                 return False
@@ -364,8 +364,8 @@ class Session(Base):
 
         new_history = [{'value': self.random_string, 'timestamp': now}]
 
-        grace_period = settings.SESSION_DB_VERIFICATION_INTERVAL + 60 # HARDCODED AS REQUESTS MAY RUN FOR LIKE 60 SEC USUALLY BEFORE BEING PROCESSED BY SERVER AND TIMEOUT AFTER THAT, MINIMIZES FALSE INVALIDATIONS
-        for entry in self.previous_random_strings:
+        grace_period = settings.SESSION_DB_VERIFICATION_INTERVAL + 92 # HARDCODED AS REQUESTS MAY RUN FOR LIKE 60 SEC USUALLY BEFORE BEING PROCESSED BY SERVER AND TIMEOUT AFTER THAT, MINIMIZES FALSE INVALIDATIONS
+        for entry in self.previous_random_strings:                    # INCREASED GRACE PERIOD TO 92 SECS FROM 60 SECS TO HANDLE SSE SCENARIOS BETTER.
             if now - entry.get('timestamp', 0) < grace_period:
                 new_history.append(entry)
         self.previous_random_strings = new_history
