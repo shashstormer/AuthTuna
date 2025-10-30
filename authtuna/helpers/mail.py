@@ -116,7 +116,6 @@ class EmailManager:
 
         # Always offload to background to avoid blocking request processing.
         # Prefer FastAPI BackgroundTasks when available, else spawn a detached task.
-        print("EMAIL SEND:", subject, "TO:", email_to)
         if background_tasks:
             background_tasks.add_task(self._send_smtp_message, message)
         else:
