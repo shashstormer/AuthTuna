@@ -1,3 +1,4 @@
+import datetime
 import time
 from typing import Optional, Tuple, List, Dict, Any, Union
 
@@ -20,6 +21,7 @@ from authtuna.core.exceptions import (
 )
 from authtuna.core.mfa import MFAManager
 from authtuna.core.passkeys import PasskeysCore
+from authtuna.helpers.mail import email_manager
 
 
 class UserManager:
@@ -962,7 +964,7 @@ class AuthTunaAsync:
             await db.commit()
             return user
 
-    async def validate_mfa_login(self, mfa_token: str, code: str, ip_address: str, device_data: dict) -> DBSession:
+    async def validate_mfa_login(self, mfa_token: str, code: str, ip_address: str, device_data: dict, background_tasks=None) -> DBSession:
         """
         Handles the second step of an MFA login within a single transaction.
         """
@@ -989,4 +991,12 @@ class AuthTunaAsync:
         session = await self.sessions.create(
             user.id, ip_address, device_data["region"], device_data["device"]
         )
+        if settings.EMAIL_ENABLED:
+            await email_manager.send_new_login_email(user.email, background_tasks, {
+                "username": user.username,
+                "region": device_data["region"],
+                "ip_address": ip_address,
+                "device": device_data["device"] ,
+                "login_time": datetime.datetime.fromtimestamp(session.ctime).strftime("%Y-%m-%d %H:%M:%S"),
+            })
         return session

@@ -87,7 +87,8 @@ async def validate_mfa_login(login_data: MFALoginValidate, request: Request, bac
             mfa_token=login_data.mfa_token,
             code=login_data.code,
             ip_address=get_remote_address(request),
-            device_data=request.state.device_data
+            device_data=request.state.device_data,
+            background_tasks=background_tasks,
         )
         response = JSONResponse({"message": "Login successful."})
         response.set_cookie(
@@ -99,14 +100,6 @@ async def validate_mfa_login(login_data: MFALoginValidate, request: Request, bac
             max_age=settings.SESSION_ABSOLUTE_LIFETIME_SECONDS,
             domain=settings.SESSION_COOKIE_DOMAIN,
         )
-        if settings.EMAIL_ENABLED:
-            await email_manager.send_new_login_email(session.user.email, background_tasks, {
-                "username": session.user.username,
-                "region": request.state.device_data["region"],
-                "ip_address": get_remote_address(request),
-                "device": request.state.device_data["device"],
-                "login_time": datetime.datetime.fromtimestamp(session.ctime).strftime("%Y-%m-%d %H:%M:%S"),
-            })
         return response
     except InvalidTokenError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
