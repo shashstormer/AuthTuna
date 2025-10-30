@@ -86,7 +86,7 @@ async def validate_mfa_login(login_data: MFALoginValidate, request: Request, bac
         session = await auth_service.validate_mfa_login(
             mfa_token=login_data.mfa_token,
             code=login_data.code,
-            ip_address=get_remote_address(request),
+            ip_address=await get_remote_address(request),
             device_data=request.state.device_data,
             background_tasks=background_tasks,
         )
