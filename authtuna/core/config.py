@@ -146,7 +146,6 @@ def get_settings() -> "Settings":
         else:
             logger.debug("Auto-initializing settings on first access.")
             _settings_instance = init_settings(use_env=True)
-
     return _settings_instance
 
 
@@ -157,7 +156,7 @@ def get_settings() -> "Settings":
 # This provides the just-in-time, conditional initialization.
 
 class _SettingsProxy:
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> Any:  # WAS TRYING TO ADD TYPEHINT SO AUTOCOMPLETE WILL WORK FOR `settings.VAR` BUT ITS NOT WORKING IF SOMEONE KNOWS HLP.
         return getattr(get_settings(), name)
 
 
