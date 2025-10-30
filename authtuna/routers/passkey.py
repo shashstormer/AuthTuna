@@ -1,12 +1,15 @@
+import datetime
 from typing import List, Dict, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response, BackgroundTasks
 from pydantic import BaseModel, Field
 
+from authtuna import settings
 from authtuna.core.database import User
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.exceptions import UserNotFoundError, InvalidTokenError, TokenExpiredError
-from authtuna.helpers import create_session_and_set_cookie
+from authtuna.helpers import create_session_and_set_cookie, get_remote_address
+from authtuna.helpers.mail import email_manager
 from authtuna.integrations import get_current_user, auth_service
 
 router = APIRouter(prefix="/passkeys", tags=["Passkeys"])
@@ -86,7 +89,7 @@ async def generate_login_options(request: Request):
 
 
 @router.post("/login", summary="Verify passkey authentication and create a session")
-async def login_with_passkey(payload: PasskeyAuthenticationRequest, request: Request, response: Response):
+async def login_with_passkey(payload: PasskeyAuthenticationRequest, request: Request, response: Response, background_tasks: BackgroundTasks):
     """
     Verifies a passkey assertion and, if successful, creates a new user session.
     """
@@ -113,7 +116,14 @@ async def login_with_passkey(payload: PasskeyAuthenticationRequest, request: Req
 
         # Create a new session for the user and set the cookie
         await create_session_and_set_cookie(user, request, response, auth_service.db_manager.get_db())
-
+        if settings.EMAIL_ENABLED:
+            await email_manager.send_new_login_email(user.email, background_tasks, {
+                "username": user.username,
+                "region": request.state.device_data["region"],
+                "ip_address": get_remote_address(request),
+                "device": request.state.device_data["device"],
+                "login_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            })
         return {"status": "ok", "message": "Login successful."}
     except (ValueError, UserNotFoundError) as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))

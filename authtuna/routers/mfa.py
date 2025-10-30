@@ -1,3 +1,4 @@
+import datetime
 import io
 import logging
 
@@ -6,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks,
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from starlette.templating import Jinja2Templates
-
+from authtuna.helpers import get_remote_address
 from authtuna.core.config import settings
 from authtuna.core.database import User
 from authtuna.core.exceptions import InvalidTokenError, OperationForbiddenError
@@ -76,7 +77,7 @@ async def get_qr_code(uri: str):
     return StreamingResponse(buf, media_type="image/png")
 
 @router.post("/validate-login")
-async def validate_mfa_login(login_data: MFALoginValidate, request: Request):
+async def validate_mfa_login(login_data: MFALoginValidate, request: Request, background_tasks: BackgroundTasks):
     """
     Validates the MFA code during login to complete the authentication process by
     calling the dedicated service method.
@@ -85,7 +86,7 @@ async def validate_mfa_login(login_data: MFALoginValidate, request: Request):
         session = await auth_service.validate_mfa_login(
             mfa_token=login_data.mfa_token,
             code=login_data.code,
-            ip_address=request.client.host if request.client else "unknown",
+            ip_address=get_remote_address(request),
             device_data=request.state.device_data
         )
         response = JSONResponse({"message": "Login successful."})
@@ -98,6 +99,14 @@ async def validate_mfa_login(login_data: MFALoginValidate, request: Request):
             max_age=settings.SESSION_ABSOLUTE_LIFETIME_SECONDS,
             domain=settings.SESSION_COOKIE_DOMAIN,
         )
+        if settings.EMAIL_ENABLED:
+            await email_manager.send_new_login_email(session.user.email, background_tasks, {
+                "username": session.user.username,
+                "region": request.state.device_data["region"],
+                "ip_address": get_remote_address(request),
+                "device": request.state.device_data["device"],
+                "login_time": datetime.datetime.fromtimestamp(session.ctime).strftime("%Y-%m-%d %H:%M:%S"),
+            })
         return response
     except InvalidTokenError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
