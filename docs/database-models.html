@@ -81,7 +81,7 @@
 
             <div class="space-y-2">
                 <h2 class="text-lg font-semibold text-gray-400 mt-4 mb-2 uppercase tracking-wider">Fundamentals</h2>
-                <a href="index.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
+                <a href="index.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Introduction & Setup
                 </a>
                 <a href="configuration.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
@@ -90,7 +90,7 @@
                 <a href="core-managers.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Core Service Layer
                 </a>
-                <a href="database-models.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                <a href="database-models.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
                     Database Models
                 </a>
 
@@ -129,54 +129,72 @@
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div id="content" class="prose max-w-4xl mx-auto">
-                <h1>AuthTuna 🐟 - High-Performance Async Security</h1>
-                <p class="lead">AuthTuna is a modern, batteries-included authentication and authorization framework for Python, designed specifically for **FastAPI** applications, but with a framework-agnostic core.</p>
+                <h1>Database Models</h1>
+                <p>AuthTuna uses a set of SQLAlchemy ORM models to represent users, roles, permissions, and other security-related data. Understanding these models is key to extending AuthTuna's functionality and building custom queries.</p>
 
-                <h2>Key Features</h2>
+                <h2>User</h2>
+                <p>The `User` model is the core of the system, representing an individual user account.</p>
                 <ul>
-                    <li><strong>Async-First:</strong> Built entirely with asynchronous managers and SQLAlchemy 2.0.</li>
-                    <li><strong>Robust Sessions:</strong> DB-backed sessions with anti-hijack checks (device/region/IP mismatch).</li>
-                    <li><strong>Comprehensive RBAC:</strong> Hierarchical roles and fine-grained **Scoped Permissions**.</li>
-                    <li><strong>Built-in Flows:</strong> Ready-to-use routers for Login, Signup, MFA, Password Reset, and Social SSO.</li>
-                    <li><strong>Auditing:</strong> Logs all critical security events (login, password change, suspension).</li>
-                    <li><strong>UI Components:</strong> Includes pre-built HTML templates for login, user dashboard, settings, and admin pages.</li>
+                    <li>`id`: A unique identifier for the user.</li>
+                    <li>`username`: The user's username. This is case-insensitive.</li>
+                    <li>`email`: The user's email address. This is case-insensitive.</li>
+                    <li>`is_active`: A boolean indicating whether the user's account is active.</li>
+                    <li>`password_hash`: The user's hashed password.</li>
+                    <li>`email_verified`: A boolean indicating whether the user's email address has been verified.</li>
+                    <li>`requires_password_reset`: A boolean indicating whether the user is required to reset their password.</li>
+                    <li>`mfa_enabled`: A boolean indicating whether the user has multi-factor authentication enabled.</li>
+                    <li>`created_at`: The timestamp when the user's account was created.</li>
+                    <li>`last_login`: The timestamp of the user's last login.</li>
                 </ul>
 
-                <h2>Getting Started (Minimal Setup)</h2>
-                <p>Install dependencies and initialize your FastAPI application:</p>
-                <pre><code class="language-bash">pip install authtuna</code></pre>
+                <h2>Role</h2>
+                <p>The `Role` model represents a role that can be assigned to a user.</p>
+                <ul>
+                    <li>`id`: A unique identifier for the role.</li>
+                    <li>`name`: The name of the role.</li>
+                    <li>`description`: A description of the role.</li>
+                    <li>`system`: A boolean indicating whether the role is a system role.</li>
+                    <li>`level`: An integer representing the role's level in the hierarchy.</li>
+                </ul>
 
-                <h4>1. Create a minimal .env file</h4>
-                <pre><code class="language-bash"># .env
-API_BASE_URL=http://localhost:8000
-# Mandatory encryption keys (generate with Fernet.generate_key().decode())
-FERNET_KEYS='["YOUR_PRIMARY_KEY", "YOUR_SECONDARY_KEY"]'
-JWT_SECRET_KEY="a-strong-jwt-secret"
-DEFAULT_DATABASE_URI=sqlite+aiosqlite:///./authtuna.db
-</code></pre>
+                <h2>Permission</h2>
+                <p>The `Permission` model represents a permission that can be granted to a role.</p>
+                <ul>
+                    <li>`id`: A unique identifier for the permission.</li>
+                    <li>`name`: The name of the permission.</li>
+                    <li>`description`: A description of the permission.</li>
+                    <li>`system`: A boolean indicating whether the permission is a system permission.</li>
+                </ul>
 
-                <h4>2. Initialize the App</h4>
-                <pre><code class="language-python">from fastapi import FastAPI, Depends
-from authtuna import init_app
-from authtuna.integrations import get_current_user
-from authtuna.core.database import User
+                <h2>Session</h2>
+                <p>The `Session` model represents an active user session.</p>
+                <ul>
+                    <li>`session_id`: A unique identifier for the session.</li>
+                    <li>`user_id`: The ID of the user who owns the session.</li>
+                    <li>`region`: The region where the session was initiated.</li>
+                    <li>`device`: The device where the session was initiated.</li>
+                    <li>`active`: A boolean indicating whether the session is active.</li>
+                    <li>`ctime`: The timestamp when the session was created.</li>
+                    <li>`mtime`: The timestamp when the session was last modified.</li>
+                    <li>`etime`: The timestamp when the session will expire.</li>
+                    <li>`e_abs_time`: The absolute expiry time of the session.</li>
+                    <li>`create_ip`: The IP address where the session was created.</li>
+                    <li>`last_ip`: The last IP address used for the session.</li>
+                    <li>`random_string`: A random string used to mitigate replay attacks.</li>
+                    <li>`previous_random_strings`: A list of previous random strings.</li>
+                </ul>
 
-app = FastAPI(title="AuthTuna Demo API")
-
-# This single function adds all middleware and routers
-init_app(app)
-
-@app.get("/", tags=["Root"],)
-async def root(user=Depends(get_current_user_optional)):
-    """
-    Automatically redirects to login page if not authenticated, else redirects to the dashboard.
-    """
-    if user is None:
-        return RedirectResponse("/auth/login")
-    return RedirectResponse("/ui/dashboard")
-
-</code></pre>
-                <p>After running your app, you can access the built-in UI at <a href="/ui/dashboard">/ui/dashboard</a> and authentication forms at <a href="/auth/login">/auth/login</a>.</p>
+                <h2>Token</h2>
+                <p>The `Token` model represents a token that can be used for various purposes, such as email verification or password reset.</p>
+                <ul>
+                    <li>`id`: A unique identifier for the token.</li>
+                    <li>`purpose`: The purpose of the token.</li>
+                    <li>`user_id`: The ID of the user who owns the token.</li>
+                    <li>`ctime`: The timestamp when the token was created.</li>
+                    <li>`etime`: The timestamp when the token will expire.</li>
+                    <li>`used`: A boolean indicating whether the token has been used.</li>
+                    <li>`new_gen_id`: The ID of the new token that was generated to replace this one.</li>
+                </ul>
             </div>
         </main>
     </div>

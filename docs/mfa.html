@@ -63,6 +63,10 @@
         }
         .prose table { width: 100%; }
         .prose th { background-color: #1f2937; }
+        .nav-link.active {
+            background-color: var(--primary);
+            color: white;
+        }
     </style>
 </head>
 <body class="text-gray-200">
@@ -86,6 +90,9 @@
                 <a href="core-managers.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Core Service Layer
                 </a>
+                <a href="database-models.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    Database Models
+                </a>
 
                 <h2 class="text-lg font-semibold text-gray-400 mt-6 mb-2 uppercase tracking-wider">FastAPI Integration</h2>
                 <a href="dependencies.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
@@ -102,7 +109,7 @@
                 <a href="auth-flows.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Authentication Flows
                 </a>
-                <a href="mfa.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                <a href="mfa.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
                     MFA & Social Login (SSO)
                 </a>
                 <a href="middleware-session.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
@@ -118,7 +125,7 @@
         <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
 
         <main class="flex-1 overflow-y-auto p-8 lg:p-12 doc-content-area">
-             <button id="menu-button" class="md:hidden fixed top-4 right-4 bg-gray-800 p-2 rounded-lg z-40">
+             <button id="menu-button" class="md:hidden fixed top-4 right-4 bg-gray-800 p-2 rounded-lg z-40" onclick="toggleSidebar()">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div id="content" class="prose max-w-4xl mx-auto">
@@ -147,6 +154,13 @@
     </div>
     <script>
         hljs.highlightAll();
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            sidebar.classList.toggle('translate-x-0');
+            overlay.classList.toggle('hidden');
+        }
     </script>
 </body>
 </html>
