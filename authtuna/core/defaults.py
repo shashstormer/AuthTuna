@@ -35,7 +35,7 @@ DEFAULT_ROLES = {
     "OrgAdmin": {"level": 0, "description": "Can manage an organization's members and teams."},
     "OrgOwner": {"level": 0, "description": "Full control over an organization."},
 
-    # the following roles meant purely for administrative purposes for the auth service owners.
+    # the following roles meant purely for administrative purposes for the auth service owners and use hierarchical grant system.
     "Moderator": {"level": 50, "description": "Can manage users and content."},
     "Admin": {"level": 90, "description": "Full administrative access to most features."},
     "SuperAdmin": {"level": 100, "description": "Highest level of administrative access."},
@@ -55,6 +55,16 @@ ROLE_PERMISSIONS = {
     "OrgOwner": ["org:manage", "org:invite_member", "org:remove_member", "team:create", "team:delete", "team:manage"],
 }
 
+DEFAULT_ROLE_GRANTS = {
+    # System Admin Roles
+    "SuperAdmin": ["Admin", "Moderator", "OrgOwner", "OrgAdmin", "TeamLead", "OrgMember", "User"], # anyway hierarchical system exists so this and the next line dont actually matter.
+    "Admin": ["Moderator", "OrgOwner", "OrgAdmin", "TeamLead", "OrgMember", "User"],
+
+    # Organization Roles
+    "OrgOwner": ["OrgAdmin", "TeamLead", "OrgMember"],
+    "OrgAdmin": ["TeamLead", "OrgMember"],
+    "TeamLead": ["TeamMember"],
+}
 
 async def provision_defaults(db: AsyncSession):
     """
@@ -125,5 +135,20 @@ async def provision_defaults(db: AsyncSession):
                     given_at=time.time()
                 )
                 await db.execute(stmt)
-
+    for assigner_name, assignable_names in DEFAULT_ROLE_GRANTS.items():
+        assigner_role_result = await db.execute(select(Role).where(Role.name == assigner_name))
+        assigner_role = assigner_role_result.unique().scalar_one_or_none()
+        if not assigner_role:
+            print(f"Warning: Assigner role '{assigner_name}' not found, skipping grants.")
+            continue
+        for assignable_name in assignable_names:
+            assignable_role_result = await db.execute(select(Role).where(Role.name == assignable_name))
+            assignable_role = assignable_role_result.unique().scalar_one_or_none()
+            if not assignable_role:
+                print(
+                    f"Warning: Assignable role '{assignable_name}' for assigner '{assigner_name}' not found, skipping.")
+                continue
+            if assignable_role not in assigner_role.can_assign_roles:
+                assigner_role.can_assign_roles.append(assignable_role)
+                print(f"Granting: '{assigner_name}' -> can assign -> '{assignable_name}'")
     await db.commit()
