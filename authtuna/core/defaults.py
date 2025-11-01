@@ -1,6 +1,8 @@
 import time
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
+
 from authtuna.core.database import User, Role, Permission, user_roles_association
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.config import settings
@@ -108,6 +110,7 @@ async def provision_defaults(db: AsyncSession):
             permission = (await db.execute(select(Permission).where(Permission.name == perm_name))).scalar_one_or_none()
             if permission not in role.permissions:
                 role.permissions.append(permission)
+    await db.flush()
 
     for user_key, user_data in DEFAULT_USERS.items():
         if not (await db.execute(select(User).where(User.id == user_data["id"]))).unique().scalar_one_or_none():
@@ -135,6 +138,7 @@ async def provision_defaults(db: AsyncSession):
                     given_at=time.time()
                 )
                 await db.execute(stmt)
+    await db.flush()
     for assigner_name, assignable_names in DEFAULT_ROLE_GRANTS.items():
         assigner_role_result = await db.execute(select(Role).where(Role.name == assigner_name))
         assigner_role = assigner_role_result.unique().scalar_one_or_none()
@@ -142,7 +146,7 @@ async def provision_defaults(db: AsyncSession):
             print(f"Warning: Assigner role '{assigner_name}' not found, skipping grants.")
             continue
         for assignable_name in assignable_names:
-            assignable_role_result = await db.execute(select(Role).where(Role.name == assignable_name))
+            assignable_role_result = await db.execute(select(Role).options(selectinload(Role.can_assign_roles)).where(Role.name == assignable_name))
             assignable_role = assignable_role_result.unique().scalar_one_or_none()
             if not assignable_role:
                 print(
