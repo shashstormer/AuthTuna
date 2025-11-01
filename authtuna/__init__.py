@@ -28,25 +28,25 @@ from fastapi import FastAPI
 from .core.config import settings, init_settings
 
 
-def _start_rpc_server_bg():
-    if not settings.RPC_ENABLED:
-        return
-    import asyncio
-    try:
-        server_mod = importlib.import_module('authtuna.rpc.server')
-        serve = getattr(server_mod, 'serve', None)
-        if serve:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(serve())
-    except Exception as e:
-        import warnings
-        warnings.warn(f"Failed to auto-start RPC server: {e}")
-
-
-if getattr(settings, 'RPC_AUTOSTART', False):
-    t = threading.Thread(target=_start_rpc_server_bg, daemon=True)
-    t.start()
+# def _start_rpc_server_bg():
+#     if not settings.RPC_ENABLED:
+#         return
+#     import asyncio
+#     try:
+#         server_mod = importlib.import_module('authtuna.rpc.server')
+#         serve = getattr(server_mod, 'serve', None)
+#         if serve:
+#             loop = asyncio.new_event_loop()
+#             asyncio.set_event_loop(loop)
+#             loop.run_until_complete(serve())
+#     except Exception as e:
+#         import warnings
+#         warnings.warn(f"Failed to auto-start RPC server: {e}")
+#
+#
+# if getattr(settings, 'RPC_AUTOSTART', False):
+#     t = threading.Thread(target=_start_rpc_server_bg, daemon=True)
+#     t.start()
 
 
 def init_app(app: FastAPI, session_middleware_kwargs=None):

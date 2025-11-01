@@ -7,7 +7,7 @@ from sqlalchemy import or_, select, func, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from authtuna.core import encryption_utils
+from authtuna.core.encryption import encryption_utils
 from authtuna.core.config import settings
 from authtuna.core.database import (
     DatabaseManager, User, Role, Permission, DeletedUser,
