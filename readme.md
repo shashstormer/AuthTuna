@@ -8,7 +8,7 @@
 
 # AuthTuna 🐟
 
-A modern async security framework for Python (FastAPI-first, framework-agnostic core).  
+A modern async security framework for Python (FastAPI-first, framework-agnostic core).
 Battle-tested, batteries-included authentication, session management, RBAC, SSO, MFA, and much more.
 
 ---
@@ -72,7 +72,7 @@ uvicorn main:app --reload
 ### Required Config Keys (`FERNET_KEYS`, `API_BASE_URL`)
 
 - **`FERNET_KEYS`**: Comma-separated base64-encoded keys for encrypting sensitive data (sessions, cookies, etc).
-  - To generate:  
+  - To generate:
     ```python
     from cryptography.fernet import Fernet
     print(Fernet.generate_key().decode())
@@ -88,32 +88,85 @@ uvicorn main:app --reload
 
 ### All Config Options
 
-| Variable                      | Description                                                | Required | Example                                |
+| Variable                      | Description                                                | Required | Default                                |
 |-------------------------------|------------------------------------------------------------|----------|----------------------------------------|
-| API_BASE_URL                  | Your app's public base URL                                 | Yes      | http://localhost:8000                  |
-| FERNET_KEYS                   | Comma-separated list of Fernet keys (base64)               | Yes      | `key1,key2,...`                        |
-| DEFAULT_DATABASE_URI          | SQLAlchemy DB URI (async supported)                        | Yes      | `sqlite+aiosqlite:///./authtuna.db`    |
-| SECRET_KEY                    | Secret for signing tokens                                  | Yes      | `your-super-secret-key`                |
-| JWT_SECRET_KEY                | JWT encryption secret                                      |          | (defaults, override for prod)          |
-| ENCRYPTION_PRIMARY_KEY        | Encryption key for sensitive fields                        |          | (defaults, override for prod)          |
-| ENCRYPTION_SECONDARY_KEYS     | For key rotation                                           |          |                                        |
-| APP_NAME                      | Application name                                           | No       | AuthTuna                               |
-| DATABASE_USE_ASYNC_ENGINE     | Use async SQLAlchemy drivers                               | No       | True                                   |
-| SESSION_LIFETIME_SECONDS      | Session duration (seconds)                                 | No       | 604800                                 |
-| SESSION_TOKEN_NAME            | Cookie name for session                                    | No       | session_token                          |
-| EMAIL_ENABLED                 | Enable/disable email features                              | No       | False                                  |
-| SMTP_HOST, SMTP_PORT, ...     | SMTP config for sending emails                             | If email | smtp.example.com, 587, ...             |
-| EMAIL_DOMAINS                 | Allowed email domains (list)                               | No       | gmail.com,example.com                  |
-| ...                           | See source for full list and default values                |          |                                        |
+| `APP_NAME` | Name of the application. | No | `AuthTuna` |
+| `ALGORITHM` | JWT encryption algorithm. | No | `HS256` |
+| `API_BASE_URL` | Your app's public base URL. | Yes | |
+| `TRY_FULL_INITIALIZE_WHEN_SYSTEM_USER_EXISTS_AGAIN`| Attempt to re-initialize the system user if it already exists. | No | `False` |
+| `JWT_SECRET_KEY` | Secret key for JWT encryption. | No | `dev-secret-key-change-in-production` |
+| `ENCRYPTION_PRIMARY_KEY` | Primary key for encrypting sensitive fields. | No | `dev-encryption-key-change-in-production` |
+| `ENCRYPTION_SECONDARY_KEYS` | Secondary keys for key rotation. | No | `[]` |
+| `FERNET_KEYS` | Comma-separated list of Fernet keys for session encryption. | Yes | |
+| `DEFAULT_SUPERADMIN_PASSWORD` | Default password for the superadmin user. | No | |
+| `DEFAULT_ADMIN_PASSWORD` | Default password for the admin user. | No | |
+| `DEFAULT_SUPERADMIN_EMAIL` | Default email for the superadmin user. | No | `superadmin@example.com` |
+| `DEFAULT_ADMIN_EMAIL` | Default email for the admin user. | No | `admin@example.com` |
+| `DEFAULT_DATABASE_URI` | SQLAlchemy database URI. | Yes | `sqlite+aiosqlite:///./authtuna_dev.db` |
+| `DATABASE_USE_ASYNC_ENGINE` | Use async SQLAlchemy drivers. | No | `True` |
+| `AUTO_CREATE_DATABASE` | Automatically create database tables if they don't exist. | No | `True` |
+| `DATABASE_POOL_SIZE` | Database connection pool size. | No | `20` |
+| `DATABASE_MAX_OVERFLOW` | Database connection pool max overflow. | No | `40` |
+| `DATABASE_POOL_TIMEOUT` | Database connection pool timeout in seconds. | No | `30` |
+| `DATABASE_POOL_RECYCLE` | Database connection pool recycle time in seconds. | No | `1800` |
+| `DATABASE_POOL_PRE_PING` | Ping the database before each connection. | No | `True` |
+| `FINGERPRINT_HEADERS` | List of headers to use for device fingerprinting. | No | `["User-Agent", "Accept-Language"]` |
+| `SESSION_DB_VERIFICATION_INTERVAL` | Time in seconds before rechecking if a session token is still active in the database. | No | `10` |
+| `SESSION_LIFETIME_SECONDS` | Session duration in seconds. | No | `604800` |
+| `SESSION_ABSOLUTE_LIFETIME_SECONDS` | Absolute session lifetime in seconds. | No | `31536000` |
+| `SESSION_LIFETIME_FROM` | Session lifetime calculation method (`last_activity` or `creation`). | No | `last_activity` |
+| `SESSION_SAME_SITE` | SameSite policy for session cookies. | No | `LAX` |
+| `SESSION_SECURE` | Use secure cookies for sessions. | No | `True` |
+| `SESSION_TOKEN_NAME` | Cookie name for the session token. | No | `session_token` |
+| `SESSION_COOKIE_DOMAIN` | Domain for the session cookie. | No | |
+| `LOCK_SESSION_REGION` | Lock sessions to a region based on IP geolocation. | No | `True` |
+| `DISABLE_RANDOM_STRING` | Disable random string mismatch checks to prevent logouts in high-concurrency environments. | No | `False` |
+| `RANDOM_STRING_GRACE` | Grace period in seconds for accepting stored random strings. | No | `300` |
+| `EMAIL_ENABLED` | Enable or disable email features. | No | `False` |
+| `SMTP_HOST` | SMTP server host. | If email | |
+| `SMTP_PORT` | SMTP server port. | If email | `587` |
+| `SMTP_USERNAME` | SMTP server username. | If email | |
+| `SMTP_PASSWORD` | SMTP server password. | If email | |
+| `DKIM_PRIVATE_KEY_PATH` | Path to the DKIM private key. | If email | |
+| `DKIM_DOMAIN` | DKIM domain. | If email | |
+| `DKIM_SELECTOR` | DKIM selector. | If email | |
+| `DEFAULT_SENDER_EMAIL` | Default email address for sending emails. | No | `noreply@example.com` |
+| `EMAIL_DOMAINS` | Allowed email domains for user registration. | No | `["gmail.com"]` |
+| `TOKENS_EXPIRY_SECONDS` | Expiry time in seconds for email tokens. | No | `3600` |
+| `TOKENS_MAX_COUNT_PER_DAY_PER_USER_PER_ACTION` | Maximum number of tokens per day per user per action. | No | `5` |
+| `MAIL_STARTTLS` | Use STARTTLS for SMTP connections. | No | `True` |
+| `MAIL_SSL_TLS` | Use SSL/TLS for SMTP connections. | No | `False` |
+| `USE_CREDENTIALS` | Use credentials for SMTP authentication. | No | `True` |
+| `VALIDATE_CERTS` | Validate SSL/TLS certificates. | No | `True` |
+| `EMAIL_TEMPLATE_DIR` | Directory for email templates. | No | `authtuna/templates/email` |
+| `HTML_TEMPLATE_DIR` | Directory for HTML page templates. | No | `authtuna/templates/pages` |
+| `DASHBOARD_AND_USER_INFO_PAGES_TEMPLATE_DIR` | Directory for dashboard and user info page templates. | No | `authtuna/templates/dashboard` |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID. | If Google SSO | |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret. | If Google SSO | |
+| `GOOGLE_REDIRECT_URI` | Google OAuth redirect URI. | If Google SSO | |
+| `GITHUB_CLIENT_ID` | GitHub OAuth client ID. | If GitHub SSO | |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret. | If GitHub SSO | |
+| `GITHUB_REDIRECT_URI` | GitHub OAuth redirect URI. | If GitHub SSO | |
+| `RPC_ENABLED` | Enable or disable RPC. | No | `False` |
+| `RPC_AUTOSTART` | Automatically start the RPC server. | No | `True` |
+| `RPC_TOKEN` | RPC authentication token. | No | `changeme-secure-token` |
+| `RPC_TLS_CERT_FILE` | Path to the RPC TLS certificate file. | If RPC TLS | |
+| `RPC_TLS_KEY_FILE` | Path to the RPC TLS key file. | If RPC TLS | |
+| `RPC_ADDRESS` | RPC server address. | No | `[::]:50051` |
+| `WEBAUTHN_ENABLED` | Enable or disable WebAuthn. | No | `False` |
+| `WEBAUTHN_RP_ID` | WebAuthn relying party ID. | No | `localhost` |
+| `WEBAUTHN_RP_NAME` | WebAuthn relying party name. | No | `AuthTuna` |
+| `WEBAUTHN_ORIGIN` | WebAuthn origin URL. | No | `http://localhost:8000` |
+| `STRATEGY` | Authentication strategy (`COOKIE` or `BEARER`). | No | `COOKIE` |
 
 **See [core/config.py](authtuna/core/config.py) for ALL options.**
 
 ### Using `.env` or Environment Variables
 
 - Place your config in a `.env` file (see above).
-- Or export them in your shell:  
+- Or export them in your shell:
   `export API_BASE_URL="https://api.mysite.com"`, etc.
-- If you want to use a custom file:  
+- If you want to use a custom file:
   `ENV_FILE_NAME=".myenv"`
 
 ### Using a Secrets Manager or Custom `init_settings`

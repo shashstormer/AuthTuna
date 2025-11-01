@@ -122,54 +122,36 @@
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div id="content" class="prose max-w-4xl mx-auto">
-                <h1>AuthTuna 🐟 - High-Performance Async Security</h1>
-                <p class="lead">AuthTuna is a modern, batteries-included authentication and authorization framework for Python, designed specifically for **FastAPI** applications, but with a framework-agnostic core.</p>
+                <h1>Core Service Layer (`AuthTunaAsync`)</h1>
+                <p>The entire library core is exposed through asynchronous manager classes. The main entry point is the <code>auth_service</code> instance from <code>authtuna.integrations</code>.</p>
 
-                <h2>Key Features</h2>
-                <ul>
-                    <li><strong>Async-First:</strong> Built entirely with asynchronous managers and SQLAlchemy 2.0.</li>
-                    <li><strong>Robust Sessions:</strong> DB-backed sessions with anti-hijack checks (device/region/IP mismatch).</li>
-                    <li><strong>Comprehensive RBAC:</strong> Hierarchical roles and fine-grained **Scoped Permissions**.</li>
-                    <li><strong>Built-in Flows:</strong> Ready-to-use routers for Login, Signup, MFA, Password Reset, and Social SSO.</li>
-                    <li><strong>Auditing:</strong> Logs all critical security events (login, password change, suspension).</li>
-                    <li><strong>UI Components:</strong> Includes pre-built HTML templates for login, user dashboard, settings, and admin pages.</li>
-                </ul>
+                <h4>UserManager</h4>
+                <p>Handles user lifecycle and data management.</p>
+                <pre><code class="language-python"># Example: Suspending a user
+from authtuna.integrations import auth_service
 
-                <h2>Getting Started (Minimal Setup)</h2>
-                <p>Install dependencies and initialize your FastAPI application:</p>
-                <pre><code class="language-bash">pip install authtuna</code></pre>
-
-                <h4>1. Create a minimal .env file</h4>
-                <pre><code class="language-bash"># .env
-API_BASE_URL=http://localhost:8000
-# Mandatory encryption keys (generate with Fernet.generate_key().decode())
-FERNET_KEYS='["YOUR_PRIMARY_KEY", "YOUR_SECONDARY_KEY"]'
-JWT_SECRET_KEY="a-strong-jwt-secret"
-DEFAULT_DATABASE_URI=sqlite+aiosqlite:///./authtuna.db
+async def suspend(user_id, admin_id):
+    suspended_user = await auth_service.users.suspend_user(
+        user_id=user_id,
+        admin_id=admin_id,
+        reason="Violated ToS"
+    )
+    return suspended_user.is_active # Returns False
 </code></pre>
 
-                <h4>2. Initialize the App</h4>
-                <pre><code class="language-python">from fastapi import FastAPI, Depends
-from authtuna import init_app
-from authtuna.integrations import get_current_user
-from authtuna.core.database import User
-
-app = FastAPI(title="AuthTuna Demo API")
-
-# This single function adds all middleware and routers
-init_app(app)
-
-@app.get("/", tags=["Root"],)
-async def root(user=Depends(get_current_user_optional)):
-    """
-    Automatically redirects to login page if not authenticated, else redirects to the dashboard.
-    """
-    if user is None:
-        return RedirectResponse("/auth/login")
-    return RedirectResponse("/ui/dashboard")
-
+                <h4>SessionManager</h4>
+                <p>Directly manages database sessions, terminations, and retrieval.</p>
+                <pre><code class="language-python"># Example: Terminate all other sessions for a user
+async def cleanup_sessions(user_id, current_session_id, ip_address):
+    await auth_service.sessions.terminate_all_for_user(
+        user_id=user_id,
+        ip_address=ip_address,
+        except_session_id=current_session_id
+    )
 </code></pre>
-                <p>After running your app, you can access the built-in UI at <a href="/ui/dashboard">/ui/dashboard</a> and authentication forms at <a href="/auth/login">/auth/login</a>.</p>
+
+                <h4>RoleManager & PermissionManager</h4>
+                <p>Manages the RBAC system, including creating roles/permissions and assigning them. See the <a href="rbac-management.html">RBAC Management</a> section for details.</p>
             </div>
         </main>
     </div>
