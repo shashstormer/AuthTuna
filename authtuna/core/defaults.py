@@ -59,10 +59,12 @@ async def provision_defaults(db: AsyncSession):
     """
     Idempotently creates default permissions, roles, and users.
     """
-    system_user_exists = (await db.execute(select(User).where(User.id == "system"))).unique().scalar_one_or_none() # this is to reduce database queries. If the system user exists, there is no need to provision defaults, if you want to re initialize a specific user then delete that user and system and they will be reprovisioned on next start.
-    if system_user_exists:
-        return
-
+    if not settings.TRY_FULL_INITIALIZE_WHEN_SYSTEM_USER_EXISTS_AGAIN:
+        system_user_exists = (await db.execute(select(User).where(
+            User.id == "system"))).unique().scalar_one_or_none()  # this is to reduce database queries. If the system user exists, there is no need to provision defaults, if you want to re initialize a specific user then delete that user and system and they will be reprovisioned on next start.
+        if system_user_exists:
+            return
+    print("Provisioning default permissions, roles, and users.")
     DEFAULT_USERS = {
         "system": {
             "id": "system", "username": "system", "email": "system@local.host", "password": None, "roles": ["System"]

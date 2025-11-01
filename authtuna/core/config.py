@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "AuthTuna"
     ALGORITHM: str = "HS256"  # JWT Encryption algorithm
     API_BASE_URL: str
+    TRY_FULL_INITIALIZE_WHEN_SYSTEM_USER_EXISTS_AGAIN: bool = False
     # Security settings
     JWT_SECRET_KEY: SecretStr = SecretStr("dev-secret-key-change-in-production")
     ENCRYPTION_PRIMARY_KEY: SecretStr = SecretStr("dev-encryption-key-change-in-production")
