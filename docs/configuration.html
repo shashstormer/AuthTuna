@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuthTuna 🐟 - Asynchronous Security Framework</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #8b5cf6; /* Indigo-500 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030712; /* Gray-950 */
+        }
+        /* Custom scrolling for content area */
+        .doc-content-area::-webkit-scrollbar { width: 8px; }
+        .doc-content-area::-webkit-scrollbar-thumb { background-color: #374151; border-radius: 4px; }
+        .doc-content-area::-webkit-scrollbar-track { background: #1f2937; }
+
+        /* Prose styling equivalent for generated content */
+        .prose h1, .prose h2, .prose h3, .prose h4 {
+            color: #f3f4f6; /* White */
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        .prose h1 { font-size: 2.5rem; font-weight: 800; }
+        .prose h2 { font-size: 1.75rem; font-weight: 700; border-bottom: 1px solid #374151; padding-bottom: 0.5rem; }
+        .prose h3 { font-size: 1.25rem; font-weight: 600; }
+        .prose h4 { font-size: 1.1rem; font-weight: 600; color: #a5b4fc; }
+        .prose p, .prose li { color: #d1d5db; line-height: 1.7; }
+        .prose ul, .prose ol { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1rem; }
+        .prose a { color: #a5b4fc; text-decoration: none; }
+        .prose a:hover { text-decoration: underline; }
+        .prose code {
+            background-color: #1f2937; /* Gray-800 */
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.375rem;
+            color: #facc15; /* Amber-400 */
+            font-size: 0.875rem;
+        }
+        .prose pre {
+            background-color: #111827; /* Gray-900 */
+            border: 1px solid #374151;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .prose pre code {
+            background: none;
+            color: #e5e7eb; /* Gray-200 */
+            padding: 0;
+            font-size: 1rem;
+        }
+        .prose table { width: 100%; }
+        .prose th { background-color: #1f2937; }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <div class="flex h-screen overflow-hidden">
+
+        <nav id="sidebar" class="w-64 bg-gray-900 p-6 border-r border-gray-800 flex-shrink-0 overflow-y-auto absolute md:relative transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out z-30">
+            <div class="sticky top-0 pb-6 bg-gray-900 z-10">
+                <h1 class="text-3xl font-extrabold text-indigo-400">AuthTuna 🐟</h1>
+                <p class="text-sm text-gray-500 mt-1">v0.1.8 Docs</p>
+            </div>
+
+            <div class="space-y-2">
+                <h2 class="text-lg font-semibold text-gray-400 mt-4 mb-2 uppercase tracking-wider">Fundamentals</h2>
+                <a href="index.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    Introduction & Setup
+                </a>
+                <a href="configuration.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    Configuration (`Settings`)
+                </a>
+                <a href="core-managers.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    Core Service Layer
+                </a>
+
+                <h2 class="text-lg font-semibold text-gray-400 mt-6 mb-2 uppercase tracking-wider">FastAPI Integration</h2>
+                <a href="dependencies.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    Dependencies
+                </a>
+                <a href="permission-dependencies.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    Role & Permission Checks
+                </a>
+                 <a href="rbac-management.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    RBAC Management
+                </a>
+
+                <h2 class="text-lg font-semibold text-gray-400 mt-6 mb-2 uppercase tracking-wider">Built-in Features</h2>
+                <a href="auth-flows.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    Authentication Flows
+                </a>
+                <a href="mfa.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    MFA & Social Login (SSO)
+                </a>
+                <a href="middleware-session.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    Middleware & Session Mgmt
+                </a>
+                 <a href="ui-dashboard.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    UI Dashboard
+                </a>
+
+            </div>
+        </nav>
+
+        <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+        <main class="flex-1 overflow-y-auto p-8 lg:p-12 doc-content-area">
+             <button id="menu-button" class="md:hidden fixed top-4 right-4 bg-gray-800 p-2 rounded-lg z-40">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <div id="content" class="prose max-w-4xl mx-auto">
+                <h1>Configuration (`Settings` Reference)</h1>
+                <p>AuthTuna uses Pydantic settings, loading configuration from environment variables or a <code>.env</code> file. Secrets use <code>SecretStr</code> to prevent accidental logging.</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-400 rounded-lg">
+                        <thead class="text-xs uppercase bg-gray-800 text-gray-300">
+                            <tr>
+                                <th scope="col" class="py-3 px-6">Variable</th>
+                                <th scope="col" class="py-3 px-6">Description</th>
+                                <th scope="col" class="py-3 px-6">Required</th>
+                                <th scope="col" class="py-3 px-6">Default</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`APP_NAME`</td>
+                                <td class="py-4 px-6">Name of the application.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`AuthTuna`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`ALGORITHM`</td>
+                                <td class="py-4 px-6">JWT encryption algorithm.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`HS256`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`API_BASE_URL`</td>
+                                <td class="py-4 px-6">Your app's public base URL.</td>
+                                <td class="py-4 px-6">Yes</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`TRY_FULL_INITIALIZE_WHEN_SYSTEM_USER_EXISTS_AGAIN`</td>
+                                <td class="py-4 px-6">Attempt to re-initialize the system user if it already exists.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`False`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`JWT_SECRET_KEY`</td>
+                                <td class="py-4 px-6">Secret key for JWT encryption.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`dev-secret-key-change-in-production`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`ENCRYPTION_PRIMARY_KEY`</td>
+                                <td class="py-4 px-6">Primary key for encrypting sensitive fields.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`dev-encryption-key-change-in-production`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`ENCRYPTION_SECONDARY_KEYS`</td>
+                                <td class="py-4 px-6">Secondary keys for key rotation.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`[]`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`FERNET_KEYS`</td>
+                                <td class="py-4 px-6">Comma-separated list of Fernet keys for session encryption.</td>
+                                <td class="py-4 px-6">Yes</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DEFAULT_SUPERADMIN_PASSWORD`</td>
+                                <td class="py-4 px-6">Default password for the superadmin user.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DEFAULT_ADMIN_PASSWORD`</td>
+                                <td class="py-4 px-6">Default password for the admin user.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DEFAULT_SUPERADMIN_EMAIL`</td>
+                                <td class="py-4 px-6">Default email for the superadmin user.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`superadmin@example.com`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DEFAULT_ADMIN_EMAIL`</td>
+                                <td class="py-4 px-6">Default email for the admin user.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`admin@example.com`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DEFAULT_DATABASE_URI`</td>
+                                <td class="py-4 px-6">SQLAlchemy database URI.</td>
+                                <td class="py-4 px-6">Yes</td>
+                                <td class="py-4 px-6">`sqlite+aiosqlite:///./authtuna_dev.db`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DATABASE_USE_ASYNC_ENGINE`</td>
+                                <td class="py-4 px-6">Use async SQLAlchemy drivers.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`True`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`AUTO_CREATE_DATABASE`</td>
+                                <td class="py-4 px-6">Automatically create database tables if they don't exist.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`True`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DATABASE_POOL_SIZE`</td>
+                                <td class="py-4 px-6">Database connection pool size.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`20`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DATABASE_MAX_OVERFLOW`</td>
+                                <td class="py-4 px-6">Database connection pool max overflow.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`40`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DATABASE_POOL_TIMEOUT`</td>
+                                <td class="py-4 px-6">Database connection pool timeout in seconds.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`30`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DATABASE_POOL_RECYCLE`</td>
+                                <td class="py-4 px-6">Database connection pool recycle time in seconds.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`1800`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DATABASE_POOL_PRE_PING`</td>
+                                <td class="py-4 px-6">Ping the database before each connection.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`True`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`FINGERPRINT_HEADERS`</td>
+                                <td class="py-4 px-6">List of headers to use for device fingerprinting.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`["User-Agent", "Accept-Language"]`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SESSION_DB_VERIFICATION_INTERVAL`</td>
+                                <td class="py-4 px-6">Time in seconds before rechecking if a session token is still active in the database.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`10`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SESSION_LIFETIME_SECONDS`</td>
+                                <td class="py-4 px-6">Session duration in seconds.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`604800`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SESSION_ABSOLUTE_LIFETIME_SECONDS`</td>
+                                <td class="py-4 px-6">Absolute session lifetime in seconds.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`31536000`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SESSION_LIFETIME_FROM`</td>
+                                <td class="py-4 px-6">Session lifetime calculation method (`last_activity` or `creation`).</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`last_activity`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SESSION_SAME_SITE`</td>
+                                <td class="py-4 px-6">SameSite policy for session cookies.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`LAX`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SESSION_SECURE`</td>
+                                <td class="py-4 px-6">Use secure cookies for sessions.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`True`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SESSION_TOKEN_NAME`</td>
+                                <td class="py-4 px-6">Cookie name for the session token.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`session_token`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SESSION_COOKIE_DOMAIN`</td>
+                                <td class="py-4 px-6">Domain for the session cookie.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`LOCK_SESSION_REGION`</td>
+                                <td class="py-4 px-6">Lock sessions to a region based on IP geolocation.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`True`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DISABLE_RANDOM_STRING`</td>
+                                <td class="py-4 px-6">Disable random string mismatch checks to prevent logouts in high-concurrency environments.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`False`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`RANDOM_STRING_GRACE`</td>
+                                <td class="py-4 px-6">Grace period in seconds for accepting stored random strings.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`300`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`EMAIL_ENABLED`</td>
+                                <td class="py-4 px-6">Enable or disable email features.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`False`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SMTP_HOST`</td>
+                                <td class="py-4 px-6">SMTP server host.</td>
+                                <td class="py-4 px-6">If email</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SMTP_PORT`</td>
+                                <td class="py-4 px-6">SMTP server port.</td>
+                                <td class="py-4 px-6">If email</td>
+                                <td class="py-4 px-6">`587`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SMTP_USERNAME`</td>
+                                <td class="py-4 px-6">SMTP server username.</td>
+                                <td class="py-4 px-6">If email</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`SMTP_PASSWORD`</td>
+                                <td class="py-4 px-6">SMTP server password.</td>
+                                <td class="py-4 px-6">If email</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DKIM_PRIVATE_KEY_PATH`</td>
+                                <td class="py-4 px-6">Path to the DKIM private key.</td>
+                                <td class="py-4 px-6">If email</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DKIM_DOMAIN`</td>
+                                <td class="py-4 px-6">DKIM domain.</td>
+                                <td class="py-4 px-6">If email</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DKIM_SELECTOR`</td>
+                                <td class="py-4 px-6">DKIM selector.</td>
+                                <td class="py-4 px-6">If email</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DEFAULT_SENDER_EMAIL`</td>
+                                <td class="py-4 px-6">Default email address for sending emails.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`noreply@example.com`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`EMAIL_DOMAINS`</td>
+                                <td class="py-4 px-6">Allowed email domains for user registration.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`["gmail.com"]`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`TOKENS_EXPIRY_SECONDS`</td>
+                                <td class="py-4 px-6">Expiry time in seconds for email tokens.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`3600`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`TOKENS_MAX_COUNT_PER_DAY_PER_USER_PER_ACTION`</td>
+                                <td class="py-4 px-6">Maximum number of tokens per day per user per action.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`5`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`MAIL_STARTTLS`</td>
+                                <td class="py-4 px-6">Use STARTTLS for SMTP connections.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`True`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`MAIL_SSL_TLS`</td>
+                                <td class="py-4 px-6">Use SSL/TLS for SMTP connections.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`False`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`USE_CREDENTIALS`</td>
+                                <td class="py-4 px-6">Use credentials for SMTP authentication.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`True`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`VALIDATE_CERTS`</td>
+                                <td class="py-4 px-6">Validate SSL/TLS certificates.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`True`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`EMAIL_TEMPLATE_DIR`</td>
+                                <td class="py-4 px-6">Directory for email templates.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`authtuna/templates/email`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`HTML_TEMPLATE_DIR`</td>
+                                <td class="py-4 px-6">Directory for HTML page templates.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`authtuna/templates/pages`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`DASHBOARD_AND_USER_INFO_PAGES_TEMPLATE_DIR`</td>
+                                <td class="py-4 px-6">Directory for dashboard and user info page templates.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`authtuna/templates/dashboard`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`GOOGLE_CLIENT_ID`</td>
+                                <td class="py-4 px-6">Google OAuth client ID.</td>
+                                <td class="py-4 px-6">If Google SSO</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`GOOGLE_CLIENT_SECRET`</td>
+                                <td class="py-4 px-6">Google OAuth client secret.</td>
+                                <td class="py-4 px-6">If Google SSO</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`GOOGLE_REDIRECT_URI`</td>
+                                <td class="py-4 px-6">Google OAuth redirect URI.</td>
+                                <td class="py-4 px-6">If Google SSO</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`GITHUB_CLIENT_ID`</td>
+                                <td class="py-4 px-6">GitHub OAuth client ID.</td>
+                                <td class="py-4 px-6">If GitHub SSO</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`GITHUB_CLIENT_SECRET`</td>
+                                <td class="py-4 px-6">GitHub OAuth client secret.</td>
+                                <td class="py-4 px-6">If GitHub SSO</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`GITHUB_REDIRECT_URI`</td>
+                                <td class="py-4 px-6">GitHub OAuth redirect URI.</td>
+                                <td class="py-4 px-6">If GitHub SSO</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`RPC_ENABLED`</td>
+                                <td class="py-4 px-6">Enable or disable RPC.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`False`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`RPC_AUTOSTART`</td>
+                                <td class="py-4 px-6">Automatically start the RPC server.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`True`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`RPC_TOKEN`</td>
+                                <td class="py-4 px-6">RPC authentication token.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`changeme-secure-token`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`RPC_TLS_CERT_FILE`</td>
+                                <td class="py-4 px-6">Path to the RPC TLS certificate file.</td>
+                                <td class="py-4 px-6">If RPC TLS</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`RPC_TLS_KEY_FILE`</td>
+                                <td class="py-4 px-6">Path to the RPC TLS key file.</td>
+                                <td class="py-4 px-6">If RPC TLS</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`RPC_ADDRESS`</td>
+                                <td class="py-4 px-6">RPC server address.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`[::]:50051`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`WEBAUTHN_ENABLED`</td>
+                                <td class="py-4 px-6">Enable or disable WebAuthn.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`False`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`WEBAUTHN_RP_ID`</td>
+                                <td class="py-4 px-6">WebAuthn relying party ID.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`localhost`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`WEBAUTHN_RP_NAME`</td>
+                                <td class="py-4 px-6">WebAuthn relying party name.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`AuthTuna`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`WEBAUTHN_ORIGIN`</td>
+                                <td class="py-4 px-6">WebAuthn origin URL.</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`http://localhost:8000`</td>
+                            </tr>
+                            <tr class="bg-gray-900 border-b border-gray-800">
+                                <td class="py-4 px-6">`STRATEGY`</td>
+                                <td class="py-4 px-6">Authentication strategy (`COOKIE` or `BEARER`).</td>
+                                <td class="py-4 px-6">No</td>
+                                <td class="py-4 px-6">`COOKIE`</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        hljs.highlightAll();
+    </script>
+</body>
+</html>

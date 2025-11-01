@@ -122,54 +122,31 @@
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div id="content" class="prose max-w-4xl mx-auto">
-                <h1>AuthTuna 🐟 - High-Performance Async Security</h1>
-                <p class="lead">AuthTuna is a modern, batteries-included authentication and authorization framework for Python, designed specifically for **FastAPI** applications, but with a framework-agnostic core.</p>
+                <h1>Authentication Flows & Endpoints</h1>
+                <p>The <code>auth_router</code> provides all necessary API endpoints and HTML pages for a complete security system.</p>
+                <p>Just use the pages included in the router and if you want custom pages update the env var for templates dir ALL THE PAGES NEED TO BE INCLUDED IN THE NEW FOLDER AS I HAVE NOT IMPLEMENTED FALLBACK YET. Just copy paste dir if you want to update theme. (Maybe ima add theme configuration so that ppl wont have to copy pasta all files, no guarantee just thinking.)</p>
 
-                <h2>Key Features</h2>
-                <ul>
-                    <li><strong>Async-First:</strong> Built entirely with asynchronous managers and SQLAlchemy 2.0.</li>
-                    <li><strong>Robust Sessions:</strong> DB-backed sessions with anti-hijack checks (device/region/IP mismatch).</li>
-                    <li><strong>Comprehensive RBAC:</strong> Hierarchical roles and fine-grained **Scoped Permissions**.</li>
-                    <li><strong>Built-in Flows:</strong> Ready-to-use routers for Login, Signup, MFA, Password Reset, and Social SSO.</li>
-                    <li><strong>Auditing:</strong> Logs all critical security events (login, password change, suspension).</li>
-                    <li><strong>UI Components:</strong> Includes pre-built HTML templates for login, user dashboard, settings, and admin pages.</li>
-                </ul>
+                <h4>Standard Authentication (`/auth`)</h4>
+                <p>These endpoints handle user credentials and password security.</p>
+                 <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-400 rounded-lg">
+                         <thead class="text-xs uppercase bg-gray-800 text-gray-300">
+                            <tr><th class="py-3 px-6">Endpoint</th><th class="py-3 px-6">Method</th><th class="py-3 px-6">Function</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr class="bg-gray-900 border-b border-gray-800"><td>/auth/signup</td><td>POST</td><td>User registration.</td></tr>
+                            <tr class="bg-gray-900 border-b border-gray-800"><td>/auth/login</td><td>POST</td><td>User login.</td></tr>
+                            <tr class="bg-gray-900 border-b border-gray-800"><td>/auth/logout</td><td>POST</td><td>Terminates the current session.</td></tr>
+                            <tr class="bg-gray-900 border-b border-gray-800"><td>/auth/forgot-password</td><td>POST</td><td>Initiates password reset flow.</td></tr>
+                            <tr class="bg-gray-900 border-b border-gray-800"><td>/auth/reset-password</td><td>POST</td><td>Completes password reset with a valid token.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                <h2>Getting Started (Minimal Setup)</h2>
-                <p>Install dependencies and initialize your FastAPI application:</p>
-                <pre><code class="language-bash">pip install authtuna</code></pre>
-
-                <h4>1. Create a minimal .env file</h4>
-                <pre><code class="language-bash"># .env
-API_BASE_URL=http://localhost:8000
-# Mandatory encryption keys (generate with Fernet.generate_key().decode())
-FERNET_KEYS='["YOUR_PRIMARY_KEY", "YOUR_SECONDARY_KEY"]'
-JWT_SECRET_KEY="a-strong-jwt-secret"
-DEFAULT_DATABASE_URI=sqlite+aiosqlite:///./authtuna.db
-</code></pre>
-
-                <h4>2. Initialize the App</h4>
-                <pre><code class="language-python">from fastapi import FastAPI, Depends
-from authtuna import init_app
-from authtuna.integrations import get_current_user
-from authtuna.core.database import User
-
-app = FastAPI(title="AuthTuna Demo API")
-
-# This single function adds all middleware and routers
-init_app(app)
-
-@app.get("/", tags=["Root"],)
-async def root(user=Depends(get_current_user_optional)):
-    """
-    Automatically redirects to login page if not authenticated, else redirects to the dashboard.
-    """
-    if user is None:
-        return RedirectResponse("/auth/login")
-    return RedirectResponse("/ui/dashboard")
-
-</code></pre>
-                <p>After running your app, you can access the built-in UI at <a href="/ui/dashboard">/ui/dashboard</a> and authentication forms at <a href="/auth/login">/auth/login</a>.</p>
+                <h4>Redirect on Login</h4>
+                <p>To enhance user experience, you can redirect users to a specific page after login by appending a <code>return_url</code> query parameter to the login page URL. The middleware will store this URL in a temporary cookie.</p>
+                <pre><code class="language-bash"># Example: This will redirect the user to /settings after they log in.
+http://localhost:8000/auth/login?return_url=/ui/settings</code></pre>
             </div>
         </main>
     </div>
