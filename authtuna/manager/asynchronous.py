@@ -6,6 +6,7 @@ import pyotp
 from sqlalchemy import or_, select, func, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
+from watchfiles import awatch
 
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.config import settings
@@ -365,15 +366,15 @@ class RoleManager:
 
         return False
 
-    async def assign_to_user(self, user_id: str, role_name: str, assigner_id: str, scope: str = 'none'):
-        async with self._db_manager.get_db() as db:
+    async def assign_to_user(self, user_id: str, role_name: str, assigner_id: str, scope: str = 'none', db=None):
+        async def _main(db):
             # Step 1: Fetch all necessary objects
             user_manager = UserManager(self._db_manager)
             assigner = await user_manager.get_by_id(assigner_id, with_relations=True, db=db)
             if not assigner:
                 raise UserNotFoundError("Assigner user not found.")
 
-            role_to_assign = await self.get_by_name(role_name)
+            role_to_assign = await self.get_by_name(role_name, db=db)
             if not role_to_assign:
                 raise RoleNotFoundError(f"Role '{role_name}' not found.")
 
@@ -406,7 +407,12 @@ class RoleManager:
                 user_id, "ROLE_ASSIGNED", "system",
                 {"role": role_name, "scope": scope, "by": assigner_id}, db=db
             )
-            await db.commit()
+        if db:
+            await _main(db)
+        else:
+            async with self._db_manager.get_db() as db:
+                await _main(db)
+                await db.commit()
 
     async def remove_from_user(self, user_id: str, role_name: str, remover_id: str, scope: str = 'none'):
         async with self._db_manager.get_db() as db:
@@ -450,10 +456,14 @@ class RoleManager:
             else:
                 raise RoleNotFoundError(f"Role '{role_name}' not found for this user.")
 
-    async def get_by_name(self, name: str) -> Optional[Role]:
-        async with self._db_manager.get_db() as db:
+    async def get_by_name(self, name: str, db=None) -> Optional[Role]:
+        async def _get(db):
             stmt = select(Role).where(Role.name == name).options(selectinload(Role.can_assign_roles))
             return (await db.execute(stmt)).unique().scalar_one_or_none()
+        if db:
+            return await _get(db)
+        async with self._db_manager.get_db() as db:
+            return await _get(db)
 
     async def get_by_id(self, role_id: str) -> Optional[Role]:
         async with self._db_manager.get_db() as db:
@@ -865,7 +875,8 @@ class OrganizationManager:
             user_id=user.id,
             role_name=role_name,
             assigner_id="system",
-            scope=org_scope
+            scope=org_scope,
+            db=db,
         )
         await self._db_manager.log_audit_event(
             user.id, "ORG_JOINED", ip_address,
@@ -884,7 +895,7 @@ class OrganizationManager:
                 organization=new_org,
                 role_name="OrgOwner",
                 ip_address=ip_address,
-                joined_by="creator"
+                joined_by="creator",
             )
 
             await self._db_manager.log_audit_event(
@@ -922,9 +933,9 @@ class OrganizationManager:
                 for row in result.all()
             ]
 
-    async def get_user_orgs(self, user_id: str) -> list[Organization]:
+    async def get_user_orgs(self, user_id: str, db=None) -> list[Organization]:
         """Fetches all organizations a user is a member of."""
-        async with self._db_manager.get_db() as db:
+        async def _main(db):
             stmt = select(Organization).join(
                 organization_members, organization_members.c.organization_id == Organization.id
             ).where(
@@ -932,6 +943,10 @@ class OrganizationManager:
             )
             result = await db.execute(stmt)
             return list(result.scalars().all())
+        if db:
+            return await _main(db)
+        async with self._db_manager.get_db() as db:
+            return await _main(db)
 
     async def get_user_owned_orgs(self, user_id: str) -> list[Organization]:
         """Fetches all organizations a user owns."""
@@ -1049,7 +1064,8 @@ class OrganizationManager:
             user_id=user.id,
             role_name=role_name,
             assigner_id="system",
-            scope=team_scope
+            scope=team_scope,
+            db=db,
         )
 
         await self._db_manager.log_audit_event(
@@ -1193,6 +1209,37 @@ class OrganizationManager:
 
             await db.commit()
             return team
+
+    async def get_user_teams(self, user_id: str, org_id: Optional[str]=None):
+        """
+        Get teams of an org where the user is a part of.
+        :param user_id:
+        :param org_id:
+        :return:
+        """
+        if org_id:
+            async with self._db_manager.get_db() as db:
+                stmt = select(Team).join(
+                    team_members, team_members.c.team_id == Team.id
+                ).where(
+                    team_members.c.user_id == user_id,
+                    Team.organization_id == org_id
+                )
+                result = await db.execute(stmt)
+                return result.all()
+        user_orgs = await self.get_user_orgs(user_id)
+        org_teams = {}
+        async with self._db_manager.get_db() as db:
+            for org in user_orgs:
+                stmt = select(Team).join(
+                    team_members, team_members.c.team_id == Team.id
+                ).where(
+                    team_members.c.user_id == user_id,
+                    Team.organization_id == org.id
+                )
+                result = await db.execute(stmt)
+                org_teams[org] = result.all()
+        return org_teams
 
 class AuthTunaAsync:
     """High-level facade for all authentication and authorization operations."""
