@@ -146,6 +146,21 @@ role_grant_permissions = Table(
 )
 
 
+organization_members = Table(
+    'organization_members', Base.metadata,
+    Column('user_id', String(64), ForeignKey('users.id'), primary_key=True),
+    Column('organization_id', String(64), ForeignKey('organization.id'), primary_key=True),
+    Column('joined_at', Float, default=time.time, nullable=False)
+)
+
+
+team_members = Table(
+    'team_members', Base.metadata,
+    Column('user_id', String(64), ForeignKey('users.id'), primary_key=True),
+    Column('team_id', String(64), ForeignKey('team.id'), primary_key=True),
+    Column('joined_at', Float, default=time.time, nullable=False)
+)
+
 # --- ORM Models ---
 
 class User(Base):
@@ -182,6 +197,9 @@ class User(Base):
     mfa_methods = relationship("MFAMethod", back_populates="user", cascade="all, delete-orphan")
     mfa_recovery_codes = relationship("MFARecoveryCode", back_populates="user", cascade="all, delete-orphan")
     audit_events = relationship("AuditEvent", back_populates="user", cascade="all, delete-orphan")
+    organizations_owned = relationship("Organization", back_populates="owner", foreign_keys="Organization.owner_id")
+    organizations = relationship("Organization", secondary=organization_members, back_populates="members")
+    teams = relationship("Team", secondary=team_members, back_populates="members")
 
     async def set_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None):
         """
@@ -481,6 +499,37 @@ class AuditEvent(Base):
     ip_address = Column(String(45), nullable=True)
     details = Column(JsonType, nullable=True)
     user = relationship('User', back_populates='audit_events')
+
+
+class Organization(Base):
+    __tablename__ = 'organization'
+
+    id = Column(String(64), primary_key=True, default=lambda: f"org_{encryption_utils.gen_random_string(28)}")
+    name = Column(String(100), nullable=False)
+    owner_id = Column(String(64), ForeignKey('users.id'), nullable=False)
+    created_at = Column(Float, nullable=False, default=time.time)
+
+    owner = relationship("User", back_populates="organizations_owned", foreign_keys=[owner_id])
+    teams = relationship("Team", back_populates="organization", cascade="all, delete-orphan")
+    members = relationship("User", secondary=organization_members, back_populates="organizations")
+
+    def __repr__(self):
+        return f"<Organization {self.name} (ID: {self.id})>"
+
+
+class Team(Base):
+    __tablename__ = 'team'
+
+    id = Column(String(64), primary_key=True, default=lambda: f"team_{encryption_utils.gen_random_string(27)}")
+    name = Column(String(100), nullable=False)
+    organization_id = Column(String(64), ForeignKey('organization.id'), nullable=False)
+    created_at = Column(Float, nullable=False, default=time.time)
+
+    organization = relationship("Organization", back_populates="teams")
+    members = relationship("User", secondary=team_members, back_populates="teams")
+
+    def __repr__(self):
+        return f"<Team {self.name} (ID: {self.id})>"
 
 
 class DatabaseManager:

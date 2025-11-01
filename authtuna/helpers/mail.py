@@ -231,6 +231,37 @@ class EmailManager:
             background_tasks=background_tasks
         )
 
+    async def send_org_invite_email(self, email: str, token: str, org_name: str, inviter_name: str,
+                                    background_tasks: BackgroundTasks):
+        """Sends an organization invitation email."""
+        join_link = f"{settings.API_BASE_URL}/orgs/join?token={token}"
+        context = {
+            "join_link": join_link,
+            "inviter_name": inviter_name,
+            "org_name": org_name,
+        }
+        await self.send_email_async(
+            subject="You've been invited to an organization!",
+            email_to=email,
+            template_name="org_invite.html",  # New template
+            context=context,
+            background_tasks=background_tasks
+        )
 
-# Instantiate a single instance of the EmailManager for easy import
+    async def send_team_invite_email(self, email: str, token: str, team_name: str, inviter_name: str, background_tasks: BackgroundTasks):
+        """Sends a team invitation email."""
+        join_link = f"{settings.API_BASE_URL}/teams/join?token={token}"
+        context = {
+            "join_link": join_link,
+            "inviter_name": inviter_name,
+            "team_name": team_name,
+        }
+        await self.send_email_async(
+            subject="You've been invited to a team!",
+            email_to=email,
+            template_name="team_invite.html",
+            context=context,
+            background_tasks=background_tasks
+        )
+
 email_manager = EmailManager()

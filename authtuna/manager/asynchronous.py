@@ -1,6 +1,6 @@
 import datetime
 import time
-from typing import Optional, Tuple, List, Dict, Any, Union
+from typing import Optional, Tuple, List, Dict, Any, Union, Coroutine
 
 import pyotp
 from sqlalchemy import or_, select, func, delete, desc
@@ -12,7 +12,7 @@ from authtuna.core.config import settings
 from authtuna.core.database import (
     DatabaseManager, User, Role, Permission, DeletedUser,
     Session as DBSession, Token, user_roles_association, role_permissions_association, Session, AuditEvent,
-    PasskeyCredential
+    PasskeyCredential, Organization, Team, organization_members, team_members
 )
 from authtuna.core.exceptions import (
     UserAlreadyExistsError, InvalidCredentialsError, EmailNotVerifiedError,
@@ -812,6 +812,7 @@ class PasskeyManager:
             await db.commit()
             return result.rowcount > 0
 
+
 class AuditManager:
     """Manages querying the audit trail for security and administrative purposes."""
 
@@ -833,6 +834,366 @@ class AuditManager:
             return list(result.scalars().all())
 
 
+class OrganizationManager:
+    """Manages all CRUD and business logic for Organizations and Teams."""
+
+    def __init__(self, db_manager: DatabaseManager, user_manager: UserManager, role_manager: RoleManager,
+                 token_manager: TokenManager):
+        self._db_manager = db_manager
+        self.users = user_manager
+        self.roles = role_manager
+        self.tokens = token_manager
+
+    async def _join_organization_internal(
+            self, db: AsyncSession, user: User, organization: Organization,
+            role_name: str, ip_address: str, joined_by: str
+    ):
+        """Private helper to add a user to an org and assign their role."""
+        stmt_exists = select(organization_members).where(
+            organization_members.c.user_id == user.id,
+            organization_members.c.organization_id == organization.id
+        )
+        if (await db.execute(stmt_exists)).first():
+            return
+        stmt = organization_members.insert().values(
+            user_id=user.id,
+            organization_id=organization.id
+        )
+        await db.execute(stmt)
+        org_scope = f"org:{organization.id}"
+        await self.roles.assign_to_user(
+            user_id=user.id,
+            role_name=role_name,
+            assigner_id="system",
+            scope=org_scope
+        )
+        await self._db_manager.log_audit_event(
+            user.id, "ORG_JOINED", ip_address,
+            {"org_id": organization.id, "role": role_name, "joined_by": joined_by}, db=db
+        )
+
+    async def create_organization(self, name: str, owner: User, ip_address: str) -> Organization:
+        """Creates a new organization and assigns the owner."""
+        async with self._db_manager.get_db() as db:
+            new_org = Organization(name=name, owner_id=owner.id)
+            db.add(new_org)
+            await db.flush()
+            await self._join_organization_internal(
+                db=db,
+                user=owner,
+                organization=new_org,
+                role_name="OrgOwner",
+                ip_address=ip_address,
+                joined_by="creator"
+            )
+
+            await self._db_manager.log_audit_event(
+                owner.id, "ORG_CREATED", ip_address,
+                {"org_id": new_org.id, "org_name": new_org.name}, db=db
+            )
+            await db.commit()
+            await db.refresh(new_org)
+            return new_org
+
+    async def get_organization_by_name(self, name: str) -> Optional[Organization]:
+        async with self._db_manager.get_db() as db:
+            stmt = select(Organization).where(Organization.name == name)
+            result = await db.execute(stmt)
+            return result.unique().scalar_one_or_none()
+
+    async def get_organization_by_id(self, org_id: str) -> Optional[Organization]:
+        async with self._db_manager.get_db() as db:
+            # Use await db.get() for primary key lookup
+            return await db.get(Organization, org_id)
+
+    async def get_org_members(self, org_id: str) -> list[dict[str, Any]]:
+        """Fetches all members of an organization with their join time."""
+        async with self._db_manager.get_db() as db:
+            stmt = select(
+                User.id, User.username, User.email, organization_members.c.joined_at
+            ).join_from(
+                organization_members, User, organization_members.c.user_id == User.id
+            ).where(
+                organization_members.c.organization_id == org_id
+            )
+            result = await db.execute(stmt)
+            return [
+                {"user_id": row.id, "username": row.username, "email": row.email, "joined_at": row.joined_at}
+                for row in result.all()
+            ]
+
+    async def get_user_orgs(self, user_id: str) -> list[Organization]:
+        """Fetches all organizations a user is a member of."""
+        async with self._db_manager.get_db() as db:
+            stmt = select(Organization).join(
+                organization_members, organization_members.c.organization_id == Organization.id
+            ).where(
+                organization_members.c.user_id == user_id
+            )
+            result = await db.execute(stmt)
+            return list(result.scalars().all())
+
+    async def get_user_owned_orgs(self, user_id: str) -> list[Organization]:
+        """Fetches all organizations a user owns."""
+        async with self._db_manager.get_db() as db:
+            stmt = select(Organization).where(
+                Organization.owner_id == user_id
+            )
+            result = await db.execute(stmt)
+            return list(result.scalars().all())
+
+    async def invite_to_organization(self, org_id: str, invitee_email: str, role_name: str, inviter: User,
+                                     ip_address: str, background_tasks=None) -> Optional[bool]:
+        """
+        Invites a user to an organization.
+        If email is enabled, sends an email with a token.
+        If email is disabled, automatically joins the user.
+        """
+        invitee = await self.users.get_by_email(invitee_email)
+        if not invitee:
+            raise UserNotFoundError(f"User with email {invitee_email} not found.")
+
+        org = await self.get_organization_by_id(org_id)
+        if not org:
+            raise RoleNotFoundError(f"Organization {org_id} not found.")
+        if org_id not in [o.id for o in await self.get_user_orgs(inviter.id)]:
+            raise OperationForbiddenError("Inviter is not a member of the organization.")
+        async with self._db_manager.get_db() as db:
+            await self._db_manager.log_audit_event(
+                inviter.id, "ORG_INVITE_SENT", ip_address,
+                {"org_id": org_id, "org_name": org.name, "invitee_email": invitee_email, "role": role_name}, db=db
+            )
+            await db.commit()
+
+        if settings.EMAIL_ENABLED:
+            token_purpose = f"org_invite:{org_id}:{role_name}"
+            invite_token = await self.tokens.create(invitee.id, token_purpose, expiry_seconds=604800)  # 7 days
+
+            from authtuna.helpers.mail import email_manager
+            await email_manager.send_org_invite_email(
+                email=invitee_email,
+                token=invite_token.id,
+                org_name=org.name,
+                inviter_name=inviter.username,
+                background_tasks=background_tasks,
+            )
+            return True
+        else:
+            # Email is disabled, auto-join the user
+            async with self._db_manager.get_db() as db:
+                await self._join_organization_internal(
+                    db=db,
+                    user=invitee,
+                    organization=org,
+                    role_name=role_name,
+                    ip_address=ip_address,
+                    joined_by="auto-accept-no-email"
+                )
+                await db.commit()
+            return None
+
+    async def accept_organization_invite(self, token_id: str, ip_address: str) -> Organization:
+        """Validates an invite token and adds the user to the organization."""
+        async with self._db_manager.get_db() as db:
+            token_obj = await db.get(Token, token_id)
+            if not token_obj or not token_obj.purpose.startswith("org_invite:"):
+                raise InvalidTokenError("Invalid or unknown invite token.")
+
+            try:
+                user = await self.tokens.validate(db, token_id, token_obj.purpose, ip_address)
+            except (InvalidTokenError, TokenExpiredError) as e:
+                raise OperationForbiddenError(f"Invalid or expired invite token: {e}")
+
+            try:
+                _, org_id, role_name = token_obj.purpose.split(":")
+            except (ValueError, AttributeError):
+                raise OperationForbiddenError("Invalid invite token format.")
+
+            organization = await db.get(Organization, org_id)
+            if not organization:
+                raise RoleNotFoundError(f"Organization {org_id} not found.")
+
+            await self._join_organization_internal(
+                db=db,
+                user=user,
+                organization=organization,
+                role_name=role_name,
+                ip_address=ip_address,
+                joined_by="token-invite"
+            )
+
+            await db.commit()
+            return organization
+
+
+    async def _join_team_internal(
+            self, db: AsyncSession, user: User, team: Team,
+            role_name: str, ip_address: str, joined_by: str
+    ):
+        """Private helper to add a user to a team and assign their role."""
+        stmt_exists = select(team_members).where(
+            team_members.c.user_id == user.id,
+            team_members.c.team_id == team.id
+        )
+        if (await db.execute(stmt_exists)).first():
+            return
+
+        stmt = team_members.insert().values(
+            user_id=user.id,
+            team_id=team.id
+        )
+        await db.execute(stmt)
+
+        team_scope = f"team:{team.id}"
+        await self.roles.assign_to_user(
+            user_id=user.id,
+            role_name=role_name,
+            assigner_id="system",
+            scope=team_scope
+        )
+
+        await self._db_manager.log_audit_event(
+            user.id, "TEAM_JOINED", ip_address,
+            {"org_id": team.organization_id, "team_id": team.id, "role": role_name, "joined_by": joined_by}, db=db
+        )
+
+    async def create_team(self, name: str, org_id: str, creator: User, ip_address: str) -> Team:
+        """Creates a new team within an organization."""
+        async with self._db_manager.get_db() as db:
+            org = await db.get(Organization, org_id)
+            if not org:
+                raise RoleNotFoundError(f"Organization {org_id} not found.")
+
+            new_team = Team(name=name, organization_id=org_id)
+            db.add(new_team)
+            await db.flush()
+            await self._join_team_internal(
+                db=db,
+                user=creator,
+                team=new_team,
+                role_name="TeamLead",
+                ip_address=ip_address,
+                joined_by="creator"
+            )
+            await self._db_manager.log_audit_event(
+                creator.id, "TEAM_CREATED", ip_address,
+                {"org_id": org_id, "team_id": new_team.id, "team_name": new_team.name}, db=db
+            )
+            await db.commit()
+            await db.refresh(new_team)
+            return new_team
+
+    async def get_team_by_id(self, team_id: str) -> Optional[Team]:
+        async with self._db_manager.get_db() as db:
+            return await db.get(Team, team_id)
+
+    async def get_org_teams(self, org_id: str) -> list[Team]:
+        """Fetches all teams within an organization."""
+        async with self._db_manager.get_db() as db:
+            stmt = select(Team).where(Team.organization_id == org_id)
+            result = await db.execute(stmt)
+            return list(result.scalars().all())
+
+    async def get_team_members(self, team_id: str) -> list[dict[str, Any]]:
+        """Fetches all members of a team with their join time."""
+        async with self._db_manager.get_db() as db:
+            stmt = select(
+                User.id, User.username, User.email, team_members.c.joined_at
+            ).join_from(
+                team_members, User, team_members.c.user_id == User.id
+            ).where(
+                team_members.c.team_id == team_id
+            )
+            result = await db.execute(stmt)
+            return [
+                {"user_id": row.id, "username": row.username, "email": row.email, "joined_at": row.joined_at}
+                for row in result.all()
+            ]
+
+    async def invite_to_team(self, team_id: str, invitee_email: str, role_name: str, inviter: User, ip_address: str) -> \
+    Optional[bool]:
+        """
+        Invites a user to a team.
+        If email is enabled, sends an email with a token.
+        If email is disabled, automatically joins the user.
+        """
+        invitee = await self.users.get_by_email(invitee_email)
+        if not invitee:
+            raise UserNotFoundError(f"User with email {invitee_email} not found.")
+
+        team = await self.get_team_by_id(team_id)
+        if not team:
+            raise RoleNotFoundError(f"Team {team_id} not found.")
+        async with self._db_manager.get_db() as db:
+            stmt_exists = select(team_members).where(
+                team_members.c.user_id == inviter.id,
+                team_members.c.team_id == team_id
+            )
+            if (await db.execute(stmt_exists)).first():
+                return False
+        async with self._db_manager.get_db() as db:
+            await self._db_manager.log_audit_event(
+                inviter.id, "TEAM_INVITE_SENT", ip_address,
+                {"org_id": team.organization_id, "team_id": team_id, "invitee_email": invitee_email, "role": role_name},
+                db=db
+            )
+            await db.commit()
+
+        if settings.EMAIL_ENABLED:
+            token_purpose = f"team_invite:{team_id}:{role_name}"
+            invite_token = await self.tokens.create(invitee.id, token_purpose, expiry_seconds=604800)
+            await email_manager.send_team_invite_email(invitee_email=invitee_email,
+                                                       token=invite_token.id,
+                                                       team_name=team.name,
+                                                       inviter_name=inviter.username,
+                                                       background_tasks=None)
+            return True
+        else:
+            async with self._db_manager.get_db() as db:
+                await self._join_team_internal(
+                    db=db,
+                    user=invitee,
+                    team=team,
+                    role_name=role_name,
+                    ip_address=ip_address,
+                    joined_by="auto-accept-no-email"
+                )
+                await db.commit()
+            return None
+
+    async def accept_team_invite(self, token_id: str, ip_address: str) -> Team:
+        """Validates an invite token and adds the user to the team."""
+        async with self._db_manager.get_db() as db:
+            token_obj = await db.get(Token, token_id)
+            if not token_obj or not token_obj.purpose.startswith("team_invite:"):
+                raise InvalidTokenError("Invalid or unknown invite token.")
+
+            try:
+                user = await self.tokens.validate(db, token_id, token_obj.purpose, ip_address)
+            except (InvalidTokenError, TokenExpiredError) as e:
+                raise OperationForbiddenError(f"Invalid or expired invite token: {e}")
+
+            try:
+                _, team_id, role_name = token_obj.purpose.split(":")
+            except (ValueError, AttributeError):
+                raise OperationForbiddenError("Invalid invite token format.")
+
+            team = await db.get(Team, team_id)
+            if not team:
+                raise RoleNotFoundError(f"Team {team_id} not found.")
+
+            await self._join_team_internal(
+                db=db,
+                user=user,
+                team=team,
+                role_name=role_name,
+                ip_address=ip_address,
+                joined_by="token-invite"
+            )
+
+            await db.commit()
+            return team
+
 class AuthTunaAsync:
     """High-level facade for all authentication and authorization operations."""
 
@@ -846,6 +1207,7 @@ class AuthTunaAsync:
         self.mfa = MFAManager(db_manager)
         self.audit = AuditManager(db_manager)
         self.passkeys = PasskeyManager(db_manager)
+        self.orgs = OrganizationManager(db_manager, self.users, self.roles, self.tokens)
 
     async def get_dashboard_stats(self) -> Dict[str, Any]:
         """Gathers all necessary statistics for the admin dashboard."""
@@ -878,6 +1240,7 @@ class AuthTunaAsync:
             email=email, username=username, password=password, ip_address=ip_address,
             email_verified=not settings.EMAIL_ENABLED
         )
+        await self.roles.assign_to_user(user.id, "User", assigner_id="system")
         token = None
         if settings.EMAIL_ENABLED:
             token = await self.tokens.create(user.id, "email_verification")

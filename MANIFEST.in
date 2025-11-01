@@ -11,6 +11,7 @@ include authtuna/templates/email/mfa_failed.html
 include authtuna/templates/email/mfa_removed.html
 include authtuna/templates/email/new_login.html
 include authtuna/templates/email/new_social_account_connected.html
+include authtuna/templates/email/org_invite.html
 include authtuna/templates/email/password_change.html
 include authtuna/templates/email/password_reset.html
 include authtuna/templates/email/verification.html

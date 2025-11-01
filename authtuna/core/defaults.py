@@ -14,21 +14,44 @@ DEFAULT_PERMISSIONS = {
     "roles:assign:Admin": "Permission to assign the Admin role.",
     "roles:assign:Moderator": "Permission to assign the Moderator role.",
     "roles:assign:User": "Permission to assign the User role.",
+
+    "org:create": "Permission to create a new organization.",
+    "org:manage": "Permission to edit and delete an organization.",
+    "org:invite_member": "Permission to invite new members to an organization.",
+    "org:remove_member": "Permission to remove members from an organization.",
+    "team:create": "Permission to create a new team within an organization.",
+    "team:manage": "Permission to edit and delete a team.",
+    "team:invite_member": "Permission to invite new members to a team.",
+    "team:remove_member": "Permission to remove members from a team.",
 }
 DEFAULT_ROLES = {
-    "User": {"level": 10, "description": "Standard user with basic permissions."},
+    "User": {"level": 0, "description": "Standard user with basic permissions will be assigned to all users by default (from v0.1.11), allows configuring if all users can create orgs or only specific users so based on requirement you will be able to update and build further."},
+
+    # These are addedd for organization management. These will be using the role based grant system instead of hierarchical
+    "OrgMember": {"level": 0, "description": "Default member of an organization."},
+    "TeamMember": {"level": 0, "description": "Default member of a team."},
+    "TeamLead": {"level": 0, "description": "Can manage a specific team and its members."},
+    "OrgAdmin": {"level": 0, "description": "Can manage an organization's members and teams."},
+    "OrgOwner": {"level": 0, "description": "Full control over an organization."},
+
+    # the following roles meant purely for administrative purposes for the auth service owners.
     "Moderator": {"level": 50, "description": "Can manage users and content."},
     "Admin": {"level": 90, "description": "Full administrative access to most features."},
     "SuperAdmin": {"level": 100, "description": "Highest level of administrative access."},
     "System": {"level": 999, "system": True, "description": "For automated, internal system processes."},
 }
 ROLE_PERMISSIONS = {
-    "Moderator": ["admin:access:panel", "admin:manage:users"],
+    "Moderator": ["admin:access:panel", "admin:manage:users", "roles:assign:User"],
     "Admin": ["admin:access:panel", "admin:manage:users", "admin:manage:roles", "roles:assign:Moderator",
               "roles:assign:User"],
     "SuperAdmin": ["admin:access:panel", "admin:manage:users", "admin:manage:roles", "admin:manage:permissions",
                    "roles:assign:Admin", "roles:assign:Moderator", "roles:assign:User"],
-    "System": ["roles:assign:SuperAdmin", "roles:assign:Admin", "roles:assign:Moderator", "roles:assign:User"]
+    "System": ["roles:assign:SuperAdmin", "roles:assign:Admin", "roles:assign:Moderator", "roles:assign:User"],
+
+    "OrgMember": ["org:create"],
+    "TeamLead": ["team:invite_member", "team:remove_member", "team:manage"],
+    "OrgAdmin": ["org:invite_member", "org:remove_member", "team:create", "team:delete", "team:manage"],
+    "OrgOwner": ["org:manage", "org:invite_member", "org:remove_member", "team:create", "team:delete", "team:manage"],
 }
 
 
@@ -36,7 +59,7 @@ async def provision_defaults(db: AsyncSession):
     """
     Idempotently creates default permissions, roles, and users.
     """
-    system_user_exists = (await db.execute(select(User).where(User.id == "system"))).unique().scalar_one_or_none()
+    system_user_exists = (await db.execute(select(User).where(User.id == "system"))).unique().scalar_one_or_none() # this is to reduce database queries. If the system user exists, there is no need to provision defaults, if you want to re initialize a specific user then delete that user and system and they will be reprovisioned on next start.
     if system_user_exists:
         return
 

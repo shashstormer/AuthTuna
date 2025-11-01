@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization Invitation</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #fff; padding: 20px; border-radius: 8px; }
+        .content { line-height: 1.6; }
+        .button { background-color: #007BFF; color: #fff !important; padding: 12px 24px; text-decoration: none; border-radius: 5px; }
+        @media (prefers-color-scheme: dark) {
+            body { background-color: #121212; color: #e0e0e0; }
+            .container { background-color: #1e1e1e; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <p>Hello,</p>
+            <p>You have been invited by <strong>{{ inviter_name }}</strong> to join "{{org_name}}" organization on {{ settings.APP_NAME }}.</p>
+            <p>Please click the button below to accept your invitation.</p>
+            <p style="text-align:center;">
+                <a href="{{ join_link }}" class="button">Accept Invitation</a>
+            </p>
+            <p>If you can't click the button, copy and paste this link into your browser:</p>
+            <p><a href="{{ join_link }}">{{ join_link }}</a></p>
+            <p>This link is valid for 7 days. If you did not expect this, please ignore this email.</p>
+        </div>
+    </div>
+</body>
+</html>
