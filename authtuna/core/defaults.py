@@ -23,6 +23,7 @@ DEFAULT_PERMISSIONS = {
     "team:manage": "Permission to edit and delete a team.",
     "team:invite_member": "Permission to invite new members to a team.",
     "team:remove_member": "Permission to remove members from a team.",
+    "team:delete": "Permission to delete a team.",
 }
 DEFAULT_ROLES = {
     "User": {"level": 0, "description": "Standard user with basic permissions will be assigned to all users by default (from v0.1.11), allows configuring if all users can create orgs or only specific users so based on requirement you will be able to update and build further."},
@@ -92,9 +93,9 @@ async def provision_defaults(db: AsyncSession):
     await db.flush()
 
     for role_name, perm_names in ROLE_PERMISSIONS.items():
-        role = (await db.execute(select(Role).where(Role.name == role_name))).unique().scalar_one()
+        role = (await db.execute(select(Role).where(Role.name == role_name))).unique().scalar_one_or_none()
         for perm_name in perm_names:
-            permission = (await db.execute(select(Permission).where(Permission.name == perm_name))).scalar_one()
+            permission = (await db.execute(select(Permission).where(Permission.name == perm_name))).scalar_one_or_none()
             if permission not in role.permissions:
                 role.permissions.append(permission)
 
