@@ -6,6 +6,8 @@ from sqlalchemy.orm import selectinload
 from authtuna.core.database import User, Role, Permission, user_roles_association
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.config import settings
+import logging
+logger = logging.getLogger(__name__)
 
 DEFAULT_PERMISSIONS = {
     "admin:access:panel": "Access the main admin dashboard.",
@@ -77,7 +79,7 @@ async def provision_defaults(db: AsyncSession):
             User.id == "system"))).unique().scalar_one_or_none()  # this is to reduce database queries. If the system user exists, there is no need to provision defaults, if you want to re initialize a specific user then delete that user and system and they will be reprovisioned on next start.
         if system_user_exists:
             return
-    print("Provisioning default permissions, roles, and users.")
+    logger.debug("Provisioning default permissions, roles, and users.")
     DEFAULT_USERS = {
         "system": {
             "id": "system", "username": "system", "email": "system@local.host", "password": None, "roles": ["System"]
@@ -146,16 +148,16 @@ async def provision_defaults(db: AsyncSession):
         assigner_role_result = await db.execute(assigner_role_query)
         assigner_role = assigner_role_result.unique().scalar_one_or_none()
         if not assigner_role:
-            print(f"Warning: Assigner role '{assigner_name}' not found, skipping grants.")
+            logger.warning(f"Warning: Assigner role '{assigner_name}' not found, skipping grants.")
             continue
         for assignable_name in assignable_names:
             assignable_role_result = await db.execute(select(Role).options(selectinload(Role.can_assign_roles)).where(Role.name == assignable_name))
             assignable_role = assignable_role_result.unique().scalar_one_or_none()
             if not assignable_role:
-                print(
+                logger.warning(
                     f"Warning: Assignable role '{assignable_name}' for assigner '{assigner_name}' not found, skipping.")
                 continue
             if assignable_role not in assigner_role.can_assign_roles:
                 assigner_role.can_assign_roles.append(assignable_role)
-                print(f"Granting: '{assigner_name}' -> can assign -> '{assignable_name}'")
+                logger.debug(f"Granting: '{assigner_name}' -> can assign -> '{assignable_name}'")
     await db.commit()
