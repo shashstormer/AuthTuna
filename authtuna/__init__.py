@@ -49,9 +49,13 @@ if getattr(settings, 'RPC_AUTOSTART', False):
     t.start()
 
 
-def init_app(app: FastAPI):
+def init_app(app: FastAPI, session_middleware_kwargs=None):
     """
     New wrapper to initialize AuthTuna with a FastAPI app instance and all routers.
+    :param session_middleware_kwargs: {region_kwargs: dict = None,
+            public_routes: Union[Set[str], Callable[[Request], bool]] = None,
+            raise_errors: bool = False,
+            public_docs: bool = True}
     :param app:
     :return:
     """
@@ -59,7 +63,7 @@ def init_app(app: FastAPI):
     from authtuna.middlewares import DatabaseSessionMiddleware
     from starlette.middleware.sessions import SessionMiddleware
 
-    app.add_middleware(DatabaseSessionMiddleware)
+    app.add_middleware(DatabaseSessionMiddleware, **(session_middleware_kwargs or {}))
     app.add_middleware(SessionMiddleware, settings.ENCRYPTION_PRIMARY_KEY.get_secret_value())
     app.include_router(auth_router)
     app.include_router(social_router)
