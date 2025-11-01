@@ -30,6 +30,8 @@ async def run_migrations(engine):
     """
     Checks the database version and automatically applies all pending migration scripts.
     """
+    if input("THESE FUNCTIONS ARE NOT TESTED AT ALL MIGHT CAUSE ISSUES. USE WITH CARE.\nPress Y to run migrations: ") != 'Y':
+        return
     migration_files = sorted(os.listdir(os.path.join(os.path.dirname(__file__), 'versions')))
 
     async with engine.begin() as conn:

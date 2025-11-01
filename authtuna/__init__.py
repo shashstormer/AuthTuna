@@ -16,7 +16,7 @@ AuthTuna provides a robust, multi-layered security foundation for modern web app
 While the core is framework-agnostic and future adapters are possible, the officially supported and actively maintained integration is FastAPI.
 """
 
-__version__ = "0.0.1"
+__version__ = "0.1.11"
 __author__ = "shashstormer"
 __description__ = "A robust, multi-layered security foundation for modern web applications"
 
