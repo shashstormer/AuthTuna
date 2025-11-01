@@ -6,8 +6,6 @@ import pyotp
 from sqlalchemy import or_, select, func, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
-from watchfiles import awatch
-
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.config import settings
 from authtuna.core.database import (
