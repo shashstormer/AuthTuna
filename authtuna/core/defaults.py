@@ -140,7 +140,10 @@ async def provision_defaults(db: AsyncSession):
                 await db.execute(stmt)
     await db.flush()
     for assigner_name, assignable_names in DEFAULT_ROLE_GRANTS.items():
-        assigner_role_result = await db.execute(select(Role).where(Role.name == assigner_name))
+        assigner_role_query = select(Role).options(
+            selectinload(Role.can_assign_roles)
+        ).where(Role.name == assigner_name)
+        assigner_role_result = await db.execute(assigner_role_query)
         assigner_role = assigner_role_result.unique().scalar_one_or_none()
         if not assigner_role:
             print(f"Warning: Assigner role '{assigner_name}' not found, skipping grants.")
