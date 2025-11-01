@@ -237,13 +237,6 @@ async def superadmin(user: User = Depends(RoleChecker("superadmin"))):
 
 ---
 
-## Proof of Endless Possibility
-
-- **SaaS Platforms:** Isolated orgs, user impersonation, custom admin flows.
-- **FinTech:** Device fingerprinting, session hijack protection, audit logging.
-- **Education/Community:** Nested hierarchy permissions, moderation, bulk actions.
-- **Enterprise:** SSO, approval workflows, compliance and auditing.
-
 > If you can describe the business logic, you can implement it in AuthTuna.
 
 ## Community & Support
