@@ -87,7 +87,7 @@ async def provision_defaults(db: AsyncSession):
     await db.flush()
 
     for name, attrs in DEFAULT_ROLES.items():
-        if not (await db.execute(select(Role).where(Role.name == name))).scalar_one_or_none():
+        if not (await db.execute(select(Role).where(Role.name == name))).unique().scalar_one_or_none():
             db.add(Role(name=name, **attrs))
     await db.flush()
 
@@ -99,7 +99,7 @@ async def provision_defaults(db: AsyncSession):
                 role.permissions.append(permission)
 
     for user_key, user_data in DEFAULT_USERS.items():
-        if not (await db.execute(select(User).where(User.id == user_data["id"]))).scalar_one_or_none():
+        if not (await db.execute(select(User).where(User.id == user_data["id"]))).unique().scalar_one_or_none():
             new_user = User(
                 id=user_data["id"],
                 username=user_data["username"],
