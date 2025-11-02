@@ -177,11 +177,7 @@ await auth_service.roles.add_permission_to_role("editor", "edit:article") # this
                 <h5>Grant-Based System</h5>
                 <p>In addition to the hierarchy, AuthTuna has a grant-based system. This allows you to explicitly grant a role the permission to assign other roles or grant specific permissions. This provides a more granular control over the RBAC system.</p>
                 <pre><code class="language-python">
-# Grant the 'admin' role the permission to assign the 'editor' role
-await auth_service.roles.grant_role_assignment("admin", "editor")
-
-# Grant the 'admin' role the permission to grant the 'edit:article' permission
-await auth_service.roles.grant_permission_granting("admin", "edit:article")
+                        # will add example later
                 </code></pre>
                 <h5>Recommended Usage</h5>
                 <p>For most applications, the built-in roles and permissions are sufficient. However, if you need to create custom roles and permissions, it's recommended to do so in a startup script or a dedicated management command. This ensures that your RBAC system is consistent and reproducible across all environments.</p>
