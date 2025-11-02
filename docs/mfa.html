@@ -115,6 +115,9 @@
                 <a href="middleware-session.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Middleware & Session Mgmt
                 </a>
+                <a href="passkeys.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                    Passkeys
+                </a>
                  <a href="ui-dashboard.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     UI Dashboard
                 </a>
@@ -131,7 +134,7 @@
             <div id="content" class="prose max-w-4xl mx-auto">
                 <h1>MFA & Social Login (SSO)</h1>
 
-                <h4>Multi-Factor Authentication (`/mfa`)</h4>
+                <h2>Multi-Factor Authentication (`/mfa`)</h2>
                 <p>AuthTuna implements the TOTP standard (compatible with Google Authenticator, Authy, etc.) along with recovery codes.</p>
                  <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left text-gray-400 rounded-lg">
@@ -147,8 +150,25 @@
                     </table>
                 </div>
 
-                <h4>Social Login (`/auth/{provider}`)</h4>
+                <h2>Social Login (SSO)</h2>
                 <p>If configured with client IDs and secrets, the <code>social_router</code> handles OAuth2 flows for providers like Google and GitHub, automatically linking or creating user accounts.</p>
+
+                <h3>Configuration</h3>
+                <p>To enable SSO, you need to configure the following settings in your <code>.env</code> file:</p>
+
+                <h4>Google SSO</h4>
+                <pre><code class="language-bash">
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+</code></pre>
+                <p>You can obtain these credentials from the <a href="https://console.developers.google.com/" target="_blank">Google API Console</a>. When creating your credentials, you'll need to specify the authorized redirect URIs. For AuthTuna, the redirect URI is <code>{API_BASE_URL}/auth/google/callback</code>.</p>
+
+                <h4>GitHub SSO</h4>
+                <pre><code class="language-bash">
+GITHUB_CLIENT_ID="your-github-client-id"
+GITHUB_CLIENT_SECRET="your-github-client-secret"
+</code></pre>
+                <p>You can obtain these credentials from your GitHub developer settings. When creating your OAuth App, you'll need to specify the authorization callback URL. For AuthTuna, the callback URL is <code>{API_BASE_URL}/auth/github/callback</code>.</p>
             </div>
         </main>
     </div>
