@@ -87,7 +87,7 @@
                 <a href="configuration.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Configuration (`Settings`)
                 </a>
-                <a href="core-managers.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
+                <a href="core-managers.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Core Service Layer
                 </a>
                 <a href="database-models.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
@@ -115,6 +115,9 @@
                 <a href="middleware-session.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Middleware & Session Mgmt
                 </a>
+                <a href="passkeys.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
+                    Passkeys
+                </a>
                  <a href="ui-dashboard.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     UI Dashboard
                 </a>
@@ -129,69 +132,33 @@
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div id="content" class="prose max-w-4xl mx-auto">
-                <h1>Core Service Layer (`AuthTunaAsync`)</h1>
-                <p>The entire library core is exposed through asynchronous manager classes. The main entry point is the <code>auth_service</code> instance from <code>authtuna.integrations</code>.</p>
+                <h1>Passkeys</h1>
+                <p>AuthTuna provides a complete implementation of the WebAuthn standard, allowing you to offer passwordless authentication with passkeys. This is a more secure and user-friendly alternative to traditional passwords.</p>
 
-                <h4>UserManager</h4>
-                <p>Handles user lifecycle and data management.</p>
-                <pre><code class="language-python"># Example: Suspending a user
-from authtuna.integrations import auth_service
-
-async def suspend(user_id, admin_id):
-    suspended_user = await auth_service.users.suspend_user(
-        user_id=user_id,
-        admin_id=admin_id,
-        reason="Violated ToS"
-    )
-    return suspended_user.is_active # Returns False
+                <h2>Configuration</h2>
+                <p>To enable passkey authentication, you need to configure the following settings in your <code>.env</code> file:</p>
+                <pre><code class="language-bash">
+WEBAUTHN_ENABLED=True
+WEBAUTHN_RP_ID="yourdomain.com"
+WEBAUTHN_RP_NAME="Your App Name"
+WEBAUTHN_ORIGIN="https://yourdomain.com"
 </code></pre>
 
-                <h4>SessionManager</h4>
-                <p>Directly manages database sessions, terminations, and retrieval.</p>
-                <pre><code class="language-python"># Example: Terminate all other sessions for a user
-async def cleanup_sessions(user_id, current_session_id, ip_address):
-    await auth_service.sessions.terminate_all_for_user(
-        user_id=user_id,
-        ip_address=ip_address,
-        except_session_id=current_session_id
-    )
-</code></pre>
+                <ul>
+                    <li><code>WEBAUTHN_ENABLED</code>: Set this to <code>True</code> to enable passkey functionality.</li>
+                    <li><code>WEBAUTHN_RP_ID</code>: The relying party ID. This should be the domain of your website.</li>
+                    <li><code>WEBAUTHN_RP_NAME</code>: The name of your application. This will be displayed to the user during the passkey creation process.</li>
+                    <li><code>WEBAUTHN_ORIGIN</code>: The origin of your website. This should be the full URL of your website, including the protocol.</li>
+                </ul>
 
-                <h4>RoleManager & PermissionManager</h4>
-                <p>Manages the RBAC system, including creating roles/permissions and assigning them.</p>
-                <h5>Creating Roles and Permissions</h5>
-                <pre><code class="language-python">
-# Create a new role
-await auth_service.roles.create_role("editor", "Can edit content", level=50)
+                <h2>Usage</h2>
+                <p>Once you've configured the settings, you can use the built-in passkey routers to handle the registration and authentication of passkeys. These routers are located in <code>authtuna/routers/passkeys.py</code> and are included automatically when you call <code>init_app(app)</code>.</p>
 
-# Create a new permission
-await auth_service.roles.create_permission("edit:article", "Can edit articles")
-                </code></pre>
-                <h5>Adding Permissions to a Role</h5>
-                <pre><code class="language-python">
-# Add a permission to a role
-await auth_service.roles.add_permission_to_role("editor", "edit:article")
-                </code></pre>
-                <h5>Role Hierarchy and Levels</h5>
-                <p>AuthTuna supports role hierarchy through a `level` system. A role with a higher level can manage roles with a lower level. For example, an `admin` with level 90 can assign the `editor` role with level 50 to a user.</p>
-                <h5>Grant-Based System</h5>
-                <p>In addition to the hierarchy, AuthTuna has a grant-based system. This allows you to explicitly grant a role the permission to assign other roles or grant specific permissions. This provides a more granular control over the RBAC system.</p>
-                <pre><code class="language-python">
-# Grant the 'admin' role the permission to assign the 'editor' role
-await auth_service.roles.grant_role_assignment("admin", "editor")
+                <h3>Registration</h3>
+                <p>To register a new passkey, you'll need to make a POST request to the <code>/passkeys/register/begin</code> endpoint. This will return a set of options that you can use to create the passkey on the client-side. Once the passkey has been created, you'll need to make a POST request to the <code>/passkeys/register/complete</code> endpoint with the client-side data to complete the registration.</p>
 
-# Grant the 'admin' role the permission to grant the 'edit:article' permission
-await auth_service.roles.grant_permission_granting("admin", "edit:article")
-                </code></pre>
-                <h5>Recommended Usage</h5>
-                <p>For most applications, the built-in roles and permissions are sufficient. However, if you need to create custom roles and permissions, it's recommended to do so in a startup script or a dedicated management command. This ensures that your RBAC system is consistent and reproducible across all environments.</p>
-
-                <h4>TokenManager</h4>
-                <p>The `TokenManager` is responsible for creating, validating, and managing tokens for various purposes, such as email verification and password reset. You can use this manager to create custom tokens for your own features.</p>
-
-                <h4>OrganizationManager</h4>
-                <p>The `OrganizationManager` handles the logic for creating, managing, and inviting users to organizations. This is useful for multi-tenant applications where users are grouped into different organizations.</p>
-
+                <h3>Authentication</h3>
+                <p>To authenticate with a passkey, you'll need to make a POST request to the <code>/passkeys/login/begin</code> endpoint. This will return a set of options that you can use to get the passkey assertion on the client-side. Once you have the assertion, you'll need to make a POST request to the <code>/passkeys/login/complete</code> endpoint with the client-side data to complete the authentication.</p>
             </div>
         </main>
     </div>

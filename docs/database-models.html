@@ -87,10 +87,10 @@
                 <a href="configuration.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Configuration (`Settings`)
                 </a>
-                <a href="core-managers.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
+                <a href="core-managers.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Core Service Layer
                 </a>
-                <a href="database-models.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                <a href="database-models.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
                     Database Models
                 </a>
 
@@ -129,69 +129,72 @@
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div id="content" class="prose max-w-4xl mx-auto">
-                <h1>Core Service Layer (`AuthTunaAsync`)</h1>
-                <p>The entire library core is exposed through asynchronous manager classes. The main entry point is the <code>auth_service</code> instance from <code>authtuna.integrations</code>.</p>
+                <h1>Database Models</h1>
+                <p>AuthTuna uses a set of SQLAlchemy ORM models to represent users, roles, permissions, and other security-related data. Understanding these models is key to extending AuthTuna's functionality and building custom queries.</p>
 
-                <h4>UserManager</h4>
-                <p>Handles user lifecycle and data management.</p>
-                <pre><code class="language-python"># Example: Suspending a user
-from authtuna.integrations import auth_service
+                <h2>User</h2>
+                <p>The `User` model is the core of the system, representing an individual user account.</p>
+                <ul>
+                    <li>`id`: A unique identifier for the user.</li>
+                    <li>`username`: The user's username. This is case-insensitive.</li>
+                    <li>`email`: The user's email address. This is case-insensitive.</li>
+                    <li>`is_active`: A boolean indicating whether the user's account is active.</li>
+                    <li>`password_hash`: The user's hashed password.</li>
+                    <li>`email_verified`: A boolean indicating whether the user's email address has been verified.</li>
+                    <li>`requires_password_reset`: A boolean indicating whether the user is required to reset their password.</li>
+                    <li>`mfa_enabled`: A boolean indicating whether the user has multi-factor authentication enabled.</li>
+                    <li>`created_at`: The timestamp when the user's account was created.</li>
+                    <li>`last_login`: The timestamp of the user's last login.</li>
+                </ul>
 
-async def suspend(user_id, admin_id):
-    suspended_user = await auth_service.users.suspend_user(
-        user_id=user_id,
-        admin_id=admin_id,
-        reason="Violated ToS"
-    )
-    return suspended_user.is_active # Returns False
-</code></pre>
+                <h2>Role</h2>
+                <p>The `Role` model represents a role that can be assigned to a user.</p>
+                <ul>
+                    <li>`id`: A unique identifier for the role.</li>
+                    <li>`name`: The name of the role.</li>
+                    <li>`description`: A description of the role.</li>
+                    <li>`system`: A boolean indicating whether the role is a system role.</li>
+                    <li>`level`: An integer representing the role's level in the hierarchy.</li>
+                </ul>
 
-                <h4>SessionManager</h4>
-                <p>Directly manages database sessions, terminations, and retrieval.</p>
-                <pre><code class="language-python"># Example: Terminate all other sessions for a user
-async def cleanup_sessions(user_id, current_session_id, ip_address):
-    await auth_service.sessions.terminate_all_for_user(
-        user_id=user_id,
-        ip_address=ip_address,
-        except_session_id=current_session_id
-    )
-</code></pre>
+                <h2>Permission</h2>
+                <p>The `Permission` model represents a permission that can be granted to a role.</p>
+                <ul>
+                    <li>`id`: A unique identifier for the permission.</li>
+                    <li>`name`: The name of the permission.</li>
+                    <li>`description`: A description of the permission.</li>
+                    <li>`system`: A boolean indicating whether the permission is a system permission.</li>
+                </ul>
 
-                <h4>RoleManager & PermissionManager</h4>
-                <p>Manages the RBAC system, including creating roles/permissions and assigning them.</p>
-                <h5>Creating Roles and Permissions</h5>
-                <pre><code class="language-python">
-# Create a new role
-await auth_service.roles.create_role("editor", "Can edit content", level=50)
+                <h2>Session</h2>
+                <p>The `Session` model represents an active user session.</p>
+                <ul>
+                    <li>`session_id`: A unique identifier for the session.</li>
+                    <li>`user_id`: The ID of the user who owns the session.</li>
+                    <li>`region`: The region where the session was initiated.</li>
+                    <li>`device`: The device where the session was initiated.</li>
+                    <li>`active`: A boolean indicating whether the session is active.</li>
+                    <li>`ctime`: The timestamp when the session was created.</li>
+                    <li>`mtime`: The timestamp when the session was last modified.</li>
+                    <li>`etime`: The timestamp when the session will expire.</li>
+                    <li>`e_abs_time`: The absolute expiry time of the session.</li>
+                    <li>`create_ip`: The IP address where the session was created.</li>
+                    <li>`last_ip`: The last IP address used for the session.</li>
+                    <li>`random_string`: A random string used to mitigate replay attacks.</li>
+                    <li>`previous_random_strings`: A list of previous random strings.</li>
+                </ul>
 
-# Create a new permission
-await auth_service.roles.create_permission("edit:article", "Can edit articles")
-                </code></pre>
-                <h5>Adding Permissions to a Role</h5>
-                <pre><code class="language-python">
-# Add a permission to a role
-await auth_service.roles.add_permission_to_role("editor", "edit:article")
-                </code></pre>
-                <h5>Role Hierarchy and Levels</h5>
-                <p>AuthTuna supports role hierarchy through a `level` system. A role with a higher level can manage roles with a lower level. For example, an `admin` with level 90 can assign the `editor` role with level 50 to a user.</p>
-                <h5>Grant-Based System</h5>
-                <p>In addition to the hierarchy, AuthTuna has a grant-based system. This allows you to explicitly grant a role the permission to assign other roles or grant specific permissions. This provides a more granular control over the RBAC system.</p>
-                <pre><code class="language-python">
-# Grant the 'admin' role the permission to assign the 'editor' role
-await auth_service.roles.grant_role_assignment("admin", "editor")
-
-# Grant the 'admin' role the permission to grant the 'edit:article' permission
-await auth_service.roles.grant_permission_granting("admin", "edit:article")
-                </code></pre>
-                <h5>Recommended Usage</h5>
-                <p>For most applications, the built-in roles and permissions are sufficient. However, if you need to create custom roles and permissions, it's recommended to do so in a startup script or a dedicated management command. This ensures that your RBAC system is consistent and reproducible across all environments.</p>
-
-                <h4>TokenManager</h4>
-                <p>The `TokenManager` is responsible for creating, validating, and managing tokens for various purposes, such as email verification and password reset. You can use this manager to create custom tokens for your own features.</p>
-
-                <h4>OrganizationManager</h4>
-                <p>The `OrganizationManager` handles the logic for creating, managing, and inviting users to organizations. This is useful for multi-tenant applications where users are grouped into different organizations.</p>
-
+                <h2>Token</h2>
+                <p>The `Token` model represents a token that can be used for various purposes, such as email verification or password reset.</p>
+                <ul>
+                    <li>`id`: A unique identifier for the token.</li>
+                    <li>`purpose`: The purpose of the token.</li>
+                    <li>`user_id`: The ID of the user who owns the token.</li>
+                    <li>`ctime`: The timestamp when the token was created.</li>
+                    <li>`etime`: The timestamp when the token will expire.</li>
+                    <li>`used`: A boolean indicating whether the token has been used.</li>
+                    <li>`new_gen_id`: The ID of the new token that was generated to replace this one.</li>
+                </ul>
             </div>
         </main>
     </div>
