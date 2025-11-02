@@ -162,15 +162,15 @@ async def cleanup_sessions(user_id, current_session_id, ip_address):
                 <h5>Creating Roles and Permissions</h5>
                 <pre><code class="language-python">
 # Create a new role
-await auth_service.roles.create_role("editor", "Can edit content", level=50)
+await auth_service.roles.create("editor", "Can edit content", level=30) # do not set any role to level > 49 without understanding the hirearchial rbac system (curr have not yet documented in detail so please use caution when using this feature, i am already using in prod but its not documented so pls wait till using this feature, you may use the core auth system and existing roles which are provisioned by core.defaults)
 
 # Create a new permission
-await auth_service.roles.create_permission("edit:article", "Can edit articles")
+await auth_service.permissions.create("edit:article", "Can edit articles") # same message as above.
                 </code></pre>
                 <h5>Adding Permissions to a Role</h5>
                 <pre><code class="language-python">
 # Add a permission to a role
-await auth_service.roles.add_permission_to_role("editor", "edit:article")
+await auth_service.roles.add_permission_to_role("editor", "edit:article") # this is more ok to use as less prone to escalation but caution anyway.
                 </code></pre>
                 <h5>Role Hierarchy and Levels</h5>
                 <p>AuthTuna supports role hierarchy through a `level` system. A role with a higher level can manage roles with a lower level. For example, an `admin` with level 90 can assign the `editor` role with level 50 to a user.</p>
