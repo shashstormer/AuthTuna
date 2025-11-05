@@ -21,16 +21,26 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"  # JWT Encryption algorithm
     API_BASE_URL: str
     TRY_FULL_INITIALIZE_WHEN_SYSTEM_USER_EXISTS_AGAIN: bool = False
+
     # Security settings
     JWT_SECRET_KEY: SecretStr = SecretStr("dev-secret-key-change-in-production")
     ENCRYPTION_PRIMARY_KEY: SecretStr = SecretStr("dev-encryption-key-change-in-production")
     ENCRYPTION_SECONDARY_KEYS: List[SecretStr] = []
     FERNET_KEYS: List[SecretStr] = []
 
-    DEFAULT_SUPERADMIN_PASSWORD: Optional[SecretStr] = None
-    DEFAULT_ADMIN_PASSWORD: Optional[SecretStr] = None
+    # Enable and disable features as you want
+    MFA_ENABLED: bool = True
+    PASSKEYS_ENABLED: bool = True
+    UI_ENABLED: bool = True
+    ADMIN_ROUTES_ENABLED: bool = True
+    ONLY_MIDDLEWARE: bool = False  # Use this setting on secondary servers, like you have deployed a instance with ui at auth.example.com and have another server at someapp.example.com then initialize only the session middleware
+
+    # Default initialization settings, You need to manually update in db if already initialized, dosent detect changes
+    DEFAULT_SUPERADMIN_PASSWORD: Optional[SecretStr] = None  # Just dont set this and logging into this account will be disabled.
+    DEFAULT_ADMIN_PASSWORD: Optional[SecretStr] = None  # this also.
     DEFAULT_SUPERADMIN_EMAIL: str = "superadmin@example.com"
     DEFAULT_ADMIN_EMAIL: str = "admin@example.com"
+
     # Database settings
     DEFAULT_DATABASE_URI: str = "sqlite+aiosqlite:///./authtuna_dev.db"  # PROVIDE ASYNC URI
     DATABASE_USE_ASYNC_ENGINE: bool = True  # dosent do anything
@@ -54,6 +64,7 @@ class Settings(BaseSettings):
     LOCK_SESSION_REGION: bool = True  # Lock session to region based on IP geolocation, depending on security requirements and environments you may want to disable this.
     DISABLE_RANDOM_STRING: bool = False  # IN ENVIRONMENTS WHERE YOU HAVE LONG RUNNING CONNECTIONS, AND HIGH CONCURRENCY, DISABLING THIS WILL HELP PREVENT LOGOUTS DUE TO RANDOM STRING MISMATCH.
     RANDOM_STRING_GRACE: int = 300  # seconds, STORED RANDOM STRINGS IN THIS ROLLING TIMEFRAME WILL BE ACCEPTED.
+
     # Email settings (disabled by default)
     EMAIL_ENABLED: bool = False
     SMTP_HOST: Optional[str] = None
@@ -67,12 +78,12 @@ class Settings(BaseSettings):
     EMAIL_DOMAINS: List[str] = ["gmail.com"]
     TOKENS_EXPIRY_SECONDS: int = 3600
     TOKENS_MAX_COUNT_PER_DAY_PER_USER_PER_ACTION: int = 5  # max 5 for email verification, max 5 password reset tokens etc etc...
-
     MAIL_STARTTLS: bool = True
     MAIL_SSL_TLS: bool = False
     USE_CREDENTIALS: bool = True
     VALIDATE_CERTS: bool = True
 
+    # Template Locations
     EMAIL_TEMPLATE_DIR: str = os.path.join(module_path, "templates/email")
     HTML_TEMPLATE_DIR: str = os.path.join(module_path, "templates/pages")
     DASHBOARD_AND_USER_INFO_PAGES_TEMPLATE_DIR: str = os.path.join(module_path, "templates/dashboard")
@@ -95,18 +106,13 @@ class Settings(BaseSettings):
     RPC_ADDRESS: str = "[::]:50051"
 
     # Webauthn settings
-    WEBAUTHN_ENABLED: bool = False  # Currently NOT IMPLEMENTED.
-    # WEBAUTHN_AUTHENTICATOR_ATTACHMENT: Optional[str]  # "platform" or "cross-platform"
-    # WEBAUTHN_USER_VERIFICATION: Optional[str]  # "required" or "preferred" or "discouraged"
-    # WEBAUTHN_PUBLIC_KEY_CREDENTIALS_CHARSET: Optional[str] = "ascii"
-    # WEBAUTHN_PUBLIC_KEY_CREDENTIALS_LENGTH: int = 32
-    # WEBAUTHN_PUBLIC_KEY_CREDENTIALS_COUNT: int = 10
+    WEBAUTHN_ENABLED: bool = False  # works fully and already deployed on my instance.
     WEBAUTHN_RP_ID: str = "localhost"  # The domain of your site
     WEBAUTHN_RP_NAME: str = "AuthTuna"
     WEBAUTHN_ORIGIN: str = "http://localhost:8000"
 
     # Authentication strategy: "COOKIE" or "BEARER"
-    STRATEGY: str = "COOKIE"  # Options: "COOKIE", "BEARER"
+    STRATEGY: str = "COOKIE"  # Options: "COOKIE", "BEARER", works but no way to get token and all yet so will do later. Just use api keys (coming soon).
 
     model_config = SettingsConfigDict(env_file=os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
                                       extra='ignore')

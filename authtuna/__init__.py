@@ -28,6 +28,7 @@ from fastapi import FastAPI
 from .core.config import settings, init_settings
 
 
+# Was implementing RPC-based middleware so that we will not have to add database conn string on every instance but didnt work, will try again in future.
 # def _start_rpc_server_bg():
 #     if not settings.RPC_ENABLED:
 #         return
@@ -65,12 +66,18 @@ def init_app(app: FastAPI, session_middleware_kwargs=None):
 
     app.add_middleware(DatabaseSessionMiddleware, **(session_middleware_kwargs or {}))
     app.add_middleware(SessionMiddleware, settings.ENCRYPTION_PRIMARY_KEY.get_secret_value())
+    if settings.ONLY_MIDDLEWARE:
+        return
     app.include_router(auth_router)
     app.include_router(social_router)
-    app.include_router(mfa_router)
-    app.include_router(admin_router)
-    app.include_router(ui_router)
-    app.include_router(passkey_router)
+    if settings.MFA_ENABLED:
+        app.include_router(mfa_router)
+    if settings.ADMIN_ROUTES_ENABLED:
+        app.include_router(admin_router)
+    if settings.UI_ENABLED:
+        app.include_router(ui_router)
+    if settings.PASSKEYS_ENABLED:
+        app.include_router(passkey_router)
 
 
 __all__ = [
