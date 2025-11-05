@@ -133,10 +133,13 @@
         </div>
 
         <div id="social-login-section">
-            {% if google_login_enabled or github_login_enabled %}
+            {% if google_login_enabled or github_login_enabled or passwordless_login_enabled %}
             <div class="mt-6">
                 <div class="relative"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/20"></div></div><div class="relative flex justify-center text-sm"><span class="px-2 bg-white/10 dark:bg-black/20 text-gray-600 dark:text-white/70 rounded-full">Or continue with</span></div></div>
                 <div class="mt-6 grid grid-cols-1 gap-4">
+                    {% if passwordless_login_enabled %}
+                    <a id="passwordless-login-btn" type="button" class="social-btn w-full inline-flex justify-center py-3 px-4 rounded-xl shadow-md text-sm font-medium text-gray-800 dark:text-white"><svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M2.25 4.5c0-.414.336-.75.75-.75h17.5c.414 0 .75.336.75.75v15c0 .414-.336.75-.75.75H3c-.414 0-.75-.336-.75-.75V4.5zM3.75 6v1.5h16.5V6H3.75zm0 3v9h16.5V9H3.75zm13.03 3.97a.75.75 0 00-1.06-1.06l-4.22 4.22-1.97-1.97a.75.75 0 00-1.06 1.06l2.5 2.5a.75.75 0 001.06 0l4.75-4.75z" clip-rule="evenodd" /></svg>Sign in with Email</a>
+                    {% endif %}
                     {% if google_login_enabled %}
                     <a href="/auth/google/login" class="social-btn w-full inline-flex justify-center py-3 px-4 rounded-xl shadow-md text-sm font-medium text-gray-800 dark:text-white"><svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 48 48"><path d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/></svg>Google</a>
                     {% endif %}

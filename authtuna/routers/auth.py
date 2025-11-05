@@ -294,6 +294,7 @@ async def show_login_page(request: Request):
         "request": request,
         "google_login_enabled": bool(settings.GOOGLE_CLIENT_ID),
         "github_login_enabled": bool(settings.GITHUB_CLIENT_ID),
+        "passwordless_login_enabled": settings.PASSWORDLESS_LOGIN_ENABLED,
     }
     return templates.TemplateResponse("login.html", context)
 
