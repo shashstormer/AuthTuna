@@ -1408,3 +1408,28 @@ class AuthTunaAsync:
                 "login_time": datetime.datetime.fromtimestamp(session.ctime).strftime("%Y-%m-%d %H:%M:%S"),
             })
         return session
+
+    async def request_passwordless_login(self, email: str) -> Optional[Token]:
+        async with self.db_manager.get_db() as db:
+            user = await self.users.get_by_email(email)
+            if not user: return None
+
+            count_stmt = select(func.count()).select_from(Token).where(
+                Token.user_id == user.id,
+                Token.purpose == "passwordless_login",
+                Token.ctime > time.time() - 86400
+            )
+            recent_tokens_count = (await db.execute(count_stmt)).scalar()
+
+            if recent_tokens_count >= settings.TOKENS_MAX_COUNT_PER_DAY_PER_USER_PER_ACTION:
+                raise RateLimitError("Too many passwordless login requests.")
+
+            return await self.tokens.create(user.id, "passwordless_login")
+
+    async def login_with_token(self, token_id: str, ip_address: str) -> User:
+        """Performs token validation and returns the user."""
+        async with self.db_manager.get_db() as db:
+            user = await self.tokens.validate(db, token_id, "passwordless_login", ip_address)
+            await db.commit()
+            return user
+

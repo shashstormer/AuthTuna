@@ -60,7 +60,7 @@ def init_app(app: FastAPI, session_middleware_kwargs=None):
     :param app:
     :return:
     """
-    from authtuna.routers import admin_router, auth_router, social_router, mfa_router, ui_router, passkey_router
+    from authtuna.routers import admin_router, auth_router, social_router, mfa_router, ui_router, passkey_router, passwordless_router
     from authtuna.middlewares import DatabaseSessionMiddleware
     from starlette.middleware.sessions import SessionMiddleware
 
@@ -78,6 +78,8 @@ def init_app(app: FastAPI, session_middleware_kwargs=None):
         app.include_router(ui_router)
     if settings.PASSKEYS_ENABLED:
         app.include_router(passkey_router)
+    if settings.PASSWORDLESS_LOGIN_ENABLED:
+        app.include_router(passwordless_router)
 
 
 __all__ = [

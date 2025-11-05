@@ -264,4 +264,16 @@ class EmailManager:
             background_tasks=background_tasks
         )
 
+    async def send_passwordless_login_email(self, email: str, token: str, background_tasks: BackgroundTasks):
+        """Sends a passwordless login email with a unique link."""
+        login_link = f"{settings.API_BASE_URL}/auth/passwordless/login?token={token}"
+        context = {"login_link": login_link}
+        await self.send_email_async(
+            subject="Passwordless Login",
+            email_to=email,
+            template_name="passwordless_login.html",
+            context=context,
+            background_tasks=background_tasks
+        )
+
 email_manager = EmailManager()

@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     PASSKEYS_ENABLED: bool = True
     UI_ENABLED: bool = True
     ADMIN_ROUTES_ENABLED: bool = True
+    PASSWORDLESS_LOGIN_ENABLED: bool = True
     ONLY_MIDDLEWARE: bool = False  # Use this setting on secondary servers, like you have deployed a instance with ui at auth.example.com and have another server at someapp.example.com then initialize only the session middleware
 
     # Default initialization settings, You need to manually update in db if already initialized, dosent detect changes
