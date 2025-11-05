@@ -81,7 +81,7 @@
 
             <div class="space-y-2">
                 <h2 class="text-lg font-semibold text-gray-400 mt-4 mb-2 uppercase tracking-wider">Fundamentals</h2>
-                <a href="index.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
+                <a href="index.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Introduction & Setup
                 </a>
                 <a href="configuration.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
@@ -115,7 +115,7 @@
                 <a href="middleware-session.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Middleware & Session Mgmt
                 </a>
-                <a href="passkeys.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                <a href="passkeys.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
                     Passkeys
                 </a>
                  <a href="ui-dashboard.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
@@ -132,54 +132,33 @@
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div id="content" class="prose max-w-4xl mx-auto">
-                <h1>AuthTuna 🐟 - High-Performance Async Security</h1>
-                <p class="lead">AuthTuna is a modern, batteries-included authentication and authorization framework for Python, designed specifically for **FastAPI** applications, but with a framework-agnostic core.</p>
+                <h1>Passkeys</h1>
+                <p>AuthTuna provides a complete implementation of the WebAuthn standard, allowing you to offer passwordless authentication with passkeys. This is a more secure and user-friendly alternative to traditional passwords.</p>
 
-                <h2>Key Features</h2>
+                <h2>Configuration</h2>
+                <p>To enable passkey authentication, you need to configure the following settings in your <code>.env</code> file:</p>
+                <pre><code class="language-bash">
+WEBAUTHN_ENABLED=True
+WEBAUTHN_RP_ID="yourdomain.com"
+WEBAUTHN_RP_NAME="Your App Name"
+WEBAUTHN_ORIGIN="https://yourdomain.com"
+</code></pre>
+
                 <ul>
-                    <li><strong>Async-First:</strong> Built entirely with asynchronous managers and SQLAlchemy 2.0.</li>
-                    <li><strong>Robust Sessions:</strong> DB-backed sessions with anti-hijack checks (device/region/IP mismatch).</li>
-                    <li><strong>Comprehensive RBAC:</strong> Hierarchical roles and fine-grained **Scoped Permissions**.</li>
-                    <li><strong>Built-in Flows:</strong> Ready-to-use routers for Login, Signup, MFA, Password Reset, and Social SSO.</li>
-                    <li><strong>Auditing:</strong> Logs all critical security events (login, password change, suspension).</li>
-                    <li><strong>UI Components:</strong> Includes pre-built HTML templates for login, user dashboard, settings, and admin pages.</li>
+                    <li><code>WEBAUTHN_ENABLED</code>: Set this to <code>True</code> to enable passkey functionality.</li>
+                    <li><code>WEBAUTHN_RP_ID</code>: The relying party ID. This should be the domain of your website.</li>
+                    <li><code>WEBAUTHN_RP_NAME</code>: The name of your application. This will be displayed to the user during the passkey creation process.</li>
+                    <li><code>WEBAUTHN_ORIGIN</code>: The origin of your website. This should be the full URL of your website, including the protocol.</li>
                 </ul>
 
-                <h2>Getting Started (Minimal Setup)</h2>
-                <p>Install dependencies and initialize your FastAPI application:</p>
-                <pre><code class="language-bash">pip install authtuna</code></pre>
+                <h2>Usage</h2>
+                <p>Once you've configured the settings, you can use the built-in passkey routers to handle the registration and authentication of passkeys. These routers are located in <code>authtuna/routers/passkeys.py</code> and are included automatically when you call <code>init_app(app)</code>.</p>
 
-                <h4>1. Create a minimal .env file</h4>
-                <pre><code class="language-bash"># .env
-API_BASE_URL=http://localhost:8000
-# Mandatory encryption keys (generate with Fernet.generate_key().decode())
-FERNET_KEYS='["YOUR_PRIMARY_KEY", "YOUR_SECONDARY_KEY"]'
-JWT_SECRET_KEY="a-strong-jwt-secret"
-DEFAULT_DATABASE_URI=sqlite+aiosqlite:///./authtuna.db
-</code></pre>
+                <h3>Registration</h3>
+                <p>To register a new passkey, you'll need to make a POST request to the <code>/passkeys/register/begin</code> endpoint. This will return a set of options that you can use to create the passkey on the client-side. Once the passkey has been created, you'll need to make a POST request to the <code>/passkeys/register/complete</code> endpoint with the client-side data to complete the registration.</p>
 
-                <h4>2. Initialize the App</h4>
-                <pre><code class="language-python">from fastapi import FastAPI, Depends
-from authtuna import init_app
-from authtuna.integrations import get_current_user
-from authtuna.core.database import User
-
-app = FastAPI(title="AuthTuna Demo API")
-
-# This single function adds all middleware and routers
-init_app(app)
-
-@app.get("/", tags=["Root"],)
-async def root(user=Depends(get_current_user_optional)):
-    """
-    Automatically redirects to login page if not authenticated, else redirects to the dashboard.
-    """
-    if user is None:
-        return RedirectResponse("/auth/login")
-    return RedirectResponse("/ui/dashboard")
-
-</code></pre>
-                <p>After running your app, you can access the built-in UI at <a href="/ui/dashboard">/ui/dashboard</a> and authentication forms at <a href="/auth/login">/auth/login</a>.</p>
+                <h3>Authentication</h3>
+                <p>To authenticate with a passkey, you'll need to make a POST request to the <code>/passkeys/login/begin</code> endpoint. This will return a set of options that you can use to get the passkey assertion on the client-side. Once you have the assertion, you'll need to make a POST request to the <code>/passkeys/login/complete</code> endpoint with the client-side data to complete the authentication.</p>
             </div>
         </main>
     </div>

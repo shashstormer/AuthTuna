@@ -81,7 +81,7 @@
 
             <div class="space-y-2">
                 <h2 class="text-lg font-semibold text-gray-400 mt-4 mb-2 uppercase tracking-wider">Fundamentals</h2>
-                <a href="index.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
+                <a href="index.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Introduction & Setup
                 </a>
                 <a href="configuration.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
@@ -109,7 +109,7 @@
                 <a href="auth-flows.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
                     Authentication Flows
                 </a>
-                <a href="mfa.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
+                <a href="mfa.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800 active">
                     MFA & Social Login (SSO)
                 </a>
                 <a href="middleware-session.html" class="nav-link block p-2 rounded-lg transition-colors hover:bg-gray-800">
@@ -132,54 +132,43 @@
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
             <div id="content" class="prose max-w-4xl mx-auto">
-                <h1>AuthTuna 🐟 - High-Performance Async Security</h1>
-                <p class="lead">AuthTuna is a modern, batteries-included authentication and authorization framework for Python, designed specifically for **FastAPI** applications, but with a framework-agnostic core.</p>
+                <h1>MFA & Social Login (SSO)</h1>
 
-                <h2>Key Features</h2>
-                <ul>
-                    <li><strong>Async-First:</strong> Built entirely with asynchronous managers and SQLAlchemy 2.0.</li>
-                    <li><strong>Robust Sessions:</strong> DB-backed sessions with anti-hijack checks (device/region/IP mismatch).</li>
-                    <li><strong>Comprehensive RBAC:</strong> Hierarchical roles and fine-grained **Scoped Permissions**.</li>
-                    <li><strong>Built-in Flows:</strong> Ready-to-use routers for Login, Signup, MFA, Password Reset, and Social SSO.</li>
-                    <li><strong>Auditing:</strong> Logs all critical security events (login, password change, suspension).</li>
-                    <li><strong>UI Components:</strong> Includes pre-built HTML templates for login, user dashboard, settings, and admin pages.</li>
-                </ul>
+                <h2>Multi-Factor Authentication (`/mfa`)</h2>
+                <p>AuthTuna implements the TOTP standard (compatible with Google Authenticator, Authy, etc.) along with recovery codes.</p>
+                 <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-400 rounded-lg">
+                        <thead class="text-xs uppercase bg-gray-800 text-gray-300">
+                            <tr><th class="py-3 px-6">Endpoint</th><th class="py-3 px-6">Function</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr class="bg-gray-900 border-b border-gray-800"><td>/mfa/setup</td><td>Generates TOTP secret/QR code URI for setup.</td></tr>
+                            <tr class="bg-gray-900 border-b border-gray-800"><td>/mfa/verify</td><td>Verifies the setup code to enable MFA.</td></tr>
+                            <tr class="bg-gray-900 border-b border-gray-800"><td>/mfa/validate-login</td><td>Completes login using an MFA code or recovery code.</td></tr>
+                            <tr class="bg-gray-900 border-b border-gray-800"><td>/mfa/disable</td><td>Disables MFA for the current user.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                <h2>Getting Started (Minimal Setup)</h2>
-                <p>Install dependencies and initialize your FastAPI application:</p>
-                <pre><code class="language-bash">pip install authtuna</code></pre>
+                <h2>Social Login (SSO)</h2>
+                <p>If configured with client IDs and secrets, the <code>social_router</code> handles OAuth2 flows for providers like Google and GitHub, automatically linking or creating user accounts.</p>
 
-                <h4>1. Create a minimal .env file</h4>
-                <pre><code class="language-bash"># .env
-API_BASE_URL=http://localhost:8000
-# Mandatory encryption keys (generate with Fernet.generate_key().decode())
-FERNET_KEYS='["YOUR_PRIMARY_KEY", "YOUR_SECONDARY_KEY"]'
-JWT_SECRET_KEY="a-strong-jwt-secret"
-DEFAULT_DATABASE_URI=sqlite+aiosqlite:///./authtuna.db
+                <h3>Configuration</h3>
+                <p>To enable SSO, you need to configure the following settings in your <code>.env</code> file:</p>
+
+                <h4>Google SSO</h4>
+                <pre><code class="language-bash">
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
 </code></pre>
+                <p>You can obtain these credentials from the <a href="https://console.developers.google.com/" target="_blank">Google API Console</a>. When creating your credentials, you'll need to specify the authorized redirect URIs. For AuthTuna, the redirect URI is <code>{API_BASE_URL}/auth/google/callback</code>.</p>
 
-                <h4>2. Initialize the App</h4>
-                <pre><code class="language-python">from fastapi import FastAPI, Depends
-from authtuna import init_app
-from authtuna.integrations import get_current_user
-from authtuna.core.database import User
-
-app = FastAPI(title="AuthTuna Demo API")
-
-# This single function adds all middleware and routers
-init_app(app)
-
-@app.get("/", tags=["Root"],)
-async def root(user=Depends(get_current_user_optional)):
-    """
-    Automatically redirects to login page if not authenticated, else redirects to the dashboard.
-    """
-    if user is None:
-        return RedirectResponse("/auth/login")
-    return RedirectResponse("/ui/dashboard")
-
+                <h4>GitHub SSO</h4>
+                <pre><code class="language-bash">
+GITHUB_CLIENT_ID="your-github-client-id"
+GITHUB_CLIENT_SECRET="your-github-client-secret"
 </code></pre>
-                <p>After running your app, you can access the built-in UI at <a href="/ui/dashboard">/ui/dashboard</a> and authentication forms at <a href="/auth/login">/auth/login</a>.</p>
+                <p>You can obtain these credentials from your GitHub developer settings. When creating your OAuth App, you'll need to specify the authorization callback URL. For AuthTuna, the callback URL is <code>{API_BASE_URL}/auth/github/callback</code>.</p>
             </div>
         </main>
     </div>
