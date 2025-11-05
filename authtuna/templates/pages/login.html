@@ -167,8 +167,8 @@
         const ca = document.cookie.split(';');
         for(let i=0; i < ca.length; i++) {
             let c = ca[i];
-            while (c.charAt(0)==' ') c = c.substring(1,c.length);
-            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+            while (c.charAt(0) === ' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length,c.length);
         }
         return null;
     }
@@ -273,6 +273,40 @@
         passwordError.classList.toggle('hidden', validatePassword(passwordInput.value));
     });
     passwordForm.addEventListener('submit', handlePasswordSubmit);
+
+    // Passwordless Login Handler
+    const passwordlessLoginBtn = document.getElementById('passwordless-login-btn');
+    if (passwordlessLoginBtn) {
+        passwordlessLoginBtn.addEventListener('click', async () => {
+            const email = prompt("Please enter your email address to receive a login link:");
+            if (!email || !validateUsernameOrEmail(email)) {
+                showMessage('Invalid email address.', 'text-red-400');
+                return;
+            }
+
+            passwordlessLoginBtn.disabled = true;
+            showMessage('Sending login link...', 'text-blue-400');
+
+            try {
+                const response = await fetch('/auth/passwordless/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage(data.message, 'text-green-400');
+                } else {
+                    showMessage(data.detail || 'An error occurred.', 'text-red-400');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'text-red-400');
+            } finally {
+                passwordlessLoginBtn.disabled = false;
+            }
+        });
+    }
+
 
     // Passkey Login Handler
     passkeyLoginBtn.addEventListener('click', async () => {
