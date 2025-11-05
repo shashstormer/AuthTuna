@@ -69,6 +69,8 @@ def init_app(app: FastAPI, session_middleware_kwargs=None):
     if settings.ONLY_MIDDLEWARE:
         return
     app.include_router(auth_router)
+    if settings.PASSWORDLESS_LOGIN_ENABLED:
+        app.include_router(passwordless_router)
     app.include_router(social_router)
     if settings.MFA_ENABLED:
         app.include_router(mfa_router)
@@ -78,8 +80,6 @@ def init_app(app: FastAPI, session_middleware_kwargs=None):
         app.include_router(ui_router)
     if settings.PASSKEYS_ENABLED:
         app.include_router(passkey_router)
-    if settings.PASSWORDLESS_LOGIN_ENABLED:
-        app.include_router(passwordless_router)
 
 
 __all__ = [
