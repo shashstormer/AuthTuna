@@ -55,7 +55,7 @@ class Theme(BaseModel):
         accent_foreground="#0F172A",
         destructive="#EF4444",
         destructive_foreground="#F8FAFC",
-        border="#E2E8F0",
+        border="transparent",
         input="#E2E8F0",
         ring="#94A3B8",
     )
@@ -77,7 +77,7 @@ class Theme(BaseModel):
         accent_foreground="#F8FAFC",
         destructive="#7F1D1D",
         destructive_foreground="#F8FAFC",
-        border="#1E293B",
+        border="transparent",
         input="#1E293B",
         ring="#475569",
     )
