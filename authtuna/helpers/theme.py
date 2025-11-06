@@ -31,9 +31,6 @@ def get_theme_css(mode_override: Optional[str] = None) -> str:
 
     css = f"""
 <style>
-* {{
-border-style: none;
-}}
 :root {{
   {default_vars};
 
