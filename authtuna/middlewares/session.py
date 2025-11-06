@@ -95,14 +95,17 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             request)  # For now im just using cf ip, afterwards ill add params to config it one day.
         if await self._is_public_route(request):
             return await call_next(request)
-
+        token_method = None
         session_token = None
-        if settings.STRATEGY == "COOKIE":
+        if settings.STRATEGY == "COOKIE" or settings.STRATEGY == "AUTO":
             session_token = request.cookies.get(settings.SESSION_TOKEN_NAME)
-        elif settings.STRATEGY == "BEARER":
+            if session_token:
+                token_method = "COOKIE"
+        if settings.STRATEGY == "BEARER" or settings.STRATEGY == "AUTO":
             auth_header = request.headers.get("Authorization")
             if auth_header and auth_header.startswith("Bearer "):
                 session_token = auth_header.split(" ", 1)[1]
+                token_method = "BEARER"
         else:
             raise ValueError("Invalid authentication strategy configured.")
         try:
@@ -131,7 +134,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
                                     db=db
                             ):
                                 await db_session.update_last_ip(await get_remote_address(request), db=db)
-                                if settings.STRATEGY == "COOKIE":
+                                if token_method == "COOKIE":
                                     await db_session.update_random_string()
                                 request.state.user_id = db_session.user_id
                                 request.state.session_id = db_session.session_id
