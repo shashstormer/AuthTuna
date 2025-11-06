@@ -7,8 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {{ get_theme_css()|safe }}
     <style>
-        {{ get_theme_css()|safe }}
         /* Theme variables are injected by get_theme_css(); remove hard-coded overrides here */
         body {
             font-family: 'Poppins', sans-serif;

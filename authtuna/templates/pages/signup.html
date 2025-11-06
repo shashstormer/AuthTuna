@@ -98,25 +98,25 @@
            <div class="w-16 h-16 mx-auto brand-circle rounded-full flex items-center justify-center text-3xl font-bold shadow-lg mb-4">
             <span class="icon-theme">🚀</span>
           </div>
-          <h1 class="text-4xl font-semibold text-white/95 leading-tight">Create Account</h1>
-          <p class="text-md text-white/70 mt-1">Join us to get started</p>
+          <h1 class="text-4xl font-semibold text-theme leading-tight">Create Account</h1>
+          <p class="text-md muted-theme mt-1">Join us to get started</p>
         </div>
 
         <form id="signup-form" class="space-y-6">
           <div>
-            <label for="username" class="block text-sm font-medium text-white/80 mb-2">Username</label>
+            <label for="username" class="block text-sm font-medium text-theme mb-2">Username</label>
             <input id="username" name="username" type="text" autocomplete="username" required placeholder="Username"
-                   class="form-input block w-full px-5 py-3 rounded-xl text-white">
+                   class="form-input block w-full px-5 py-3 rounded-xl text-theme">
           </div>
           <div>
-            <label for="email" class="block text-sm font-medium text-white/80 mb-2">Email address</label>
+            <label for="email" class="block text-sm font-medium text-theme mb-2">Email address</label>
             <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"
-                   class="form-input block w-full px-5 py-3 rounded-xl text-white">
+                   class="form-input block w-full px-5 py-3 rounded-xl text-theme">
           </div>
           <div>
-            <label for="password" class="block text-sm font-medium text-white/80 mb-2">Password</label>
+            <label for="password" class="block text-sm font-medium text-theme mb-2">Password</label>
             <input id="password" name="password" type="password" autocomplete="new-password" required placeholder="••••••••"
-                   class="form-input block w-full px-5 py-3 rounded-xl text-white">
+                   class="form-input block w-full px-5 py-3 rounded-xl text-theme">
           </div>
 
           <div id="message-box" class="pt-2 text-center text-sm font-medium hidden"></div>
@@ -131,7 +131,7 @@
           </div>
 
           <div class="text-center text-sm">
-            <span class="text-white/60">Already have an account?</span>
+            <span class="muted-theme">Already have an account?</span>
             <a href="/auth/login" class="font-medium text-purple-300 hover:text-purple-200 light:text-cyan-200 light:hover:text-white transition-colors duration-200">
               Sign In
             </a>
@@ -165,13 +165,13 @@
                 if (response.status === 202) {
                     cardContent.innerHTML = `
                         <div class="text-center">
-                            <div class="w-20 h-20 mx-auto bg-gradient-to-br from-sky-400 to-cyan-400 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div class="w-20 h-20 mx-auto brand-circle rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 icon-theme" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                 </svg>
                             </div>
-                            <h1 class="text-4xl font-semibold text-white/95 leading-tight">Check Your Email</h1>
-                            <p class="text-md text-white/70 mt-2 max-w-sm mx-auto">
+                            <h1 class="text-4xl font-semibold text-theme leading-tight">Check Your Email</h1>
+                            <p class="text-md muted-theme mt-2 max-w-sm mx-auto">
                                 We've sent a verification link to <strong class="font-medium">${email}</strong>. Please check your inbox or spam for link to activate your account.
                             </p>
                         </div>
