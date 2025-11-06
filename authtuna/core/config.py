@@ -9,7 +9,7 @@ import os
 module_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 _settings_instance: Optional["Settings"] = None
 
-use_env = os.getenv("AUTHTUNA_NO_ENV", "false").lower() in ("true", "1", "t")
+dont_use_env = os.getenv("AUTHTUNA_NO_ENV", "false").lower() in ("true", "1", "t")
 
 class Settings(BaseSettings):
     """
@@ -115,7 +115,7 @@ class Settings(BaseSettings):
     # Authentication strategy: "COOKIE" or "BEARER"
     STRATEGY: Literal["COOKIE", "BEARER", "AUTO"] = "AUTO"  # Options: "COOKIE", "BEARER", "AUTO", bearer has higher priority works but no way to get token and all yet so will do later. Just use api keys (coming soon).
 
-    model_config = SettingsConfigDict(env_file=None if use_env else os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
+    model_config = SettingsConfigDict(env_file=None if dont_use_env else os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
                                       extra='ignore')
 
 
@@ -129,10 +129,10 @@ def init_settings(**kwargs: Any) -> "Settings":
         **kwargs: Keyword arguments to initialize settings with.
         If you want to override specific settings in your environment, pass USE_ENV=True with params to override.
     """
-    global _settings_instance, use_env
+    global _settings_instance, dont_use_env
     if _settings_instance is not None:
         logger.warning("Settings have already been initialized. Re-initializing.")
-    use_env = kwargs.get("use_env", False)
+    dont_use_env = kwargs.get("dont_use_env", True)
     _settings_instance = Settings(**kwargs)
     return _settings_instance
 
@@ -148,14 +148,14 @@ def get_settings() -> "Settings":
 
     global _settings_instance
     if _settings_instance is None:
-        if use_env:
+        if dont_use_env:
             raise RuntimeError(
                 "AUTHTUNA_NO_ENV is set. Settings must be initialized manually "
                 "by calling `init_settings()` at application startup."
             )
         else:
             logger.debug("Auto-initializing settings on first access.")
-            _settings_instance = init_settings(use_env=True)
+            _settings_instance = init_settings(dont_use_env=False)
     return _settings_instance
 
 
