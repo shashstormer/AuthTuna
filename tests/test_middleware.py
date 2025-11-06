@@ -26,7 +26,6 @@ async def test_middleware_no_token():
 @pytest.mark.asyncio
 async def test_middleware_with_valid_token(auth_tuna_async):
     """Test that the middleware allows access with a valid token."""
-    # Create a user and a session
     await auth_tuna_async.signup(
         username="middleware_user",
         email="middleware@example.com",

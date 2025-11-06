@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     DKIM_DOMAIN: Optional[str] = None
     DKIM_SELECTOR: Optional[str] = None
     DEFAULT_SENDER_EMAIL: str = "noreply@example.com"
-    EMAIL_DOMAINS: List[str] = ["gmail.com"]
+    EMAIL_DOMAINS: List[str] = ["*"]
     TOKENS_EXPIRY_SECONDS: int = 3600
     TOKENS_MAX_COUNT_PER_DAY_PER_USER_PER_ACTION: int = 5  # max 5 for email verification, max 5 password reset tokens etc etc...
     MAIL_STARTTLS: bool = True

@@ -1,5 +1,3 @@
-# authtuna/core/exceptions.py (a new file)
-
 class AuthTunaError(Exception):
     """Base exception for the AuthTuna library."""
     pass
@@ -63,4 +61,8 @@ class PermissionNotFoundError(AuthTunaError):
 
 class OperationForbiddenError(AuthTunaError):
     """Raised when an operation is forbidden."""
+    pass
+
+class InvalidEmailError(AuthTunaError):
+    """Raised when an email address is invalid."""
     pass

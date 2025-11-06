@@ -4,6 +4,7 @@ from fastapi import Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from ua_parser import user_agent_parser
 
+from authtuna.core import InvalidEmailError
 from authtuna.core.config import settings
 from authtuna.core.database import Session as DBSession, User
 from authtuna.core.encryption import encryption_utils
@@ -87,7 +88,7 @@ async def is_username_valid(username):
     return {}
 
 
-async def is_email_valid(email):
+async def is_email_valid(email, raise_on_invalid: bool = True):
     """
     Validates if the given email address ends with one of the allowed domains.
 
@@ -96,13 +97,19 @@ async def is_email_valid(email):
     address does not match the allowed domains, it returns a dictionary containing
     an error message. Otherwise, it returns None, indicating that the email is valid.
 
+    :param raise_on_invalid: Raises InvalidEmailError if email is invalid and raise_on_invalid is True.
     :param email: The email address to validate.
     :type email: str
     :return: A dictionary with an error message if the email is invalid, or None if valid.
     :rtype: dict or None
     """
-    if not any(email.endswith(allowed_domain) for allowed_domain in settings.EMAIL_DOMAINS):
-        return {"error": "Email must end with one of the following domains: " + ", ".join(settings.EMAIL_DOMAINS)}
+    email_domain = email.split("@")[1]
+    if "*" not in settings.EMAIL_DOMAINS:
+        if not any(email_domain == allowed_domain for allowed_domain in settings.EMAIL_DOMAINS):
+            emsg = {"error": "Email must end with one of the following domains: " + ", ".join(settings.EMAIL_DOMAINS)}
+            if raise_on_invalid:
+                raise InvalidEmailError(emsg)
+            return emsg
     return None
 
 

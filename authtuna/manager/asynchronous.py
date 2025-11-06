@@ -20,6 +20,7 @@ from authtuna.core.exceptions import (
 )
 from authtuna.core.mfa import MFAManager
 from authtuna.core.passkeys import PasskeysCore
+from authtuna.helpers import is_email_valid
 from authtuna.helpers.mail import email_manager
 
 
@@ -66,6 +67,7 @@ class UserManager:
     async def create(self, email: str, username: str, password: Optional[str] = None, ip_address: str = 'system',
                      **kwargs) -> User:
         """Creates a user, sets password, and logs audit event in a single atomic transaction."""
+        await is_email_valid(email)
         async with self._db_manager.get_db() as db:
             stmt = select(User).where((User.email == email) | (User.username == username))
             existing_user = (await db.execute(stmt)).unique().scalar_one_or_none()
