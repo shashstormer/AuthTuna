@@ -82,6 +82,44 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             return self.public_routes(request)
 
         return path in self.public_routes
+    async def _cookie_helper(self, session_token: str, request: Request):
+        session_data = encryption_utils.decode_jwt_token(session_token)
+
+        if session_data:
+            last_db_check = session_data.get("database_checked", 0)
+            needs_db_check = time.time() - last_db_check > settings.SESSION_DB_VERIFICATION_INTERVAL
+
+            if needs_db_check:
+                async with db_manager.get_db() as db:
+                    stmt = select(DBSession).where(
+                        DBSession.session_id == session_data.get("session"),
+                        DBSession.user_id == session_data.get("user_id"),
+                        DBSession.active == True,
+                    )
+                    result = await db.execute(stmt)
+                    db_session = result.scalar_one_or_none()
+
+                    if db_session and await db_session.is_valid(
+                            region=request.state.device_data["region"],
+                            device=request.state.device_data["device"],
+                            random_string=session_data.get("random_string"),
+                            ip=request.state.user_ip_address,
+                            db=db
+                    ):
+                        await db_session.update_last_ip(await get_remote_address(request), db=db)
+                        await db_session.update_random_string()
+                        request.state.user_id = db_session.user_id
+                        request.state.session_id = db_session.session_id
+                        session_token = db_session.get_cookie_string()
+                    else:
+                        session_token = None
+                    await db.commit()
+            else:
+                request.state.user_id = session_data.get("user_id")
+                request.state.session_id = session_data.get("session")
+        else:
+            session_token = None
+        return session_token
 
     async def dispatch(self, request: Request, call_next):
         """
@@ -106,45 +144,11 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             if auth_header and auth_header.startswith("Bearer "):
                 session_token = auth_header.split(" ", 1)[1]
                 token_method = "BEARER"
+        request.state.token_method = token_method
         try:
             if session_token:
-                session_data = encryption_utils.decode_jwt_token(session_token)
-
-                if session_data:
-                    last_db_check = session_data.get("database_checked", 0)
-                    needs_db_check = time.time() - last_db_check > settings.SESSION_DB_VERIFICATION_INTERVAL
-
-                    if needs_db_check:
-                        async with db_manager.get_db() as db:
-                            stmt = select(DBSession).where(
-                                DBSession.session_id == session_data.get("session"),
-                                DBSession.user_id == session_data.get("user_id"),
-                                DBSession.active == True,
-                            )
-                            result = await db.execute(stmt)
-                            db_session = result.scalar_one_or_none()
-
-                            if db_session and await db_session.is_valid(
-                                    region=request.state.device_data["region"],
-                                    device=request.state.device_data["device"],
-                                    random_string=session_data.get("random_string"),
-                                    ip=request.state.user_ip_address,
-                                    db=db
-                            ):
-                                await db_session.update_last_ip(await get_remote_address(request), db=db)
-                                if token_method == "COOKIE":
-                                    await db_session.update_random_string()
-                                request.state.user_id = db_session.user_id
-                                request.state.session_id = db_session.session_id
-                                session_token = db_session.get_cookie_string()
-                            else:
-                                session_token = None
-                            await db.commit()
-                    else:
-                        request.state.user_id = session_data.get("user_id")
-                        request.state.session_id = session_data.get("session")
-                else:
-                    session_token = None
+                if token_method == "COOKIE":
+                    session_token = await self._cookie_helper(session_token, request)
             else:
                 session_token = None
 

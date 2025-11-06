@@ -183,6 +183,7 @@ class User(Base):
 
     created_at = Column(Float, nullable=False, default=time.time)
     last_login = Column(Float, nullable=False, default=time.time)
+    api_keys = relationship("ApiKey", back_populates="user", cascade="all, delete-orphan")
 
     roles = relationship(
         "Role", secondary=user_roles_association, back_populates="users", lazy="joined",
@@ -387,8 +388,8 @@ class Session(Base):
         if settings.DISABLE_RANDOM_STRING:
             grace_period = 0
         else:
-            grace_period = settings.SESSION_DB_VERIFICATION_INTERVAL + settings.RANDOM_STRING_GRACE # HARDCODED AS REQUESTS MAY RUN FOR LIKE 60 SEC USUALLY BEFORE BEING PROCESSED BY SERVER AND TIMEOUT AFTER THAT, MINIMIZES FALSE INVALIDATIONS
-        for entry in self.previous_random_strings:                    # INCREASED GRACE PERIOD TO 92 SECS FROM 60 SECS TO HANDLE SSE SCENARIOS BETTER.
+            grace_period = settings.SESSION_DB_VERIFICATION_INTERVAL + settings.RANDOM_STRING_GRACE # MINIMIZES FALSE INVALIDATIONS
+        for entry in self.previous_random_strings:
             if now - entry.get('timestamp', 0) < grace_period:
                 new_history.append(entry)
         self.previous_random_strings = new_history
@@ -615,5 +616,36 @@ class DatabaseManager:
                 await session.commit()
                 return audit_event
 
+
+class ApiKey(Base):
+    """
+    Represents a user-generated API key.
+    The 'id' column stores the *public, non-secret* part of the key (e.g., 'sk_live_123abc...').
+    The 'hashed_key' stores the bcrypt hash of the *full, secret* key.
+    """
+    __tablename__ = 'api_keys'
+
+    id = Column(String(64), primary_key=True, index=True)
+    hashed_key = Column(String(256), nullable=False, unique=True)
+    user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
+    key_type = Column(String(20), nullable=False, default="secret") # secret, public_key, master_key, test_key
+    name = Column(String(100), nullable=True)
+    created_at = Column(Float, nullable=False, default=time.time)
+    last_used_at = Column(Float, nullable=True)
+    expires_at = Column(Float, nullable=True)
+    scopes = Column(JsonType, nullable=False, default=list) # Stores [{"role_name": "Admin", "scope": "global"}]
+    user = relationship('User', back_populates='api_keys')
+
+    def __repr__(self):
+        return f"<ApiKey {self.id} (User: {self.user_id})>"
+
+
+# class RefreshFramework(Base):
+#     """
+#     I am thinking to implement refresh framework for creating refresh tokens + access tokens but still dont feel its worth it rn so leaving it blank for now.
+#     """
+#     __tablename__ = 'refresh_framework'
+#     id = Column(Integer, primary_key=True)
+#     pass
 
 db_manager = DatabaseManager()

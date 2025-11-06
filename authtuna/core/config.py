@@ -113,8 +113,16 @@ class Settings(BaseSettings):
     WEBAUTHN_ORIGIN: str = "http://localhost:8000"
 
     # Authentication strategy: "COOKIE" or "BEARER"
-    STRATEGY: Literal["COOKIE", "BEARER", "AUTO"] = "AUTO"  # Options: "COOKIE", "BEARER", "AUTO", bearer has higher priority works but no way to get token and all yet so will do later. Just use api keys (coming soon).
+    STRATEGY: Literal["COOKIE", "BEARER", "AUTO"] = "AUTO"
+    # Options: "COOKIE", "BEARER", "AUTO", bearer has higher priority works but no way to get token and all yet so will do later. Just use api keys (coming soon).
+    # BEARER = API KEY ONLY
+    # COOKIE = BROWSER COOKIES AUTH ONLY
+    # AUTO = BROWSER COOKIES AUTH OR API KEY (higher pref to bearer token).
 
+
+    API_KEY_PREFIX_SECRET: str = "sk"
+    API_KEY_PREFIX_PUBLISHABLE: str = "pk"
+    API_KEY_PREFIX_MASTER: str = "mk"
     model_config = SettingsConfigDict(env_file=None if dont_use_env else os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
                                       extra='ignore')
 
