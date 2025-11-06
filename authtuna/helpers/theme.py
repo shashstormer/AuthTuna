@@ -92,16 +92,34 @@ def get_theme_css(mode_override: Optional[str] = None) -> str:
 .btn-theme {{
   background: linear-gradient(90deg, var(--btn-bg-start), var(--btn-bg-end));
   color: var(--btn-text);
+  border: none;
+}}
+.btn-theme:hover {{
+  filter: brightness(0.96);
+}}
+.btn-theme:focus {{
+  box-shadow: 0 0 0 4px rgba(0,0,0,0.08);
+  outline: none;
 }}
 .btn-theme-outline {{
   background: transparent;
   color: var(--btn-text);
   border: 1px solid rgba(255,255,255,0.12);
 }}
+.btn-theme-outline:hover {{
+  background: rgba(255,255,255,0.02);
+}}
 .muted-theme {{
   color: var(--muted-text);
+}}
+.brand-circle {{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--btn-bg-start), var(--btn-bg-end));
+  color: var(--btn-text);
+  border-radius: 9999px;
 }}
 </style>
 """
     return css
-

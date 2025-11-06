@@ -56,8 +56,8 @@
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 7.625A.75.75 0 018.25 7.5h.75a.75.75 0 01.75.75v.75a.75.75 0 01-.75.75h-.75A.75.75 0 017.5 8.375v-.75zM15 7.5a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zM17.65 6.33a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0L17.65 7.39a.75.75 0 010-1.06zM6.34 17.65a.75.75 0 010-1.06l1.06-1.06a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0zM12 17.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V18a.75.75 0 01.75-.75zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM18 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5h-2.25a.75.75 0 01-.75-.75zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" /></svg>
         </button>
         <div class="mb-6">
-            <div class="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg mb-4">
-                🛡️
+            <div class="w-16 h-16 mx-auto brand-circle rounded-full flex items-center justify-center text-3xl font-bold shadow-lg mb-4">
+                <span class="icon-theme">🛡️</span>
             </div>
             <h1 class="text-3xl font-semibold text-white/95">Verification Required</h1>
             <p class="text-white/70 mt-2">Enter your verification code or use a passkey.</p>
@@ -73,14 +73,14 @@
                 </p>
             </div>
             <div id="message-box" class="text-center text-sm font-medium hidden"></div>
-            <button type="submit" class="w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 transition-all">
+            <button type="submit" class="w-full py-3 px-4 rounded-xl font-semibold btn-theme text-lg transition-all">
                 Complete Login
             </button>
         </form>
 
         <div id="passkey-section" class="mt-4 hidden">
              <div class="relative"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/20"></div></div><div class="relative flex justify-center text-sm"><span class="px-2 bg-white/10 dark:bg-black/20 text-white/70 rounded-full">Or</span></div></div>
-            <button id="use-passkey-btn" class="mt-4 w-full py-3 px-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all">
+            <button id="use-passkey-btn" class="mt-4 w-full py-3 px-4 rounded-xl font-semibold btn-theme text-lg transition-all">
                 Sign in with Passkey
             </button>
         </div>

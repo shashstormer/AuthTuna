@@ -7,8 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
           rel="stylesheet">
+    {{ get_theme_css()|safe }}
     <style>
-        {{ get_theme_css()|safe }}
         /* Use centralized theme variables */
         body {
             font-family: 'Poppins', sans-serif;
