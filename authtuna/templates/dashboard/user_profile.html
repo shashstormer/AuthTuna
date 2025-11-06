@@ -8,13 +8,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
           rel="stylesheet">
     <style>
-        :root {
-            --bg-start-dark: hsla(252, 40%, 29%, 1);
-            --bg-end-dark: hsla(270, 77%, 71%, 1);
-        }
+        {{ get_theme_css()|safe }}
+        /* Use get_theme_css() variables for background */
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(90deg, var(--bg-start-dark), var(--bg-end-dark));
+            background: linear-gradient(90deg, var(--bg-start), var(--bg-end));
             background-size: 400% 400%;
             animation: gradientAnimation 15s ease infinite;
         }

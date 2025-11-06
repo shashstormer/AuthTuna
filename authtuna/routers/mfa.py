@@ -13,10 +13,12 @@ from authtuna.core.database import User
 from authtuna.core.exceptions import InvalidTokenError, OperationForbiddenError
 from authtuna.helpers.mail import email_manager
 from authtuna.integrations.fastapi_integration import get_current_user, auth_service
+from authtuna.helpers.theme import get_theme_css
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/mfa", tags=["mfa"])
 templates = Jinja2Templates(directory=settings.HTML_TEMPLATE_DIR)
+templates.env.globals['get_theme_css'] = get_theme_css
 
 
 class MFACodePayload(BaseModel):

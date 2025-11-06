@@ -1,6 +1,6 @@
 import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import SecretStr
+from pydantic import SecretStr, BaseModel
 from typing import List, Optional, Any, Literal
 
 logger = logging.getLogger(__name__)
@@ -10,6 +10,19 @@ module_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 _settings_instance: Optional["Settings"] = None
 
 dont_use_env = os.getenv("AUTHTUNA_NO_ENV", "false").lower() in ("true", "1", "t")
+
+class Theme(BaseModel):
+    mode: Literal["single", "multi"] = "system"
+    class Dark:
+        background_color_start: str = "#382C68"
+        background_color_end: str = "#B57CEEFF"
+        text_color: str = "#FFFFFF"
+        icon_color: str = "#FFFFFF"
+    class Light:
+        BACKGROUND_COLOR_START: str = "#145276FF"
+        BACKGROUND_COLOR_END: str = "#81CFCAFF"
+        TEXT_COLOR: str = "#000000"
+        ICON_COLOR: str = "#000000"
 
 class Settings(BaseSettings):
     """
@@ -123,6 +136,7 @@ class Settings(BaseSettings):
     API_KEY_PREFIX_SECRET: str = "sk"
     API_KEY_PREFIX_PUBLISHABLE: str = "pk"
     API_KEY_PREFIX_MASTER: str = "mk"
+    THEME: Theme = Theme()
     model_config = SettingsConfigDict(env_file=None if dont_use_env else os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
                                       extra='ignore')
 

@@ -17,11 +17,13 @@ from authtuna.core.exceptions import (UserAlreadyExistsError, InvalidCredentials
 from authtuna.helpers import create_session_and_set_cookie
 from authtuna.helpers.mail import email_manager
 from authtuna.integrations.fastapi_integration import auth_service, get_current_user
+from authtuna.helpers.theme import get_theme_css
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 templates = Jinja2Templates(directory=settings.HTML_TEMPLATE_DIR)
+templates.env.globals['get_theme_css'] = get_theme_css
 
 
 class UserSignup(BaseModel):

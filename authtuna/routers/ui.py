@@ -12,9 +12,12 @@ from sqlalchemy.exc import IntegrityError
 from authtuna.core.config import settings
 from authtuna.core.database import User
 from authtuna.integrations.fastapi_integration import get_current_user, auth_service
+from authtuna.helpers.theme import get_theme_css
 
 router = APIRouter(prefix="/ui", tags=["ui"])
 templates = Jinja2Templates(directory=settings.DASHBOARD_AND_USER_INFO_PAGES_TEMPLATE_DIR)
+templates.env.globals['get_theme_css'] = get_theme_css
+
 class UserProfileUpdate(BaseModel):
     username: str
 

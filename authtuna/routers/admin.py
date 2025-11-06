@@ -20,6 +20,7 @@ router = APIRouter(
 )
 
 templates = Jinja2Templates(directory=settings.HTML_TEMPLATE_DIR)
+templates.env.globals['get_theme_css'] = __import__('authtuna.helpers.theme', fromlist=['get_theme_css']).get_theme_css
 
 
 # --- Pydantic Models (Unchanged) ---

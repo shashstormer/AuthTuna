@@ -8,14 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-start: hsla(202, 71%, 27%, 1);
-            --bg-end: hsla(176, 45%, 66%, 1);
-        }
-        .dark {
-            --bg-start: hsla(252, 40%, 29%, 1);
-            --bg-end: hsla(270, 77%, 71%, 1);
-        }
+        {{ get_theme_css()|safe }}
+        /* Theme variables are injected by get_theme_css(); remove hard-coded overrides here */
         body {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(90deg, var(--bg-start), var(--bg-end));
@@ -85,6 +79,7 @@
 <body class="min-h-screen flex items-center justify-center p-4 text-gray-800 dark:text-gray-100">
 
     <div class="bg-card shadow-2xl rounded-3xl p-8 w-full max-w-sm relative">
+        <div class="absolute inset-0 -z-10 bg-theme-gradient opacity-30 rounded-3xl"></div>
         <button onclick="toggleTheme()" class="absolute top-4 right-4 p-2 rounded-full text-white/70 hover:text-white hover:bg-white/20 dark:hover:bg-black/20 transition-colors duration-200">
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 7.625A.75.75 0 018.25 7.5h.75a.75.75 0 01.75.75v.75a.75.75 0 01-.75.75h-.75A.75.75 0 017.5 8.375v-.75zM15 7.5a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zM17.65 6.33a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0L17.65 7.39a.75.75 0 010-1.06zM6.34 17.65a.75.75 0 010-1.06l1.06-1.06a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0zM12 17.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V18a.75.75 0 01.75-.75zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM18 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5h-2.25a.75.75 0 01-.75-.75zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" /></svg>
         </button>
@@ -344,3 +339,4 @@
     </script>
 </body>
 </html>
+

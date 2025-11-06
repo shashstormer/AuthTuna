@@ -7,17 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root {
-      /* Light Mode Gradient (Teal/Cyan) */
-      --bg-start: hsla(202, 71%, 27%, 1);
-      --bg-end: hsla(176, 45%, 66%, 1);
-    }
-
-    .dark {
-      /* Dark Mode Gradient (Purple) */
-      --bg-start: hsla(252, 40%, 29%, 1);
-      --bg-end: hsla(270, 77%, 71%, 1);
-    }
+    {{ get_theme_css()|safe }}
+    /* Removed hard-coded HSLA variables; theme helper controls colors */
 
     body {
       font-family: 'Poppins', sans-serif;
@@ -213,4 +204,3 @@
   </script>
 </body>
 </html>
-
