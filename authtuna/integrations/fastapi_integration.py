@@ -136,8 +136,15 @@ class RoleChecker:
     user by request.state.user_id. If neither is present, it raises 401.
     """
 
-    def __init__(self, *roles: str, raise_error: bool= True):
+    def __init__(self, *roles: str,
+                 mode: Literal['AND', 'OR'] = 'AND',
+                 scope_prefix: Optional[str] = None,
+                 scope_from_path: Optional[str] = None,
+                 raise_error: bool= True):
         self.roles = set(roles)
+        self.mode = mode
+        self.scope_prefix = scope_prefix
+        self.scope_from_path = scope_from_path
         self.raise_error = raise_error
 
     async def __call__(self, request: Request) -> Optional[User]:
@@ -148,6 +155,15 @@ class RoleChecker:
             if user is None:
                 return None
         user_role_names = {role.name for role in user.roles}
+        if self.mode == 'OR':
+            if not self.roles.intersection(user_role_names):
+                if self.raise_error:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"User lacks required role(s). Requires at least one of: {', '.join(self.roles)}"
+                    )
+                return None
+            return user
         if not self.roles.issubset(user_role_names):
             if self.raise_error:
                 raise HTTPException(
