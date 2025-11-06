@@ -106,8 +106,6 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             if auth_header and auth_header.startswith("Bearer "):
                 session_token = auth_header.split(" ", 1)[1]
                 token_method = "BEARER"
-        else:
-            raise ValueError("Invalid authentication strategy configured.")
         try:
             if session_token:
                 session_data = encryption_utils.decode_jwt_token(session_token)
