@@ -82,7 +82,7 @@
             </form>
 
         <div id="passkey-login-section" class="hidden">
-            <div class="relative mt-6"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-border"></div></div><div class="relative flex justify-center text-sm"><span class="px-2 bg-card text-muted rounded-full border-0">Or</span></div></div>
+            <div class="relative mt-6"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-border"></div></div><div class="relative flex justify-center text-sm"><span class="px-2 bg-card text-muted rounded-full border-none">Or</span></div></div>
             <button id="passkey-login-btn" type="button" class="mt-6 w-full py-3 px-4 rounded-xl font-semibold btn-primary text-lg">
                 Sign in with a Passkey
             </button>
@@ -91,7 +91,7 @@
         <div id="social-login-section">
             {% if google_login_enabled or github_login_enabled or passwordless_login_enabled %}
             <div class="mt-6">
-                <div class="relative"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-border"></div></div><div class="relative flex justify-center text-sm"><span class="px-2 bg-card text-muted rounded-full border-0">Or continue with</span></div></div>
+                <div class="relative"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-border"></div></div><div class="relative flex justify-center text-sm"><span class="px-2 bg-card text-muted rounded-full border-none">Or continue with</span></div></div>
                 <div class="mt-6 grid grid-cols-1 gap-4">
                     {% if passwordless_login_enabled %}
                     <a id="passwordless-login-btn" type="button" class="btn-secondary w-full inline-flex justify-center py-3 px-4 shadow-md text-sm font-medium"><svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7.00005L10.2 11.65C11.2667 12.45 12.7333 12.45 13.8 11.65L20 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Sign in with Email</a>
