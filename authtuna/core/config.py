@@ -115,7 +115,7 @@ class Settings(BaseSettings):
     # Authentication strategy: "COOKIE" or "BEARER"
     STRATEGY: Literal["COOKIE", "BEARER", "AUTO"] = "AUTO"  # Options: "COOKIE", "BEARER", "AUTO", bearer has higher priority works but no way to get token and all yet so will do later. Just use api keys (coming soon).
 
-    model_config = SettingsConfigDict(env_file=os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
+    model_config = SettingsConfigDict(env_file=None if use_env else os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
                                       extra='ignore')
 
 
