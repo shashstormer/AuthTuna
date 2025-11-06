@@ -6,36 +6,36 @@
     <title>Role Details</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {{ get_theme_css()|safe }}
     <style>
         body { font-family: 'Poppins', sans-serif; }
     </style>
-    {{ get_theme_css()|safe }}
 </head>
-<body class="bg-gray-900 text-gray-200">
+<body class="min-h-screen">
 
     <div class="container mx-auto p-8">
-        <a href="/admin/dashboard" class="text-indigo-400 hover:text-indigo-300 mb-6 inline-block">&larr; Back to Dashboard</a>
-        <h1 class="text-4xl font-bold text-white mb-8">Role Details: <span id="role-name"></span></h1>
+        <a href="/admin/dashboard" class="text-primary hover:underline mb-6 inline-block">&larr; Back to Dashboard</a>
+        <h1 class="text-4xl font-bold mb-8">Role Details: <span id="role-name"></span></h1>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-semibold text-white mb-4">Role Information</h2>
+            <div class="card p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4">Role Information</h2>
                 <div class="space-y-3">
                     <p><strong>Description:</strong> <span id="role-description"></span></p>
                     <p><strong>Level:</strong> <span id="role-level"></span></p>
                 </div>
 
-                <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Granted Permissions</h2>
+                <h2 class="text-2xl font-semibold mt-8 mb-4">Granted Permissions</h2>
                 <ul id="role-permissions-list" class="space-y-2">
                     </ul>
             </div>
 
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-semibold text-white mb-4">Users with this Role</h2>
+            <div class="card p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4">Users with this Role</h2>
                 <div class="overflow-y-auto h-96">
-                    <table class="min-w-full bg-gray-700 rounded-lg">
+                    <table class="min-w-full rounded-lg">
                         <thead>
-                            <tr>
+                            <tr class="border-b border-border">
                                 <th class="p-3 text-left">Username</th>
                                 <th class="p-3 text-left">Scope</th>
                             </tr>
@@ -67,12 +67,12 @@
 
                 // Populate Permissions
                 rolePermissionsList.innerHTML = roleData.permissions.map(perm =>
-                    `<li class="bg-gray-700 p-2 rounded font-mono">${perm.name}</li>`
+                    `<li class="bg-secondary p-2 rounded font-mono">${perm.name}</li>`
                 ).join('') || '<li>No permissions granted.</li>';
 
                 // Populate Users
                 roleUsersBody.innerHTML = roleData.users.map(user => `
-                    <tr class="border-b border-gray-600">
+                    <tr class="border-b border-border">
                         <td class="p-2">${user.username}</td>
                         <td class="p-2 font-mono">${user.scope}</td>
                     </tr>

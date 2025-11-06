@@ -6,13 +6,10 @@
   <title>Email Verified</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  {{ get_theme_css()|safe }}
   <style>
-    {{ get_theme_css()|safe }}
-    /* Removed hard-coded :root/.dark HSLA overrides so theme helper controls colors */
-
     body {
       font-family: 'Poppins', sans-serif;
-      background: linear-gradient(90deg, var(--bg-start), var(--bg-end));
       background-size: 400% 400%;
       animation: gradientAnimation 15s ease infinite;
       transition: background 0.5s ease-in-out;
@@ -22,22 +19,6 @@
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
-    }
-
-    /* Glassmorphism card effect */
-    .bg-card {
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      background-clip: padding-box;
-    }
-
-    .dark .bg-card {
-      background-color: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-    .light .bg-card {
-      background-color: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.25);
     }
   </style>
   <script>
@@ -56,24 +37,23 @@
     }
   </script>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4
-             text-gray-800 dark:text-gray-100">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-  <div class="bg-card shadow-2xl rounded-3xl p-8 w-full max-w-md relative text-center">
-    <button onclick="toggleTheme()" class="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 dark:hover:bg-black/20 transition-colors duration-200" aria-label="Toggle theme">
-            <svg class="w-6 h-6 icon-theme" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 7.625A.75.75 0 018.25 7.5h.75a.75.75 0 01.75.75v.75a.75.75 0 01-.75.75h-.75A.75.75 0 017.5 8.375v-.75zM15 7.5a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zM17.65 6.33a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0L17.65 7.39a.75.75 0 010-1.06zM6.34 17.65a.75.75 0 010-1.06l1.06-1.06a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0zM12 17.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V18a.75.75 0 01.75-.75zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM18 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5h-2.25a.75.75 0 01-.75-.75zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" /></svg>
+  <div class="card shadow-2xl rounded-3xl p-8 w-full max-w-md relative text-center">
+    <button onclick="toggleTheme()" class="absolute top-4 right-4 p-2 rounded-full hover:bg-secondary transition-colors duration-200" aria-label="Toggle theme">
+            <svg class="w-6 h-6 text-muted" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 7.625A.75.75 0 018.25 7.5h.75a.75.75 0 01.75.75v.75a.75.75 0 01-.75.75h-.75A.75.75 0 017.5 8.375v-.75zM15 7.5a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zM17.65 6.33a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0L17.65 7.39a.75.75 0 010-1.06zM6.34 17.65a.75.75 0 010-1.06l1.06-1.06a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0zM12 17.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V18a.75.75 0 01.75-.75zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM18 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5h-2.25a.75.75 0 01-.75-.75zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" /></svg>
         </button>
     <div class="mb-6">
-        <div class="w-20 h-20 mx-auto brand-circle rounded-full flex items-center justify-center text-4xl font-bold shadow-lg mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 icon-theme" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl font-bold shadow-lg mb-4" style="background: var(--primary); color: var(--primary-foreground);">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
         </div>
-        <h1 class="text-4xl font-semibold text-theme leading-tight">Email Verified!</h1>
-        <p class="text-md muted-theme mt-2 max-w-sm mx-auto">Your email has been successfully verified. You can now proceed to log in.</p>
+        <h1 class="text-4xl font-semibold leading-tight">Email Verified!</h1>
+        <p class="text-md text-muted mt-2 max-w-sm mx-auto">Your email has been successfully verified. You can now proceed to log in.</p>
     </div>
 
-    <a href="/auth/login" class="w-full max-w-xs mx-auto py-3 px-4 rounded-xl font-semibold btn-theme text-lg inline-block">
+    <a href="/auth/login" class="w-full max-w-xs mx-auto py-3 px-4 rounded-xl font-semibold btn-primary text-lg inline-block">
         Go to Login
     </a>
   </div>

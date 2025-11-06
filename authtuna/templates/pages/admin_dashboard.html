@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
           rel="stylesheet">
+    {{ get_theme_css()|safe }}
     <style>
         body {
             font-family: 'Poppins', sans-serif;
@@ -20,23 +21,22 @@
             display: flex;
         }
     </style>
-    {{ get_theme_css()|safe }}
 </head>
-<body class="bg-gray-900 text-gray-200">
+<body class="min-h-screen">
 
 <div class="container mx-auto p-8">
-    <h1 class="text-4xl font-bold text-white mb-8">Admin Dashboard</h1>
+    <h1 class="text-4xl font-bold mb-8">Admin Dashboard</h1>
 
-    <div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-        <h2 class="text-2xl font-semibold text-white mb-4">User Management</h2>
+    <div class="card p-6 rounded-lg shadow-lg mb-8">
+        <h2 class="text-2xl font-semibold mb-4">User Management</h2>
         <div class="mb-4">
             <input type="text" id="user-search" placeholder="Search by username or email..."
-                   class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                   class="form-input w-full p-3 rounded-lg">
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full bg-gray-700 rounded-lg">
+            <table class="min-w-full rounded-lg">
                 <thead>
-                <tr>
+                <tr class="border-b border-border">
                     <th class="p-3 text-left">Username</th>
                     <th class="p-3 text-left">Email</th>
                     <th class="p-3 text-center">Status</th>
@@ -49,25 +49,25 @@
         </div>
     </div>
 
-    <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-semibold text-white mb-4">Role Management</h2>
+    <div class="card p-6 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-semibold mb-4">Role Management</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <h3 class="text-lg font-medium text-white mb-2">Existing Roles</h3>
+                <h3 class="text-lg font-medium mb-2">Existing Roles</h3>
                 <ul id="role-list" class="space-y-2">
                 </ul>
             </div>
             <div>
-                <h3 class="text-lg font-medium text-white mb-2">Create New Role</h3>
+                <h3 class="text-lg font-medium mb-2">Create New Role</h3>
                 <form id="create-role-form" class="space-y-4">
                     <input type="text" id="role-name" placeholder="Role Name" required
-                           class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600">
+                           class="form-input w-full p-3 rounded-lg">
                     <input type="text" id="role-description" placeholder="Description"
-                           class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600">
+                           class="form-input w-full p-3 rounded-lg">
                     <input type="number" id="role-level" placeholder="Hierarchy Level (e.g., 90)"
-                           class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600">
+                           class="form-input w-full p-3 rounded-lg">
                     <button type="submit"
-                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                            class="btn-primary w-full font-bold py-3 px-4 rounded-lg">
                         Create Role
                     </button>
                 </form>
@@ -77,21 +77,21 @@
 </div>
 
 <div id="assign-role-modal" class="modal fixed inset-0 bg-black bg-opacity-75 items-center justify-center">
-    <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md">
-        <h2 class="text-2xl font-semibold text-white mb-6">Assign Role to <span id="modal-username"></span></h2>
+    <div class="card p-8 rounded-lg shadow-2xl w-full max-w-md">
+        <h2 class="text-2xl font-semibold mb-6">Assign Role to <span id="modal-username"></span></h2>
         <input type="hidden" id="modal-user-id">
         <div class="space-y-4">
-            <select id="modal-role-select" class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600">
+            <select id="modal-role-select" class="form-input w-full p-3 rounded-lg">
             </select>
             <input type="text" id="modal-scope-input" placeholder="Scope (e.g., global)" value="global"
-                   class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600">
+                   class="form-input w-full p-3 rounded-lg">
         </div>
         <div class="mt-8 flex justify-end space-x-4">
             <button onclick="closeModal()"
-                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Cancel
+                    class="btn-secondary font-bold py-2 px-6 rounded-lg">Cancel
             </button>
             <button onclick="submitAssignRole()"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg">Assign
+                    class="btn-primary font-bold py-2 px-6 rounded-lg">Assign
             </button>
         </div>
     </div>
@@ -146,7 +146,7 @@
 
     function renderUsers(users) {
         userTableBody.innerHTML = users.map(user => `
-                <tr class="border-b border-gray-600">
+                <tr class="border-b border-border">
                     <td class="p-3">${user.username}</td>
                     <td class="p-3">${user.email}</td>
                     <td class="p-3 text-center">
@@ -155,7 +155,7 @@
                         </span>
                     </td>
                     <td class="p-3 text-center space-x-2">
-    <a href="/admin/users/${user.id}" class="bg-gray-600 hover:bg-gray-700 text-white text-sm font-bold py-1 px-3 rounded">View</a>
+    <a href="/admin/users/${user.id}" class="btn-secondary text-sm font-bold py-1 px-3 rounded">View</a>
     <button onclick="openAssignRoleModal('${user.id}', '${user.username}')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded">Assign Role</button>
     ${user.is_active
             ? `<button onclick="toggleUserSuspension('${user.id}', true)" class="bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-bold py-1 px-3 rounded">Suspend</button>`
@@ -170,8 +170,8 @@
         allRoles = roles; // Cache roles for modal
         roleList.innerHTML = roles.map(role => `
         <li>
-            <a href="/admin/roles/${encodeURIComponent(role.name)}" class="block bg-gray-700 p-2 rounded hover:bg-gray-600 transition-colors">
-                ${role.name} <span class="text-gray-400 text-sm">- Level ${role.level || 'N/A'}</span>
+            <a href="/admin/roles/${encodeURIComponent(role.name)}" class="block bg-secondary p-2 rounded hover:bg-accent transition-colors">
+                ${role.name} <span class="text-muted text-sm">- Level ${role.level || 'N/A'}</span>
             </a>
         </li>
     `).join('');

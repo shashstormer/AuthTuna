@@ -6,13 +6,10 @@
   <title>Sign Up</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  {{ get_theme_css()|safe }}
   <style>
-    {{ get_theme_css()|safe }}
-    /* Removed hard-coded HSLA variables; theme helper controls colors */
-
     body {
       font-family: 'Poppins', sans-serif;
-      background: linear-gradient(90deg, var(--bg-start), var(--bg-end));
       background-size: 400% 400%;
       animation: gradientAnimation 15s ease infinite;
       transition: background 0.5s ease-in-out;
@@ -23,49 +20,6 @@
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
-
-    /* Glassmorphism card effect */
-    .bg-card {
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      background-clip: padding-box;
-    }
-
-    .dark .bg-card {
-      background-color: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-    .light .bg-card {
-      background-color: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-    }
-
-    /* Input field styling */
-    .form-input {
-      border: 1px solid transparent;
-      transition: all 0.2s ease-in-out;
-    }
-    .dark .form-input {
-        background-color: rgba(0, 0, 0, 0.25);
-        border-color: rgba(100, 100, 100, 0.4);
-    }
-    .light .form-input {
-        background-color: rgba(255, 255, 255, 0.25);
-        border-color: rgba(255, 255, 255, 0.4);
-    }
-    .form-input:focus {
-        border-color: #a78bfa;
-        box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.5);
-        background-color: rgba(0, 0, 0, 0.3);
-    }
-    .light .form-input:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
-        background-color: rgba(255, 255, 255, 0.3);
-    }
-    /* Placeholder color */
-    .dark .form-input::placeholder { color: rgba(156, 163, 175, 0.6); }
-    .light .form-input::placeholder { color: rgba(255, 255, 255, 0.7); }
   </style>
   <script>
     function setTheme(theme) {
@@ -83,56 +37,50 @@
     }
   </script>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4
-             text-gray-800 dark:text-gray-100">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-  <div id="auth-card" class="bg-card shadow-2xl rounded-3xl p-8 w-full max-w-sm relative">
-    <button onclick="toggleTheme()" class="absolute top-4 right-4 p-2 rounded-full
-                                          text-white/70 hover:text-white
-                                          hover:bg-white/20 dark:hover:bg-black/20 transition-colors duration-200">
-      <!-- SVG Icon for theme toggle -->
+  <div id="auth-card" class="card shadow-2xl rounded-3xl p-8 w-full max-w-sm relative">
+    <button onclick="toggleTheme()" class="absolute top-4 right-4 p-2 rounded-full text-muted hover:text-foreground hover:bg-secondary transition-colors duration-200">
       <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 7.625A.75.75 0 018.25 7.5h.75a.75.75 0 01.75.75v.75a.75.75 0 01-.75.75h-.75A.75.75 0 017.5 8.375v-.75zM15 7.5a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zM17.65 6.33a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0L17.65 7.39a.75.75 0 010-1.06zM6.34 17.65a.75.75 0 010-1.06l1.06-1.06a.75.75 0 011.06 0l1.06 1.06a.75.75 0 010 1.06l-1.06 1.06a.75.75 0 01-1.06 0zM12 17.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V18a.75.75 0 01.75-.75zM2.25 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3a.75.75 0 01-.75-.75zM18 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5h-2.25a.75.75 0 01-.75-.75zM12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" /></svg>
     </button>
     <div id="card-content">
         <div class="text-center mb-8">
-           <div class="w-16 h-16 mx-auto brand-circle rounded-full flex items-center justify-center text-3xl font-bold shadow-lg mb-4">
-            <span class="icon-theme">🚀</span>
+           <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-3xl font-bold shadow-lg mb-4" style="background: var(--primary); color: var(--primary-foreground);">
+            <span>🚀</span>
           </div>
-          <h1 class="text-4xl font-semibold text-theme leading-tight">Create Account</h1>
-          <p class="text-md muted-theme mt-1">Join us to get started</p>
+          <h1 class="text-4xl font-semibold leading-tight">Create Account</h1>
+          <p class="text-md text-muted mt-1">Join us to get started</p>
         </div>
 
         <form id="signup-form" class="space-y-6">
           <div>
-            <label for="username" class="block text-sm font-medium text-theme mb-2">Username</label>
+            <label for="username" class="block text-sm font-medium text-muted mb-2">Username</label>
             <input id="username" name="username" type="text" autocomplete="username" required placeholder="Username"
-                   class="form-input block w-full px-5 py-3 rounded-xl text-theme">
+                   class="form-input block w-full px-5 py-3 rounded-xl">
           </div>
           <div>
-            <label for="email" class="block text-sm font-medium text-theme mb-2">Email address</label>
+            <label for="email" class="block text-sm font-medium text-muted mb-2">Email address</label>
             <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"
-                   class="form-input block w-full px-5 py-3 rounded-xl text-theme">
+                   class="form-input block w-full px-5 py-3 rounded-xl">
           </div>
           <div>
-            <label for="password" class="block text-sm font-medium text-theme mb-2">Password</label>
+            <label for="password" class="block text-sm font-medium text-muted mb-2">Password</label>
             <input id="password" name="password" type="password" autocomplete="new-password" required placeholder="••••••••"
-                   class="form-input block w-full px-5 py-3 rounded-xl text-theme">
+                   class="form-input block w-full px-5 py-3 rounded-xl">
           </div>
 
           <div id="message-box" class="pt-2 text-center text-sm font-medium hidden"></div>
 
           <div>
             <button type="submit"
-                    class="w-full py-3 px-4 mt-2 rounded-xl font-semibold btn-theme text-lg
-                           focus:ring-4 focus:ring-cyan-300 dark:focus:ring-purple-700
-                           shadow-xl hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-0.5">
+                    class="w-full py-3 px-4 mt-2 rounded-xl font-semibold btn-primary text-lg shadow-xl">
               Sign Up
             </button>
           </div>
 
           <div class="text-center text-sm">
-            <span class="muted-theme">Already have an account?</span>
-            <a href="/auth/login" class="font-medium text-purple-300 hover:text-purple-200 light:text-cyan-200 light:hover:text-white transition-colors duration-200">
+            <span class="text-muted">Already have an account?</span>
+            <a href="/auth/login" class="font-medium">
               Sign In
             </a>
           </div>
@@ -165,13 +113,13 @@
                 if (response.status === 202) {
                     cardContent.innerHTML = `
                         <div class="text-center">
-                            <div class="w-20 h-20 mx-auto brand-circle rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 icon-theme" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl font-bold shadow-lg mb-4" style="background: var(--primary); color: var(--primary-foreground);">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                 </svg>
                             </div>
-                            <h1 class="text-4xl font-semibold text-theme leading-tight">Check Your Email</h1>
-                            <p class="text-md muted-theme mt-2 max-w-sm mx-auto">
+                            <h1 class="text-4xl font-semibold leading-tight">Check Your Email</h1>
+                            <p class="text-md text-muted mt-2 max-w-sm mx-auto">
                                 We've sent a verification link to <strong class="font-medium">${email}</strong>. Please check your inbox or spam for link to activate your account.
                             </p>
                         </div>

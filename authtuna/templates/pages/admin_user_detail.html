@@ -6,20 +6,20 @@
     <title>User Details</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {{ get_theme_css()|safe }}
     <style>
         body { font-family: 'Poppins', sans-serif; }
     </style>
-    {{ get_theme_css()|safe }}
 </head>
-<body class="bg-gray-900 text-gray-200">
+<body class="min-h-screen">
 
     <div class="container mx-auto p-8">
-        <a href="/admin/dashboard" class="text-indigo-400 hover:text-indigo-300 mb-6 inline-block">&larr; Back to Dashboard</a>
-        <h1 class="text-4xl font-bold text-white mb-8">User Details: <span id="username"></span></h1>
+        <a href="/admin/dashboard" class="text-primary hover:underline mb-6 inline-block">&larr; Back to Dashboard</a>
+        <h1 class="text-4xl font-bold mb-8">User Details: <span id="username"></span></h1>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-semibold text-white mb-4">User Information</h2>
+            <div class="card p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4">User Information</h2>
                 <div class="space-y-3">
                     <p><strong>ID:</strong> <span id="user-id" class="font-mono"></span></p>
                     <p><strong>Email:</strong> <span id="user-email"></span></p>
@@ -27,33 +27,33 @@
                     <p><strong>MFA Enabled:</strong> <span id="user-mfa"></span></p>
                 </div>
 
-                <div id="action-buttons" class="mt-6 border-t border-gray-700 pt-6"></div>
+                <div id="action-buttons" class="mt-6 border-t border-border pt-6"></div>
 
-                <h2 class="text-2xl font-semibold text-white mt-8 mb-4">Assigned Roles</h2>
+                <h2 class="text-2xl font-semibold mt-8 mb-4">Assigned Roles</h2>
                 <ul id="user-roles-list" class="space-y-2"></ul>
 
-                <div class="mt-8 border-t border-gray-700 pt-6">
-                    <h3 class="text-lg font-medium text-white mb-2">Assign Role (Admin Action)</h3>
-                    <p class="text-sm text-gray-400 mb-4">Assign a role to this user based on your (the admin's) permissions.</p>
+                <div class="mt-8 border-t border-border pt-6">
+                    <h3 class="text-lg font-medium mb-2">Assign Role (Admin Action)</h3>
+                    <p class="text-sm text-muted mb-4">Assign a role to this user based on your (the admin's) permissions.</p>
                     <div class="flex items-center space-x-2">
-                        <select id="assignable-roles-select" class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600"></select>
-                        <button onclick="handleAssignRole()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Assign</button>
+                        <select id="assignable-roles-select" class="form-input w-full p-3 rounded-lg"></select>
+                        <button onclick="handleAssignRole()" class="btn-primary font-bold py-3 px-4 rounded-lg">Assign</button>
                     </div>
                 </div>
-                <div class="mt-8 border-t border-gray-700 pt-6">
-                    <h3 class="text-lg font-medium text-white mb-2">Self-Assignable Roles</h3>
-                    <p class="text-sm text-gray-400 mb-4">This shows which roles the user can grant to themselves/others and in what scope.</p>
+                <div class="mt-8 border-t border-border pt-6">
+                    <h3 class="text-lg font-medium mb-2">Self-Assignable Roles</h3>
+                    <p class="text-sm text-muted mb-4">This shows which roles the user can grant to themselves/others and in what scope.</p>
                     <ul id="self-assignable-roles-list" class="space-y-2">
                         </ul>
                 </div>
                 </div>
 
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-semibold text-white mb-4">Recent Activity (Audit Log)</h2>
+            <div class="card p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4">Recent Activity (Audit Log)</h2>
                 <div class="overflow-y-auto h-96">
-                    <table class="min-w-full bg-gray-700 rounded-lg">
+                    <table class="min-w-full rounded-lg">
                         <thead>
-                            <tr>
+                            <tr class="border-b border-border">
                                 <th class="p-3 text-left">Event</th>
                                 <th class="p-3 text-left">Timestamp</th>
                                 <th class="p-3 text-left">IP Address</th>
@@ -122,16 +122,16 @@
                 : `<button onclick="toggleUserSuspension(false)" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Unsuspend User</button>`;
 
             userRolesList.innerHTML = userData.roles.map(role => `
-                <li class="bg-gray-700 p-2 rounded flex justify-between items-center">
-                    <span>${role.role_name} <span class="text-gray-400 text-sm">(${role.scope})</span></span>
+                <li class="bg-secondary p-2 rounded flex justify-between items-center">
+                    <span>${role.role_name} <span class="text-muted text-sm">(${role.scope})</span></span>
                     <button onclick="handleRemoveRole('${role.role_name}', '${role.scope}')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded">Remove</button>
                 </li>
             `).join('') || '<li>No roles assigned.</li>';
 
             const canAssignHtml = userData.can_assign.map(role => `
-                <li class="bg-gray-700 p-2 rounded">
+                <li class="bg-secondary p-2 rounded">
                     ${role.name}
-                    <span class="text-gray-400 text-sm">(${role.scopes.join(', ')})</span>
+                    <span class="text-muted text-sm">(${role.scopes.join(', ')})</span>
                 </li>
             `).join('');
             selfAssignableRolesList.innerHTML = canAssignHtml || '<li>This user cannot self-assign any roles.</li>';
@@ -148,7 +148,7 @@
                 renderUserDetails(userData);
 
                 auditLogBody.innerHTML = auditLog.map(event => `
-                    <tr class="border-b border-gray-600">
+                    <tr class="border-b border-border">
                         <td class="p-2">${event.event_type}</td>
                         <td class="p-2">${new Date(event.timestamp * 1000).toLocaleString()}</td>
                         <td class="p-2 font-mono">${event.ip_address || 'N/A'}</td>

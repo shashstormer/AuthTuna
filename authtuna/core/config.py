@@ -11,18 +11,77 @@ _settings_instance: Optional["Settings"] = None
 
 dont_use_env = os.getenv("AUTHTUNA_NO_ENV", "false").lower() in ("true", "1", "t")
 
+class ThemeMode(BaseModel):
+    """Defines the color properties for a single theme mode (light or dark)."""
+    background_start: str
+    background_end: str
+    foreground: str  # Primary text color
+    muted_foreground: str  # Secondary/less important text
+    card: str  # Card backgrounds
+    card_foreground: str
+    popover: str  # Popover/modal backgrounds
+    popover_foreground: str
+    primary: str  # Primary interactive element color (buttons, links)
+    primary_foreground: str  # Text on primary elements
+    secondary: str  # Secondary interactive element
+    secondary_foreground: str
+    muted: str  # Muted elements, like horizontal rules
+    accent: str
+    accent_foreground: str
+    destructive: str  # Destructive actions (e.g., delete buttons)
+    destructive_foreground: str
+    border: str
+    input: str  # Input field borders
+    ring: str  # Focus rings for accessibility
+
 class Theme(BaseModel):
-    mode: Literal["single", "multi"] = "system"
-    class Dark:
-        background_color_start: str = "#382C68"
-        background_color_end: str = "#B57CEEFF"
-        text_color: str = "#FFFFFF"
-        icon_color: str = "#FFFFFF"
-    class Light:
-        BACKGROUND_COLOR_START: str = "#145276FF"
-        BACKGROUND_COLOR_END: str = "#81CFCAFF"
-        TEXT_COLOR: str = "#000000"
-        ICON_COLOR: str = "#000000"
+    """Main container for theme settings."""
+    mode: Literal["single", "multi", "system"] = "system"
+    light: ThemeMode = ThemeMode(
+        background_start="#F8FAFC",
+        background_end="#FFFFFF",
+        foreground="#020817",
+        muted_foreground="#64748B",
+        card="#FFFFFF",
+        card_foreground="#020817",
+        popover="#FFFFFF",
+        popover_foreground="#020817",
+        primary="#6D28D9",
+        primary_foreground="#F8FAFC",
+        secondary="#F1F5F9",
+        secondary_foreground="#0F172A",
+        muted="#F1F5F9",
+        accent="#F1F5F9",
+        accent_foreground="#0F172A",
+        destructive="#EF4444",
+        destructive_foreground="#F8FAFC",
+        border="#E2E8F0",
+        input="#E2E8F0",
+        ring="#94A3B8",
+    )
+    dark: ThemeMode = ThemeMode(
+        background_start="#0B0B0F",
+        background_end="#020817",
+        foreground="#F8FAFC",
+        muted_foreground="#94A3B8",
+        card="#020817",
+        card_foreground="#F8FAFC",
+        popover="#020817",
+        popover_foreground="#F8FAFC",
+        primary="#7C3AED",
+        primary_foreground="#F8FAFC",
+        secondary="#1E293B",
+        secondary_foreground="#F8FAFC",
+        muted="#1E293B",
+        accent="#1E293B",
+        accent_foreground="#F8FAFC",
+        destructive="#7F1D1D",
+        destructive_foreground="#F8FAFC",
+        border="#1E293B",
+        input="#1E293B",
+        ring="#475569",
+    )
+
 
 class Settings(BaseSettings):
     """

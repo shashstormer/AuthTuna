@@ -2,123 +2,110 @@ from typing import Optional
 from authtuna.core.config import settings
 
 
-def _get_attr_case_insensitive(obj, name_variants):
-    """Return the first attribute value found in obj for any of name_variants."""
-    for name in name_variants:
-        if hasattr(obj, name):
-            return getattr(obj, name)
-    return None
-
-
 def get_theme_css(mode_override: Optional[str] = None) -> str:
     """
     Returns a <style>...</style> block containing CSS variables for light and dark themes
-    derived from application settings. Templates can call this helper as a Jinja global
-    (e.g. {{ get_theme_css()|safe }}) to inject consistent colors across pages.
-
-    The function reads colors from settings.THEME.Light and settings.THEME.Dark.
-    It is defensive about attribute naming (supports either lowercase or UPPERCASE names).
+    derived from the application settings. This allows for dynamic and configurable
+    theming of the UI components.
     """
-    theme = settings.THEME
+    theme_config = settings.THEME
+    light = theme_config.light
+    dark = theme_config.dark
 
-    # Light theme attribute names (variants include uppercase style and camelcase)
-    light_bg_start = _get_attr_case_insensitive(theme.Light, [
-        "background_color_start", "BACKGROUND_COLOR_START", "bg_start", "BG_START"
-    ]) or "#145276FF"
-    light_bg_end = _get_attr_case_insensitive(theme.Light, [
-        "background_color_end", "BACKGROUND_COLOR_END", "bg_end", "BG_END"
-    ]) or "#81CFCAFF"
-    light_text = _get_attr_case_insensitive(theme.Light, [
-        "text_color", "TEXT_COLOR", "text", "TEXT"
-    ]) or "#000000"
-    light_icon = _get_attr_case_insensitive(theme.Light, [
-        "icon_color", "ICON_COLOR", "icon", "ICON"
-    ]) or "#000000"
+    # Generate CSS variables for both light and dark themes from the Pydantic models
+    light_vars = "; ".join(f"--{key.replace('_', '-')}: {value}" for key, value in light.model_dump().items())
+    dark_vars = "; ".join(f"--{key.replace('_', '-')}: {value}" for key, value in dark.model_dump().items())
 
-    # Dark theme attribute names
-    dark_bg_start = _get_attr_case_insensitive(theme.Dark, [
-        "background_color_start", "BACKGROUND_COLOR_START", "bg_start", "BG_START"
-    ]) or "#382C68"
-    dark_bg_end = _get_attr_case_insensitive(theme.Dark, [
-        "background_color_end", "BACKGROUND_COLOR_END", "bg_end", "BG_END"
-    ]) or "#B57CEEFF"
-    dark_text = _get_attr_case_insensitive(theme.Dark, [
-        "text_color", "TEXT_COLOR", "text", "TEXT"
-    ]) or "#FFFFFF"
-    dark_icon = _get_attr_case_insensitive(theme.Dark, [
-        "icon_color", "ICON_COLOR", "icon", "ICON"
-    ]) or "#FFFFFF"
-
-    # Button/accessory defaults derived from the primary background colors
-    light_btn_start = light_bg_start
-    light_btn_end = light_bg_end
-    dark_btn_start = dark_bg_start
-    dark_btn_end = dark_bg_end
+    # Determine the default theme based on the configuration
+    if theme_config.mode == "system":
+        # System preference will be handled by a media query
+        default_vars = light_vars
+        dark_mode_selector = "@media (prefers-color-scheme: dark) { :root { " + dark_vars + "; } }"
+    elif theme_config.mode == "multi" or mode_override == "dark":
+        # Default to light, but allow override via a `.dark` class
+        default_vars = light_vars
+        dark_mode_selector = ".dark { " + dark_vars + "; }"
+    else:  # single mode (light)
+        default_vars = light_vars
+        dark_mode_selector = ""
 
     css = f"""
 <style>
 :root {{
-  --bg-start: {light_bg_start};
-  --bg-end: {light_bg_end};
-  --text-color: {light_text};
-  --icon-color: {light_icon};
-  --btn-bg-start: {light_btn_start};
-  --btn-bg-end: {light_btn_end};
-  --btn-text: {light_text};
-  --muted-text: rgba(0,0,0,0.6);
+  {default_vars};
+
+  --radius: 0.5rem;
 }}
 
-.dark {{
-  --bg-start: {dark_bg_start};
-  --bg-end: {dark_bg_end};
-  --text-color: {dark_text};
-  --icon-color: {dark_icon};
-  --btn-bg-start: {dark_btn_start};
-  --btn-bg-end: {dark_btn_end};
-  --btn-text: {dark_text};
-  --muted-text: rgba(255,255,255,0.7);
+{dark_mode_selector}
+
+/* Reset and base styles */
+body {{
+  background: linear-gradient(135deg, var(--background-start), var(--background-end));
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }}
 
-/* Helpful utility classes that use the theme variables */
-.bg-theme-gradient {{
-  background: linear-gradient(90deg, var(--bg-start), var(--bg-end));
+/* General purpose utility classes */
+.card {{
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
 }}
-.text-theme {{
-  color: var(--text-color);
-}}
-.icon-theme {{
-  color: var(--icon-color);
-}}
-.btn-theme {{
-  background: linear-gradient(90deg, var(--btn-bg-start), var(--btn-bg-end));
-  color: var(--btn-text);
+
+.btn-primary {{
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  text-align: center;
+  font-weight: 600;
   border: none;
+  cursor: pointer;
+  transition: filter 0.2s ease-in-out;
 }}
-.btn-theme:hover {{
-  filter: brightness(0.96);
+.btn-primary:hover {{ filter: brightness(0.9); }}
+.btn-primary:focus {{ box-shadow: 0 0 0 4px var(--ring); outline: none; }}
+
+.btn-secondary {{
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }}
-.btn-theme:focus {{
-  box-shadow: 0 0 0 4px rgba(0,0,0,0.08);
+.btn-secondary:hover {{ background-color: var(--accent); }}
+
+.form-input {{
+  background-color: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+}}
+.form-input:focus {{
   outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--ring);
 }}
-.btn-theme-outline {{
-  background: transparent;
-  color: var(--btn-text);
-  border: 1px solid rgba(255,255,255,0.12);
+
+.text-muted {{
+  color: var(--muted-foreground);
 }}
-.btn-theme-outline:hover {{
-  background: rgba(255,255,255,0.02);
+
+a {{
+  color: var(--primary);
+  text-decoration: none;
 }}
-.muted-theme {{
-  color: var(--muted-text);
-}}
-.brand-circle {{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--btn-bg-start), var(--btn-bg-end));
-  color: var(--btn-text);
-  border-radius: 9999px;
+a:hover {{
+  text-decoration: underline;
 }}
 </style>
 """

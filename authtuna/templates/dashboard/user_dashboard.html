@@ -9,10 +9,8 @@
           rel="stylesheet">
     {{ get_theme_css()|safe }}
     <style>
-        /* Use centralized theme variables */
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(90deg, var(--bg-start), var(--bg-end));
             background-size: 400% 400%;
             animation: gradientAnimation 15s ease infinite;
         }
@@ -21,22 +19,16 @@
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-        .bg-card {
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            background-color: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200">
+<body class="min-h-screen">
 
 <div class="relative min-h-screen lg:flex">
 
     <!-- Mobile menu button -->
     <div class="lg:hidden flex justify-between items-center p-4">
-        <h1 class="text-2xl font-bold text-white">AuthTuna</h1>
-        <button id="menu-toggle-button" class="text-white focus:outline-none">
+        <h1 class="text-2xl font-bold">AuthTuna</h1>
+        <button id="menu-toggle-button" class="focus:outline-none">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
             </svg>
@@ -45,23 +37,23 @@
 
     <!-- Sidebar -->
     <aside id="sidebar"
-           class="w-64 bg-card p-6 flex-col justify-between fixed inset-y-0 left-0 z-30 transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex">
+           class="w-64 card p-6 flex-col justify-between fixed inset-y-0 left-0 z-30 transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex">
         <div>
-            <h1 class="text-2xl font-bold text-white mb-8 hidden lg:block">AuthTuna</h1>
+            <h1 class="text-2xl font-bold mb-8 hidden lg:block">AuthTuna</h1>
             <nav class="space-y-4">
-                <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal text-white rounded-lg bg-white/10">
+                <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal rounded-lg bg-secondary">
                     <span class="ml-3">Dashboard</span>
                 </a>
-                <a href="{{ url_for('ui_profile') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
+                <a href="{{ url_for('ui_profile') }}" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-secondary">
                     <span class="ml-3">Profile</span>
                 </a>
-                <a href="{{ url_for('ui_settings') }}" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
+                <a href="{{ url_for('ui_settings') }}" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-secondary">
                     <span class="ml-3">Settings</span>
                 </a>
             </nav>
         </div>
         <div>
-            <a href="/auth/logout" class="flex items-center p-2 text-base font-normal text-gray-300 rounded-lg hover:bg-white/5">
+            <a href="/auth/logout" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-secondary">
                 <span class="ml-3">Logout</span>
             </a>
         </div>
@@ -69,22 +61,22 @@
 
     <!-- Main content -->
     <main class="flex-1 p-6 lg:p-10">
-        <h1 class="text-3xl font-bold text-white">Welcome, {{ user.username }}!</h1>
-        <p class="text-gray-400 mb-8">Here's a quick overview of your account.</p>
+        <h1 class="text-3xl font-bold">Welcome, {{ user.username }}!</h1>
+        <p class="text-muted mb-8">Here's a quick overview of your account.</p>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="bg-card p-6 rounded-lg shadow-lg">
-                <h3 class="font-semibold text-white">Email</h3>
-                <p class="text-gray-300">{{ user.email }}</p>
+            <div class="card p-6 rounded-lg shadow-lg">
+                <h3 class="font-semibold">Email</h3>
+                <p class="text-muted">{{ user.email }}</p>
             </div>
-            <div class="bg-card p-6 rounded-lg shadow-lg">
-                <h3 class="font-semibold text-white">Account Status</h3>
+            <div class="card p-6 rounded-lg shadow-lg">
+                <h3 class="font-semibold">Account Status</h3>
                 <p class="{{ 'text-green-400' if user.is_active else 'text-red-400' }}">
                     {{ "Active" if user.is_active else "Inactive" }}
                 </p>
             </div>
-            <div class="bg-card p-6 rounded-lg shadow-lg">
-                <h3 class="font-semibold text-white">2-Factor Authentication</h3>
+            <div class="card p-6 rounded-lg shadow-lg">
+                <h3 class="font-semibold">2-Factor Authentication</h3>
                  <p class="{{ 'text-green-400' if user.mfa_enabled else 'text-yellow-400' }}">
                     {{ "Enabled" if user.mfa_enabled else "Disabled" }}
                 </p>
@@ -104,13 +96,12 @@
 
     menuButton.addEventListener('click', toggleMenu);
 
-    // Close menu if clicking outside of it on mobile
     document.addEventListener('click', (event) => {
         const isClickInsideSidebar = sidebar.contains(event.target);
         const isClickOnMenuButton = menuButton.contains(event.target);
 
         if (!isClickInsideSidebar && !isClickOnMenuButton && !sidebar.classList.contains('-translate-x-full')) {
-             if (window.innerWidth < 1024) { // 1024px is lg breakpoint
+             if (window.innerWidth < 1024) {
                 toggleMenu();
              }
         }
