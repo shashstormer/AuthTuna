@@ -189,6 +189,7 @@ class User(Base):
         "Role", secondary=user_roles_association, back_populates="users", lazy="joined",
         primaryjoin=lambda: User.id == user_roles_association.c.user_id,
         secondaryjoin=lambda: Role.id == user_roles_association.c.role_id,
+        cascade="all, delete-orphan",
     )
 
     passkey_credentials = relationship("PasskeyCredential", back_populates="user", cascade="all, delete-orphan")
@@ -198,9 +199,9 @@ class User(Base):
     mfa_methods = relationship("MFAMethod", back_populates="user", cascade="all, delete-orphan")
     mfa_recovery_codes = relationship("MFARecoveryCode", back_populates="user", cascade="all, delete-orphan")
     audit_events = relationship("AuditEvent", back_populates="user", cascade="all, delete-orphan")
-    organizations_owned = relationship("Organization", back_populates="owner", foreign_keys="Organization.owner_id")
-    organizations = relationship("Organization", secondary=organization_members, back_populates="members")
-    teams = relationship("Team", secondary=team_members, back_populates="members")
+    organizations_owned = relationship("Organization", back_populates="owner", foreign_keys="Organization.owner_id", cascade="all, delete-orphan")
+    organizations = relationship("Organization", secondary=organization_members, back_populates="members", cascade="all, delete-orphan")
+    teams = relationship("Team", secondary=team_members, back_populates="members", cascade="all, delete-orphan")
 
     async def set_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None):
         """
