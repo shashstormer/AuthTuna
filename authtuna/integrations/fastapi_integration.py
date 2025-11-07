@@ -87,15 +87,22 @@ class PermissionChecker:
         self.scope_from_path = scope_from_path
         self.raise_error = raise_error
 
-    async def __call__(self, request: Request, user: User = Depends(get_current_user)) -> Optional[User]:
+    async def _user_helper(self, request, user):
+        if not user:
+            if self.raise_error:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Not authenticated",
+                )
+            return None
         scope = "global"
         if self.scope_from_path:
             path_param_value = request.path_params.get(self.scope_from_path)
             if not path_param_value:
                 if self.raise_error:
                     raise HTTPException(
-                    status_code=500,
-                    detail=f"Scope parameter '{self.scope_from_path}' not found in URL path."
+                        status_code=500,
+                        detail=f"Scope parameter '{self.scope_from_path}' not found in URL path."
                     )
                 return None
             prefix = self.scope_prefix or self.scope_from_path.replace('_id', '')
@@ -126,6 +133,15 @@ class PermissionChecker:
                 return None
         return user
 
+    async def __call__(self, request: Request, user: User = Depends(get_current_user_optional)) -> Optional[User]:
+        if request.state.token_method == "COOKIE":
+            return await self._user_helper(request, user)
+        elif request.state.token_method == "BEARER":
+            pass
+        return None
+
+
+
 
 class RoleChecker:
     """
@@ -147,7 +163,12 @@ class RoleChecker:
         self.scope_from_path = scope_from_path
         self.raise_error = raise_error
 
-    async def __call__(self, request: Request) -> Optional[User]:
+    async def _user_helper(self, request):
+        """
+        Moved logic for user to here
+        Will add logic for api key next.
+        :return:
+        """
         if self.raise_error:
             user = await get_current_user(request)
         else:
@@ -173,3 +194,11 @@ class RoleChecker:
             return None
         request.state.user_object = user
         return user
+
+    async def __call__(self, request: Request) -> Optional[User]:
+        if request.state.token_method == "COOKIE":
+            return await self._user_helper(request)
+        elif request.state.token_method == "BEARER":
+            pass
+        return None
+

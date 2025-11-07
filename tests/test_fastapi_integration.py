@@ -57,7 +57,7 @@ def test_get_user_ip():
 async def test_permission_checker_and_mode():
     user = MagicMock(id='u1')
     request = MagicMock()
-    request.state = types.SimpleNamespace(user_id='u1')
+    request.state = types.SimpleNamespace(user_id='u1', token_method="COOKIE")
     # AND mode, missing permission
     checker = PermissionChecker('perm1', 'perm2', mode='AND')
     with patch('authtuna.integrations.fastapi_integration.auth_service.roles.has_permission', new=AsyncMock(return_value=False)):
