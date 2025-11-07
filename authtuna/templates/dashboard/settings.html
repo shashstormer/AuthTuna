@@ -268,7 +268,7 @@
             if (!response.ok) throw new Error('Failed to load passkeys.');
             const passkeys = await response.json();
             passkeyList.innerHTML = passkeys.map(key => `
-                <div class="bg-secondary p-3 rounded-lg flex items-center justify-between form-input">
+                <div class="bg-secondary p-3 rounded-lg flex items-center justify-between card">
                     <p class="font-semibold truncate pr-2">${key.name}</p>
                     <button onclick="removePasskey('${key.id}')" class="text-red-400 hover:text-red-300 text-sm font-semibold flex-shrink-0">Remove</button>
                 </div>
@@ -331,7 +331,7 @@
             const sessions = await response.json();
             document.getElementById('terminate-all-button').style.display = sessions.length > 1 ? 'inline-block' : 'none';
             sessionsList.innerHTML = sessions.map(session => `
-                <div class="bg-secondary p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0 form-input">
+                <div class="bg-secondary p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0 card">
                     <div>
                         <p class="font-semibold">${session.device}</p>
                         <p class="text-sm text-muted">${session.region} &bull; IP: ${session.last_ip}
