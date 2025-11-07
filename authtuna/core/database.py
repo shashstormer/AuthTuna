@@ -10,7 +10,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 import asyncio
-from sqlalchemy import Column, event, Table, ForeignKey, text, AsyncAdaptedQueuePool, VARCHAR, LargeBinary
+from sqlalchemy import Column, event, Table, ForeignKey, text, AsyncAdaptedQueuePool, VARCHAR, LargeBinary, ForeignKeyConstraint
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -118,7 +118,6 @@ user_roles_association = Table(
     Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True),
     Column('scope', String(255), primary_key=True, default='none', nullable=False),
     Column('given_by_id', VARCHAR(64),
-           # ForeignKey('users.id'),
            nullable=False),
     Column('given_at', Float, nullable=False, default=time.time),
 )
@@ -160,6 +159,29 @@ team_members = Table(
     Column('team_id', String(64), ForeignKey('team.id'), primary_key=True),
     Column('joined_at', Float, default=time.time, nullable=False)
 )
+
+class ApiKeyScope(Base):
+    """
+    Normalized mapping between an ApiKey and a specific entry in user_roles.
+    This enforces that any scope granted to an ApiKey must already exist in the
+    user's assigned roles (prevents creating arbitrary roles/scopes via JSON).
+    The composite ForeignKeyConstraint references the user_roles table's
+    composite primary key (user_id, role_id, scope).
+    """
+    __tablename__ = 'api_key_scopes'
+
+    api_key_id = Column(String(64), ForeignKey('api_keys.id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(String(64), nullable=False, primary_key=True)
+    role_id = Column(Integer, nullable=False, primary_key=True)
+    scope = Column(String(255), nullable=False, primary_key=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ['user_id', 'role_id', 'scope'],
+            ['user_roles.user_id', 'user_roles.role_id', 'user_roles.scope'],
+            ondelete='CASCADE'
+        ),
+    )
 
 # --- ORM Models ---
 
@@ -634,7 +656,7 @@ class ApiKey(Base):
     created_at = Column(Float, nullable=False, default=time.time)
     last_used_at = Column(Float, nullable=True)
     expires_at = Column(Float, nullable=True)
-    scopes = Column(JsonType, nullable=False, default=list) # Stores [{"role_name": "Admin", "scope": "global"}]
+    api_key_scopes = relationship('ApiKeyScope', backref='api_key', cascade='all, delete-orphan')
     user = relationship('User', back_populates='api_keys')
 
     def __repr__(self):

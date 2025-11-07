@@ -1,6 +1,6 @@
 import datetime
 import time
-from typing import Optional, Tuple, List, Dict, Any, Union, Coroutine
+from typing import Optional, Tuple, List, Dict, Any, Union, Coroutine, Literal
 
 import pyotp
 from sqlalchemy import or_, select, func, delete, desc
@@ -11,7 +11,7 @@ from authtuna.core.config import settings
 from authtuna.core.database import (
     DatabaseManager, User, Role, Permission, DeletedUser,
     Session as DBSession, Token, user_roles_association, role_permissions_association, Session, AuditEvent,
-    PasskeyCredential, Organization, Team, organization_members, team_members
+    PasskeyCredential, Organization, Team, organization_members, team_members, ApiKey, ApiKeyScope
 )
 from authtuna.core.exceptions import (
     UserAlreadyExistsError, InvalidCredentialsError, EmailNotVerifiedError,
@@ -1241,6 +1241,123 @@ class OrganizationManager:
                 org_teams[org] = result.all()
         return org_teams
 
+
+class APIManager:
+    def __init__(self, db_manager: DatabaseManager):
+        self._db_manager = db_manager
+
+    async def create_key(self, user_id: str, name: str, key_type: Literal["secret", "master", "public", "test"], scopes: List[str], valid_seconds: int) -> ApiKey:
+        """Creates a new API key for the specified user.
+
+        Scopes must reference existing (role, scope) tuples already granted to the user in `user_roles`.
+        Accepted scope formats in the `scopes` list:
+         - "RoleName" (interpreted as RoleName with scope 'global')
+         - "RoleName:scope_value" (explicit role + scope)
+        The returned ApiKey object will have a `plaintext` attribute attached with the full secret (public_id.secret)
+        so callers can display it once. Only the hash is persisted.
+        """
+        async with self._db_manager.get_db() as db:
+            # Verify user exists
+            user = await db.get(User, user_id)
+            if not user:
+                raise UserNotFoundError("User not found.")
+
+            # Generate public id and secret
+            public_id = f"ak_{encryption_utils.gen_random_string(28)}"
+            secret = encryption_utils.gen_random_string(64)
+            full_key = f"{public_id}.{secret}"
+            hashed = encryption_utils.hash_password(full_key)
+
+            new_api_key = ApiKey(
+                id=public_id,
+                hashed_key=hashed,
+                user_id=user_id,
+                key_type=key_type,
+                name=name,
+                created_at=time.time(),
+                expires_at=time.time()+valid_seconds
+            )
+            db.add(new_api_key)
+            await db.flush()
+            for scope_entry in scopes:
+                if isinstance(scope_entry, str) and ':' in scope_entry:
+                    role_name, scope_val = scope_entry.split(':', 1)
+                else:
+                    role_name = scope_entry
+                    scope_val = 'global'
+
+                role_obj = (await db.execute(select(Role).where(Role.name == role_name))).unique().scalar_one_or_none()
+                if not role_obj:
+                    raise RoleNotFoundError(f"Role '{role_name}' not found.")
+                check_stmt = select(user_roles_association).where(
+                    user_roles_association.c.user_id == user_id,
+                    user_roles_association.c.role_id == role_obj.id,
+                    user_roles_association.c.scope == scope_val
+                )
+                if not (await db.execute(check_stmt)).first():
+                    raise OperationForbiddenError(f"User does not have role '{role_name}' with scope '{scope_val}'.")
+
+                # Create ApiKeyScope row
+                api_scope = ApiKeyScope(api_key_id=new_api_key.id, user_id=user_id, role_id=role_obj.id, scope=scope_val)
+                db.add(api_scope)
+
+            await self._db_manager.log_audit_event(user_id, "API_KEY_CREATED", "system", {"key_id": new_api_key.id, "name": name}, db=db)
+            await db.commit()
+            await db.refresh(new_api_key)
+
+            # Attach plaintext for caller convenience (won't be persisted)
+            setattr(new_api_key, 'plaintext', full_key)
+            return new_api_key
+
+    async def validate_key(self, token: str) -> Optional[ApiKey]:
+        """Validates an API key and returns the associated information if valid."""
+        # Expect token format: <public_id>.<secret>
+        if not token or '.' not in token:
+            return None
+        public_id = token.split('.', 1)[0]
+        async with self._db_manager.get_db() as db:
+            stmt = select(ApiKey).where(ApiKey.id == public_id).options(selectinload(ApiKey.api_key_scopes))
+            api_key = (await db.execute(stmt)).unique().scalar_one_or_none()
+            if not api_key:
+                return None
+            if not encryption_utils.verify_password(token, api_key.hashed_key):
+                return None
+            if api_key.expires_at and time.time() > api_key.expires_at:
+                return None
+            api_key.last_used_at = time.time()
+            await db.commit()
+            await db.refresh(api_key)
+            return api_key
+
+    async def extend_key_expiration(self, key_id: str, expire_time: float):
+        """Extends the expiration time of a specific API key."""
+        async with self._db_manager.get_db() as db:
+            api_key = await db.get(ApiKey, key_id)
+            if not api_key:
+                raise ValueError("API key not found.")
+            api_key.expires_at = expire_time
+            await db.commit()
+            await db.refresh(api_key)
+            return api_key
+
+    async def delete_key(self, key_id: str):
+        """Deletes an API key."""
+        async with self._db_manager.get_db() as db:
+            api_key = await db.get(ApiKey, key_id)
+            if not api_key:
+                return False
+            await db.delete(api_key)
+            await self._db_manager.log_audit_event(api_key.user_id if getattr(api_key, 'user_id', None) else 'system', "API_KEY_DELETED", "system", {"key_id": key_id}, db=db)
+            await db.commit()
+            return True
+
+    async def get_all_keys_for_user(self, user_id: str) -> List[ApiKey]:
+        """Returns all keys associated with the given user ID."""
+        async with self._db_manager.get_db() as db:
+            stmt = select(ApiKey).where(ApiKey.user_id == user_id).options(selectinload(ApiKey.api_key_scopes))
+            result = await db.execute(stmt)
+            return list(result.unique().scalars().all())
+
 class AuthTunaAsync:
     """High-level facade for all authentication and authorization operations."""
 
@@ -1255,6 +1372,7 @@ class AuthTunaAsync:
         self.audit = AuditManager(db_manager)
         self.passkeys = PasskeyManager(db_manager)
         self.orgs = OrganizationManager(db_manager, self.users, self.roles, self.tokens)
+        self.api = APIManager(db_manager)
 
     async def get_dashboard_stats(self) -> Dict[str, Any]:
         """Gathers all necessary statistics for the admin dashboard."""
