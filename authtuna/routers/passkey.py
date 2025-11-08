@@ -10,7 +10,7 @@ from authtuna.core.encryption import encryption_utils
 from authtuna.core.exceptions import UserNotFoundError, InvalidTokenError, TokenExpiredError
 from authtuna.helpers import create_session_and_set_cookie, get_remote_address
 from authtuna.helpers.mail import email_manager
-from authtuna.integrations import get_current_user, auth_service
+from authtuna.integrations import auth_service, RoleChecker
 
 router = APIRouter(prefix="/passkeys", tags=["Passkeys"])
 
@@ -37,7 +37,7 @@ class PasskeyMFALoginRequest(BaseModel):
 
 
 @router.post("/register-options", summary="Generate options for passkey registration")
-async def generate_register_options(request: Request, user: User = Depends(get_current_user)):
+async def generate_register_options(request: Request, user: User = Depends(RoleChecker("User"))):
     """
     Generates the challenge and options needed to start a passkey registration ceremony.
     The challenge is stored in the user's server-side session for verification.
@@ -56,7 +56,7 @@ async def generate_register_options(request: Request, user: User = Depends(get_c
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, summary="Register a new passkey")
 async def register_passkey(payload: PasskeyRegistrationRequest, request: Request,
-                           user: User = Depends(get_current_user)):
+                           user: User = Depends(RoleChecker("User"))):
     """
     Verifies the response from the browser's registration ceremony and saves the new credential.
     """
@@ -129,7 +129,7 @@ async def login_with_passkey(payload: PasskeyAuthenticationRequest, request: Req
 
 
 @router.get("/", response_model=List[PasskeyResponse], summary="List all passkeys for the current user")
-async def list_passkeys(user: User = Depends(get_current_user)):
+async def list_passkeys(user: User = Depends(RoleChecker("User"))):
     """
     Returns a list of all passkeys registered to the current user.
     """
@@ -141,7 +141,7 @@ async def list_passkeys(user: User = Depends(get_current_user)):
 
 
 @router.delete("/{credential_id_b64}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a passkey")
-async def delete_passkey(credential_id_b64: str, user: User = Depends(get_current_user)):
+async def delete_passkey(credential_id_b64: str, user: User = Depends(RoleChecker("User"))):
     """
     Deletes a specific passkey for the currently authenticated user.
     """

@@ -16,8 +16,8 @@ from authtuna.core.exceptions import (UserAlreadyExistsError, InvalidCredentials
                                       TokenExpiredError, RateLimitError)
 from authtuna.helpers import create_session_and_set_cookie
 from authtuna.helpers.mail import email_manager
-from authtuna.integrations.fastapi_integration import auth_service, get_current_user
 from authtuna.helpers.theme import get_theme_css
+from authtuna.integrations.fastapi_integration import auth_service, RoleChecker
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +230,7 @@ async def change_password(
         password_data: PasswordChange,
         request: Request,
         background_tasks: BackgroundTasks,
-        user: User = Depends(get_current_user),
+        user: User = Depends(RoleChecker("User")),
 ):
     """
     Allows an authenticated user to change their own password.
@@ -258,7 +258,7 @@ async def change_password(
 
 @router.api_route("/user-info", methods=["GET", "POST"], response_model=UserInfoResponse)
 async def get_current_user_info(
-        user: User = Depends(get_current_user)
+        user: User = Depends(RoleChecker("User"))
 ):
     """
     Returns a comprehensive, secure overview of the currently authenticated user,

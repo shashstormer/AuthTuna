@@ -12,7 +12,7 @@ from authtuna.core.config import settings
 from authtuna.core.database import User
 from authtuna.core.exceptions import InvalidTokenError, OperationForbiddenError
 from authtuna.helpers.mail import email_manager
-from authtuna.integrations.fastapi_integration import get_current_user, auth_service
+from authtuna.integrations.fastapi_integration import get_current_user, auth_service, RoleChecker
 from authtuna.helpers.theme import get_theme_css
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class MFALoginValidate(BaseModel):
 
 @router.post("/setup")
 async def setup_mfa(
-        user: User = Depends(get_current_user),
+        user: User = Depends(RoleChecker("User")),
 ):
     """
     Initiates the TOTP setup process for the currently authenticated user.
@@ -52,7 +52,7 @@ async def setup_mfa(
 @router.post("/verify")
 async def verify_mfa_setup(
         payload: MFACodePayload,
-        user: User = Depends(get_current_user),
+        user: User = Depends(RoleChecker("User")),
         background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     """
@@ -113,7 +113,7 @@ async def validate_mfa_login(login_data: MFALoginValidate, request: Request, bac
 
 @router.post("/disable")
 async def disable_mfa(
-        user: User = Depends(get_current_user),
+        user: User = Depends(RoleChecker("User")),
         background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     """
@@ -128,7 +128,7 @@ async def disable_mfa(
 
 
 @router.get("/setup")
-async def show_mfa_setup_page(request: Request, user: User = Depends(get_current_user)):
+async def show_mfa_setup_page(request: Request, user: User = Depends(RoleChecker("User"))):
     """Serves the MFA setup page with a new QR code and setup token."""
     try:
         setup_token, qr_code_uri = await auth_service.mfa.setup_totp(user, settings.APP_NAME)

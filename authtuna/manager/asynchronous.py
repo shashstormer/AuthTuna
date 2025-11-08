@@ -1450,7 +1450,7 @@ class AuthTunaAsync:
             email=email, username=username, password=password, ip_address=ip_address,
             email_verified=not settings.EMAIL_ENABLED
         )
-        await self.roles.assign_to_user(user.id, "User", assigner_id="system")
+        await self.roles.assign_to_user(user.id, "User", assigner_id="system", scope="global")
         token = None
         if settings.EMAIL_ENABLED:
             token = await self.tokens.create(user.id, "email_verification")

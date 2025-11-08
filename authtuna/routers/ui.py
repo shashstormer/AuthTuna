@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from authtuna.core.config import settings
 from authtuna.core.database import User
-from authtuna.integrations.fastapi_integration import get_current_user, auth_service
+from authtuna.integrations.fastapi_integration import auth_service, RoleChecker
 from authtuna.helpers.theme import get_theme_css
 
 router = APIRouter(prefix="/ui", tags=["ui"])
@@ -33,7 +33,7 @@ class SessionInfo(BaseModel):
         from_attributes = True
 
 @router.get("/dashboard", name="ui_dashboard")
-async def dashboard(request: Request, user: User = Depends(get_current_user)):
+async def dashboard(request: Request, user: User = Depends(RoleChecker("User"))):
     """
     Renders the user dashboard page.
     """
@@ -41,7 +41,7 @@ async def dashboard(request: Request, user: User = Depends(get_current_user)):
 
 
 @router.get("/profile", name="ui_profile")
-async def profile(request: Request, user: User = Depends(get_current_user)):
+async def profile(request: Request, user: User = Depends(RoleChecker("User"))):
     """
     Renders the user profile page.
     """
@@ -49,7 +49,7 @@ async def profile(request: Request, user: User = Depends(get_current_user)):
 
 
 @router.get("/settings", name="ui_settings")
-async def settings_page(request: Request, user: User = Depends(get_current_user)):
+async def settings_page(request: Request, user: User = Depends(RoleChecker("User"))):
     """
     Renders the user settings page.
     """
@@ -60,7 +60,7 @@ async def settings_page(request: Request, user: User = Depends(get_current_user)
 async def update_profile(
     update_data: UserProfileUpdate,
     request: Request,
-    user: User = Depends(get_current_user)
+    user: User = Depends(RoleChecker("User"))
 ):
     """
     Update the current user's profile.
@@ -79,7 +79,7 @@ async def update_profile(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"An error occurred: {e}")
 
 @router.get("/settings/sessions", response_model=List[SessionInfo])
-async def get_user_sessions(request: Request, user: User = Depends(get_current_user)):
+async def get_user_sessions(request: Request, user: User = Depends(RoleChecker("User"))):
     """
     Fetches all active sessions for the current user.
     """
@@ -89,7 +89,7 @@ async def get_user_sessions(request: Request, user: User = Depends(get_current_u
 
 
 @router.post("/settings/sessions/{session_id}/terminate", status_code=status.HTTP_200_OK)
-async def terminate_session(session_id: str, request: Request, user: User = Depends(get_current_user)):
+async def terminate_session(session_id: str, request: Request, user: User = Depends(RoleChecker("User"))):
     """
     Terminates a specific session for the current user.
     """
@@ -105,7 +105,7 @@ async def terminate_session(session_id: str, request: Request, user: User = Depe
     return {"message": "Session terminated successfully."}
 
 @router.post("/settings/sessions/terminate-all", status_code=status.HTTP_200_OK)
-async def terminate_all_other_sessions(request: Request, user: User = Depends(get_current_user)):
+async def terminate_all_other_sessions(request: Request, user: User = Depends(RoleChecker("User"))):
     """
     Terminates all active sessions for the current user, except the current one.
     """
@@ -135,7 +135,7 @@ class ApiKeyInfo(BaseModel):
         from_attributes = True
 
 @router.get("/settings/api-keys", response_model=List[ApiKeyInfo])
-async def get_user_api_keys(request: Request, user: User = Depends(get_current_user)):
+async def get_user_api_keys(request: Request, user: User = Depends(RoleChecker("User"))):
     """
     Fetches all API keys for the current user.
     """
@@ -144,7 +144,7 @@ async def get_user_api_keys(request: Request, user: User = Depends(get_current_u
 
 
 @router.get("/settings/available-scopes")
-async def get_available_scopes(request: Request, user: User = Depends(get_current_user)):
+async def get_available_scopes(request: Request, user: User = Depends(RoleChecker("User"))):
     """
     Returns the user's available roles and scopes for creating API keys.
     """
@@ -172,7 +172,7 @@ async def get_available_scopes(request: Request, user: User = Depends(get_curren
 async def create_api_key(
     key_data: ApiKeyCreate,
     request: Request,
-    user: User = Depends(get_current_user)
+    user: User = Depends(RoleChecker("User"))
 ):
     """
     Creates a new API key for the current user.
@@ -204,7 +204,7 @@ async def create_api_key(
 async def delete_api_key(
     key_id: str,
     request: Request,
-    user: User = Depends(get_current_user)
+    user: User = Depends(RoleChecker("User"))
 ):
     """
     Deletes a specific API key for the current user.
