@@ -1,4 +1,3 @@
-import datetime
 import io
 import logging
 
@@ -7,13 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks,
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from starlette.templating import Jinja2Templates
-from authtuna.helpers import get_remote_address
+
 from authtuna.core.config import settings
 from authtuna.core.database import User
 from authtuna.core.exceptions import InvalidTokenError, OperationForbiddenError
+from authtuna.helpers import get_remote_address
 from authtuna.helpers.mail import email_manager
-from authtuna.integrations.fastapi_integration import get_current_user, auth_service, RoleChecker
 from authtuna.helpers.theme import get_theme_css
+from authtuna.integrations.fastapi_integration import auth_service, RoleChecker
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/mfa", tags=["mfa"])
