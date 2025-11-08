@@ -7,11 +7,12 @@ The security of **AuthTuna** is a top priority. Thank you for helping to keep Au
 ## 🔒 Supported Versions
 
 | Version | Supported |
-| ------- | :-------: |
-| 0.1.x   | ✅        |
+|---------|:---------:|
+| 0.1.x   |     ❌     |
+| 0.2.x   |     ✅     |
 
 Security updates are provided for the latest stable version of AuthTuna.
-
+In 0.1.14 there is a security vulnerability that has been patched in 0.2.0, which allowed an attacker with public key to access and manage whatever was available on user dashboard, it has been fixed by giving user a role called User with global scope and using role checker instead of get_current_user. 
 ---
 
 ## 🛡️ Reporting a Vulnerability
