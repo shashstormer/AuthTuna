@@ -1280,6 +1280,31 @@ class APIKEYManager:
             else:
                 raise ValueError("Invalid API Key type.")
 
+            try:
+                total_keys = await db.scalar(select(func.count()).select_from(ApiKey).where(ApiKey.user_id == user_id))
+            except Exception:
+                total_keys = 0
+            if settings.MAX_API_KEYS_PER_USER and total_keys >= settings.MAX_API_KEYS_PER_USER:
+                raise OperationForbiddenError(f"User has reached the maximum total API keys ({settings.MAX_API_KEYS_PER_USER}).")
+            try:
+                existing_master_keys = await db.scalar(
+                    select(func.count()).select_from(ApiKey).where(
+                        ApiKey.user_id == user_id,
+                        ApiKey.key_type == 'MASTER'
+                    )
+                )
+            except Exception:
+                existing_master_keys = 0
+            if key_type == 'MASTER' and settings.MAX_MASTER_KEYS_PER_USER and existing_master_keys >= settings.MAX_MASTER_KEYS_PER_USER:
+                raise OperationForbiddenError(f"User has reached the maximum master keys ({settings.MAX_MASTER_KEYS_PER_USER}).")
+            if key_type == 'SECRET' and settings.MAX_SCOPES_PER_SECRET_KEY and settings.MAX_SCOPES_PER_SECRET_KEY > 0:
+                if scopes is None:
+                    scope_count = 0
+                else:
+                    scope_count = len(scopes)
+                if scope_count > settings.MAX_SCOPES_PER_SECRET_KEY:
+                    raise OperationForbiddenError(f"A secret key cannot have more than {settings.MAX_SCOPES_PER_SECRET_KEY} scopes.")
+
             public_id = f"{key_prefix}_{encryption_utils.gen_random_string(28)}"
             secret = encryption_utils.gen_random_string(64)
             full_key = f"{public_id}.{secret}"
