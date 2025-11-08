@@ -61,6 +61,8 @@ async def get_current_user(request: Request) -> User:
         try:
             api_key = await auth_service.api.validate_key(token)
         except Exception as e:
+            print("E0001")
+            print(e)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
         if not api_key:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")

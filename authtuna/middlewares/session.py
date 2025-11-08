@@ -125,21 +125,16 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
     async def _bearer_helper(self, api_key_token: str, request: Request):
         """Validates BEARER API key tokens and sets user_id on request.state."""
         try:
-            # Import here to avoid circular dependency
             from authtuna.manager.asynchronous import AuthTunaAsync
             auth_service = AuthTunaAsync(db_manager)
-
-            # Validate the API key
             api_key = await auth_service.api.validate_key(api_key_token)
-
+            print("K0002")
+            print(api_key)
             if api_key:
-                # Set user_id from the API key
                 request.state.user_id = api_key.user_id
-                # Cache the api_key object for later use
                 request.state.api_key = api_key
                 return True
             else:
-                # Invalid API key
                 request.state.user_id = None
                 return False
         except Exception as e:

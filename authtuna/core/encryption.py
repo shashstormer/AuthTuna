@@ -67,8 +67,11 @@ class EncryptionUtils:
         """
         Verifies a plain-text key against a hashed key.
         """
-        key_digest = EncryptionUtils.hash_key(key)
-        return bcrypt.checkpw(key_digest.encode('utf-8'), hashed_key.encode('utf-8'))
+        hasher = hashlib.new(settings.KEY_HASH_ALGORITHM)
+        string_bytes = key.encode('utf-8')
+        hasher.update(string_bytes)
+        key_digest = hasher.digest()
+        return bcrypt.checkpw(key_digest, hashed_key.encode('utf-8'))
 
     def encrypt_data(self, data: bytes) -> str:
         """

@@ -1363,6 +1363,8 @@ class APIKEYManager:
         async with self._db_manager.get_db() as db:
             stmt = select(ApiKey).where(ApiKey.id == public_id).options(selectinload(ApiKey.api_key_scopes))
             api_key = (await db.execute(stmt)).unique().scalar_one_or_none()
+            print("K0001")
+            print(api_key)
             if not api_key:
                 return None
             if not encryption_utils.verify_key(token, api_key.hashed_key):
