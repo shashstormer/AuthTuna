@@ -346,11 +346,6 @@ class RoleChecker:
         return None
 
 
-def get_user_ip(request: Request) -> str:
-    """Return the resolved client IP address set by the session middleware."""
-    return getattr(request.state, 'user_ip_address', None)
-
-
 def resolve_token_method(request: Request) -> Optional[str]:
     """Infer and cache the token method (COOKIE or BEARER) on the request.state.
     Gracefully handles when middleware didn't set it (e.g., in unit tests).
