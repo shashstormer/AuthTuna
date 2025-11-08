@@ -1,7 +1,7 @@
 """
 This file gonna contain routes for ui (dashboards, user info and logins etc etc, gonna work on this soon)
 """
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.templating import Jinja2Templates
@@ -129,7 +129,7 @@ class ApiKeyInfo(BaseModel):
     key_type: str
     created_at: float
     expires_at: float
-    last_used_at: float = None
+    last_used_at: Optional[float] = None
 
     class Config:
         from_attributes = True
@@ -219,5 +219,3 @@ async def delete_api_key(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found.")
 
     return {"message": "API key deleted successfully."}
-
-
