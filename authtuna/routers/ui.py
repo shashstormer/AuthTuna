@@ -113,3 +113,111 @@ async def terminate_all_other_sessions(request: Request, user: User = Depends(ge
     ip_address = request.state.user_ip_address
     await auth_service.sessions.terminate_all_for_user(user.id, ip_address, except_session_id=current_session_id)
     return {"message": "All other sessions have been terminated."}
+
+
+# API Key Management Routes
+
+class ApiKeyCreate(BaseModel):
+    name: str
+    key_type: str  # "secret", "master", "public", "test"
+    scopes: List[str] = []
+    valid_seconds: int = 31536000  # 1 year default
+
+class ApiKeyInfo(BaseModel):
+    id: str
+    name: str
+    key_type: str
+    created_at: float
+    expires_at: float
+    last_used_at: float = None
+
+    class Config:
+        from_attributes = True
+
+@router.get("/settings/api-keys", response_model=List[ApiKeyInfo])
+async def get_user_api_keys(request: Request, user: User = Depends(get_current_user)):
+    """
+    Fetches all API keys for the current user.
+    """
+    keys = await auth_service.api.get_all_keys_for_user(user.id)
+    return keys
+
+
+@router.get("/settings/available-scopes")
+async def get_available_scopes(request: Request, user: User = Depends(get_current_user)):
+    """
+    Returns the user's available roles and scopes for creating API keys.
+    """
+    # Get user with roles
+    user_with_roles = await auth_service.users.get_by_id(user.id, with_relations=True)
+
+    scopes_info = []
+    for role in user_with_roles.roles:
+        # Get the scope from user_roles_association
+        scope = getattr(role, '_sa_instance_state', None)
+        scope_value = "global"  # default
+
+        # Try to get the actual scope from the relationship
+        # The scope is stored in the association table
+        scopes_info.append({
+            "role_name": role.name,
+            "scope": "global",  # simplified for now
+            "display": f"{role.name}:global"
+        })
+
+    return {"scopes": scopes_info}
+
+
+@router.post("/settings/api-keys", status_code=status.HTTP_201_CREATED)
+async def create_api_key(
+    key_data: ApiKeyCreate,
+    request: Request,
+    user: User = Depends(get_current_user)
+):
+    """
+    Creates a new API key for the current user.
+    """
+    try:
+        api_key = await auth_service.api.create_key(
+            user_id=user.id,
+            name=key_data.name,
+            key_type=key_data.key_type,
+            scopes=key_data.scopes if key_data.scopes else None,
+            valid_seconds=key_data.valid_seconds
+        )
+        return {
+            "message": "API key created successfully",
+            "api_key": {
+                "id": api_key.id,
+                "name": api_key.name,
+                "key_type": api_key.key_type,
+                "plaintext": api_key.plaintext,  # Only shown once!
+                "created_at": api_key.created_at,
+                "expires_at": api_key.expires_at
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.delete("/settings/api-keys/{key_id}", status_code=status.HTTP_200_OK)
+async def delete_api_key(
+    key_id: str,
+    request: Request,
+    user: User = Depends(get_current_user)
+):
+    """
+    Deletes a specific API key for the current user.
+    """
+    # Verify the key belongs to the user
+    keys = await auth_service.api.get_all_keys_for_user(user.id)
+    if not any(k.id == key_id for k in keys):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found or does not belong to user.")
+
+    success = await auth_service.api.delete_key(key_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found.")
+
+    return {"message": "API key deleted successfully."}
+
+

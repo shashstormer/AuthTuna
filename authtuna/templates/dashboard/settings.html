@@ -135,6 +135,22 @@
             <div class="card p-6 md:p-8 rounded-lg shadow-lg">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                     <div>
+                        <h2 class="text-2xl font-semibold">API Keys</h2>
+                        <p class="text-muted mt-1">Manage your API keys for programmatic access.</p>
+                    </div>
+                    <button id="create-api-key-button"
+                            class="bg-blue-600 hover:bg-blue-700 font-bold py-2 px-4 rounded-lg text-sm mt-4 sm:mt-0 w-full sm:w-auto">
+                        Create New API Key
+                    </button>
+                </div>
+                <div id="api-keys-list" class="space-y-4">
+                </div>
+                <div id="api-keys-message-box" class="mt-4 text-center text-sm font-medium"></div>
+            </div>
+
+            <div class="card p-6 md:p-8 rounded-lg shadow-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                    <div>
                         <h2 class="text-2xl font-semibold">Active Sessions</h2>
                         <p class="text-muted mt-1">This is a list of devices that have logged into your account.</p>
                     </div>
@@ -161,6 +177,94 @@
             </button>
             <button id="modal-confirm-button" class="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 font-semibold">
                 Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="api-key-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden opacity-0 z-50">
+    <div class="card rounded-lg shadow-xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <h3 class="text-2xl font-bold mb-4">Create New API Key</h3>
+        <form id="api-key-form" class="space-y-4">
+            <div>
+                <label for="api-key-name" class="block text-sm font-medium text-muted mb-2">Key Name</label>
+                <input type="text" id="api-key-name" required
+                       placeholder="e.g., Production Server"
+                       class="form-input w-full p-3 rounded-lg">
+            </div>
+
+            <div>
+                <label for="api-key-type" class="block text-sm font-medium text-muted mb-2">Key Type</label>
+                <select id="api-key-type" required class="form-input w-full p-3 rounded-lg">
+                    <option value="secret">Secret Key - Scoped access with specific roles</option>
+                    <option value="master">Master Key - Full access with all your roles</option>
+                    <option value="public">Public Key - Identity-only (no permissions)</option>
+                    <option value="test">Test Key - For testing purposes</option>
+                </select>
+                <p id="key-type-description" class="text-xs text-muted mt-2"></p>
+            </div>
+
+            <div id="scopes-container" class="hidden">
+                <label class="block text-sm font-medium text-muted mb-2">Scopes</label>
+                <textarea id="api-key-scopes"
+                          placeholder="Enter scopes (comma-separated)&#10;Example: Admin:global, User:project:123"
+                          class="form-input w-full p-3 rounded-lg h-24 resize-none"></textarea>
+                <p class="text-xs text-muted mt-1">Available roles: <span id="available-roles-list">Loading...</span></p>
+            </div>
+
+            <div>
+                <label for="api-key-expiry" class="block text-sm font-medium text-muted mb-2">Expiry Period</label>
+                <select id="api-key-expiry" class="form-input w-full p-3 rounded-lg">
+                    <option value="2592000">30 days</option>
+                    <option value="7776000">90 days</option>
+                    <option value="15552000">6 months</option>
+                    <option value="31536000" selected>1 year</option>
+                    <option value="63072000">2 years</option>
+                    <option value="94608000">3 years</option>
+                </select>
+            </div>
+
+            <div class="flex justify-end space-x-4 mt-6">
+                <button type="button" id="api-key-modal-cancel" class="px-6 py-2 rounded-lg btn-secondary font-semibold">
+                    Cancel
+                </button>
+                <button type="submit" class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 font-semibold">
+                    Create Key
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="api-key-display-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden opacity-0 z-50">
+    <div class="card rounded-lg shadow-xl p-8 max-w-2xl w-full mx-4">
+        <h3 class="text-2xl font-bold mb-4 text-green-400">✓ API Key Created Successfully!</h3>
+        <div class="bg-yellow-900 border border-yellow-600 rounded-lg p-4 mb-4">
+            <p class="text-yellow-200 text-sm font-semibold">⚠️ IMPORTANT: Copy this key now! You won't be able to see it again.</p>
+        </div>
+        <div class="space-y-3 mb-6">
+            <div>
+                <label class="block text-sm font-medium text-muted mb-1">Name</label>
+                <p id="created-key-name" class="font-mono bg-secondary p-2 rounded"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-muted mb-1">Type</label>
+                <p id="created-key-type" class="font-mono bg-secondary p-2 rounded"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-muted mb-1">API Key</label>
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="created-key-value" readonly
+                           class="font-mono bg-secondary p-2 rounded flex-1 text-sm select-all">
+                    <button id="copy-key-button" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-semibold text-sm">
+                        Copy
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button id="api-key-display-close" class="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 font-semibold">
+                Done
             </button>
         </div>
     </div>
@@ -373,10 +477,201 @@
         });
     });
 
+    // --- API Keys Logic ---
+    const apiKeysMessageBox = document.getElementById('api-keys-message-box');
+    const apiKeysList = document.getElementById('api-keys-list');
+    const apiKeyModal = document.getElementById('api-key-modal');
+    const apiKeyDisplayModal = document.getElementById('api-key-display-modal');
+    let availableRoles = [];
+
+    // Load available scopes/roles
+    async function loadAvailableScopes() {
+        try {
+            const response = await fetch('/ui/settings/available-scopes');
+            if (response.ok) {
+                const data = await response.json();
+                availableRoles = data.scopes.map(s => s.display);
+                document.getElementById('available-roles-list').textContent =
+                    availableRoles.join(', ') || 'None';
+            }
+        } catch (error) {
+            console.error('Failed to load available scopes:', error);
+        }
+    }
+
+    async function loadApiKeys() {
+        try {
+            const response = await fetch('/ui/settings/api-keys');
+            if (!response.ok) throw new Error('Failed to load API keys.');
+            const keys = await response.json();
+            apiKeysList.innerHTML = keys.map(key => {
+                const expiresDate = new Date(key.expires_at * 1000);
+                const isExpired = expiresDate < new Date();
+                const keyTypeColors = {
+                    'SECRET': 'bg-blue-600',
+                    'MASTER': 'bg-purple-600',
+                    'PUBLIC': 'bg-green-600',
+                    'TEST': 'bg-yellow-600'
+                };
+                const keyTypeColor = keyTypeColors[key.key_type] || 'bg-gray-600';
+                return `
+                <div class="bg-secondary p-4 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0 card">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2">
+                            <p class="font-semibold">${key.name}</p>
+                            <span class="${keyTypeColor} text-xs px-2 py-1 rounded">${key.key_type}</span>
+                            ${isExpired ? '<span class="bg-red-600 text-xs px-2 py-1 rounded">EXPIRED</span>' : ''}
+                        </div>
+                        <p class="text-sm text-muted mt-1">ID: ${key.id}</p>
+                        <p class="text-xs text-muted mt-1">
+                            Created: ${new Date(key.created_at * 1000).toLocaleDateString()}
+                            &bull; Expires: ${expiresDate.toLocaleDateString()}
+                        </p>
+                        ${key.last_used_at ? `<p class="text-xs text-muted">Last used: ${new Date(key.last_used_at * 1000).toLocaleString()}</p>` : '<p class="text-xs text-muted">Never used</p>'}
+                    </div>
+                    <button onclick="deleteApiKey('${key.id}')" class="bg-red-600 hover:bg-red-700 font-bold py-2 px-4 rounded-lg text-sm w-full sm:w-auto">Delete</button>
+                </div>
+            `}).join('') || '<p class="text-sm text-muted">No API keys created yet.</p>';
+        } catch (error) {
+            showMessage(apiKeysMessageBox, error.message, 'error');
+        }
+    }
+
+    function deleteApiKey(keyId) {
+        showModal('Delete API Key?', 'This will permanently delete the API key and any applications using it will lose access.', async () => {
+            try {
+                const response = await fetch(`/ui/settings/api-keys/${keyId}`, {method: 'DELETE'});
+                if (!response.ok) throw new Error('Failed to delete API key.');
+                showMessage(apiKeysMessageBox, 'API key deleted successfully.', 'success');
+                loadApiKeys();
+            } catch (error) {
+                showMessage(apiKeysMessageBox, error.message, 'error');
+            }
+        });
+    }
+
+    // Show/hide scopes based on key type
+    document.getElementById('api-key-type').addEventListener('change', (e) => {
+        const scopesContainer = document.getElementById('scopes-container');
+        const keyType = e.target.value;
+
+        const descriptions = {
+            'secret': 'This key will only have access to the specific roles/scopes you specify.',
+            'master': 'This key will have full access with all your current roles and permissions.',
+            'public': 'This key can only be used for identity verification. It has no permissions and is safe to use in client-side code.',
+            'test': 'This key is for testing purposes and follows the same scoping rules as secret keys.'
+        };
+
+        document.getElementById('key-type-description').textContent = descriptions[keyType] || '';
+
+        if (keyType === 'secret' || keyType === 'test') {
+            scopesContainer.classList.remove('hidden');
+        } else {
+            scopesContainer.classList.add('hidden');
+        }
+    });
+
+    // Open create API key modal
+    document.getElementById('create-api-key-button').addEventListener('click', () => {
+        document.getElementById('api-key-form').reset();
+        document.getElementById('scopes-container').classList.add('hidden');
+        document.getElementById('key-type-description').textContent = '';
+        apiKeyModal.classList.remove('hidden');
+        setTimeout(() => apiKeyModal.classList.remove('opacity-0'), 10);
+    });
+
+    // Close API key modal
+    document.getElementById('api-key-modal-cancel').addEventListener('click', () => {
+        apiKeyModal.classList.add('opacity-0');
+        setTimeout(() => apiKeyModal.classList.add('hidden'), 300);
+    });
+
+    // Handle API key form submission
+    document.getElementById('api-key-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('api-key-name').value;
+        const keyType = document.getElementById('api-key-type').value;
+        const scopesInput = document.getElementById('api-key-scopes').value;
+        const validSeconds = parseInt(document.getElementById('api-key-expiry').value);
+
+        const scopes = scopesInput ? scopesInput.split(',').map(s => s.trim()).filter(s => s) : [];
+
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch('/ui/settings/api-keys', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    name: name,
+                    key_type: keyType,
+                    scopes: scopes,
+                    valid_seconds: validSeconds
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to create API key.');
+            }
+
+            const data = await response.json();
+
+            // Close the create modal
+            apiKeyModal.classList.add('opacity-0');
+            setTimeout(() => apiKeyModal.classList.add('hidden'), 300);
+
+            // Show the API key display modal
+            document.getElementById('created-key-name').textContent = data.api_key.name;
+            document.getElementById('created-key-type').textContent = data.api_key.key_type;
+            document.getElementById('created-key-value').value = data.api_key.plaintext;
+
+            apiKeyDisplayModal.classList.remove('hidden');
+            setTimeout(() => apiKeyDisplayModal.classList.remove('opacity-0'), 10);
+
+            loadApiKeys();
+        } catch (error) {
+            showMessage(apiKeysMessageBox, error.message, 'error');
+            apiKeyModal.classList.add('opacity-0');
+            setTimeout(() => apiKeyModal.classList.add('hidden'), 300);
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+
+    // Copy API key to clipboard
+    document.getElementById('copy-key-button').addEventListener('click', async () => {
+        const keyValue = document.getElementById('created-key-value').value;
+        try {
+            await navigator.clipboard.writeText(keyValue);
+            const button = document.getElementById('copy-key-button');
+            button.textContent = 'Copied!';
+            button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            button.classList.add('bg-green-600');
+            setTimeout(() => {
+                button.textContent = 'Copy';
+                button.classList.remove('bg-green-600');
+                button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            }, 2000);
+        } catch (error) {
+            alert('Failed to copy to clipboard. Please copy manually.');
+        }
+    });
+
+    // Close API key display modal
+    document.getElementById('api-key-display-close').addEventListener('click', () => {
+        apiKeyDisplayModal.classList.add('opacity-0');
+        setTimeout(() => apiKeyDisplayModal.classList.add('hidden'), 300);
+    });
+
     // --- Initial Load ---
     document.addEventListener('DOMContentLoaded', () => {
         loadSessions();
         loadPasskeys();
+        loadApiKeys();
+        loadAvailableScopes();
     });
 </script>
 </body>
