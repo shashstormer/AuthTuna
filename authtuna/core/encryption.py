@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import logging
 import secrets
@@ -51,6 +52,23 @@ class EncryptionUtils:
         Verifies a plain-text password against a bcrypt hash.
         """
         return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+    @staticmethod
+    def hash_key(key: str):
+        hasher = hashlib.new(settings.KEY_HASH_ALGORITHM)
+        string_bytes = key.encode('utf-8')
+        hasher.update(string_bytes)
+        key_digest = hasher.digest()
+        hashed_key = bcrypt.hashpw(key_digest, bcrypt.gensalt(rounds=12))
+        return hashed_key.decode('utf-8')
+
+    @staticmethod
+    def verify_key(key: str, hashed_key: str) -> bool:
+        """
+        Verifies a plain-text key against a hashed key.
+        """
+        key_digest = EncryptionUtils.hash_key(key)
+        return bcrypt.checkpw(key_digest.encode('utf-8'), hashed_key.encode('utf-8'))
 
     def encrypt_data(self, data: bytes) -> str:
         """

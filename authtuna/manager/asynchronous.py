@@ -1308,7 +1308,7 @@ class APIKEYManager:
             public_id = f"{key_prefix}_{encryption_utils.gen_random_string(28)}"
             secret = encryption_utils.gen_random_string(64)
             full_key = f"{public_id}.{secret}"
-            hashed = encryption_utils.hash_password(full_key)
+            hashed = encryption_utils.hash_key(full_key)
 
             new_api_key = ApiKey(
                 id=public_id,
@@ -1365,7 +1365,7 @@ class APIKEYManager:
             api_key = (await db.execute(stmt)).unique().scalar_one_or_none()
             if not api_key:
                 return None
-            if not encryption_utils.verify_password(token, api_key.hashed_key):
+            if not encryption_utils.verify_key(token, api_key.hashed_key):
                 return None
             if api_key.expires_at and time.time() > api_key.expires_at:
                 return None
