@@ -83,6 +83,7 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
 
         return path in self.public_routes
     async def _cookie_helper(self, session_token: str, request: Request):
+        """Validates and refreshes COOKIE-based session tokens (JWT)."""
         session_data = encryption_utils.decode_jwt_token(session_token)
 
         if session_data:
@@ -121,6 +122,31 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             session_token = None
         return session_token
 
+    async def _bearer_helper(self, api_key_token: str, request: Request):
+        """Validates BEARER API key tokens and sets user_id on request.state."""
+        try:
+            # Import here to avoid circular dependency
+            from authtuna.manager.asynchronous import AuthTunaAsync
+            auth_service = AuthTunaAsync(db_manager)
+
+            # Validate the API key
+            api_key = await auth_service.api.validate_key(api_key_token)
+
+            if api_key:
+                # Set user_id from the API key
+                request.state.user_id = api_key.user_id
+                # Cache the api_key object for later use
+                request.state.api_key = api_key
+                return True
+            else:
+                # Invalid API key
+                request.state.user_id = None
+                return False
+        except Exception as e:
+            logger.error(f"Error validating API key: {e}", exc_info=True)
+            request.state.user_id = None
+            return False
+
     async def dispatch(self, request: Request, call_next):
         """
         Main middleware entrypoint. Validates session, injects user/session info, and refreshes cookies.
@@ -149,6 +175,11 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             if session_token:
                 if token_method == "COOKIE":
                     session_token = await self._cookie_helper(session_token, request)
+                elif token_method == "BEARER":
+                    # For BEARER tokens, validate the API key and set user_id
+                    # Don't need to refresh/update the token like cookies
+                    await self._bearer_helper(session_token, request)
+                    # Keep session_token for BEARER (not used for cookie setting)
             else:
                 session_token = None
 
