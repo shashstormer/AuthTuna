@@ -1247,7 +1247,7 @@ class APIKEYManager:
     def __init__(self, db_manager: DatabaseManager):
         self._db_manager = db_manager
 
-    async def create_key(self, user_id: str, name: str, key_type: Literal["secret", "master", "public", "test"], scopes: List[str], valid_seconds: int) -> ApiKey:
+    async def create_key(self, user_id: str, name: str, key_type: Literal["secret", "master", "public", "test"], scopes: List[str]=None, valid_seconds: int=31536000) -> ApiKey:
         """Creates a new API key for the specified user.
 
         Scopes must reference existing (role, scope) tuples already granted to the user in `user_roles`.
@@ -1256,15 +1256,31 @@ class APIKEYManager:
          - "RoleName:scope_value" (explicit role + scope)
         The returned ApiKey object will have a `plaintext` attribute attached with the full secret (public_id.secret)
         so callers can display it once. Only the hash is persisted.
+
+        Behavior changes:
+        - master keys: automatically inherit all roles+scopes the user already has (ignores provided `scopes`).
+        - public keys: may not have scopes; they are identity-only (no ApiKeyScope rows are created).
+        - secret/test keys: keep the current behaviour (must pass valid scopes that the user already has).
         """
         async with self._db_manager.get_db() as db:
             # Verify user exists
             user = await db.get(User, user_id)
             if not user:
                 raise UserNotFoundError("User not found.")
+            key_prefix = key_type.upper()
+            key_type = key_type.upper()
+            if key_prefix == 'TEST':
+                key_prefix = "test"
+            elif key_prefix == 'SECRET':
+                key_prefix = settings.API_KEY_PREFIX_SECRET
+            elif key_prefix == 'MASTER':
+                key_prefix = settings.API_KEY_PREFIX_MASTER
+            elif key_prefix == 'PUBLIC':
+                key_prefix = settings.API_KEY_PREFIX_PUBLISHABLE
+            else:
+                raise ValueError("Invalid API Key type.")
 
-            # Generate public id and secret
-            public_id = f"ak_{encryption_utils.gen_random_string(28)}"
+            public_id = f"{key_prefix}_{encryption_utils.gen_random_string(28)}"
             secret = encryption_utils.gen_random_string(64)
             full_key = f"{public_id}.{secret}"
             hashed = encryption_utils.hash_password(full_key)
@@ -1280,33 +1296,43 @@ class APIKEYManager:
             )
             db.add(new_api_key)
             await db.flush()
-            for scope_entry in scopes:
-                if isinstance(scope_entry, str) and ':' in scope_entry:
-                    role_name, scope_val = scope_entry.split(':', 1)
-                else:
-                    role_name = scope_entry
-                    scope_val = 'global'
 
-                role_obj = (await db.execute(select(Role).where(Role.name == role_name))).unique().scalar_one_or_none()
-                if not role_obj:
-                    raise RoleNotFoundError(f"Role '{role_name}' not found.")
-                check_stmt = select(user_roles_association).where(
-                    user_roles_association.c.user_id == user_id,
-                    user_roles_association.c.role_id == role_obj.id,
-                    user_roles_association.c.scope == scope_val
-                )
-                if not (await db.execute(check_stmt)).first():
-                    raise OperationForbiddenError(f"User does not have role '{role_name}' with scope '{scope_val}'.")
+            if key_type == 'MASTER':
+                if scopes:
+                    raise ValueError("Master keys cannot have specific scopes.")
+                stmt = select(user_roles_association).where(user_roles_association.c.user_id == user_id)
+                result = await db.execute(stmt)
+                rows = result.mappings().all()
+                for r in rows:
+                    api_scope = ApiKeyScope(api_key_id=new_api_key.id, user_id=user_id, role_id=r['role_id'], scope=r['scope'])
+                    db.add(api_scope)
+            elif key_type == 'PUBLIC':
+                if scopes:
+                    raise ValueError("Public keys cannot have scopes.")
+            else:
+                for scope_entry in scopes:
+                    if isinstance(scope_entry, str) and ':' in scope_entry:
+                        role_name, scope_val = scope_entry.split(':', 1)
+                    else:
+                        role_name = scope_entry
+                        scope_val = 'global'
 
-                # Create ApiKeyScope row
-                api_scope = ApiKeyScope(api_key_id=new_api_key.id, user_id=user_id, role_id=role_obj.id, scope=scope_val)
-                db.add(api_scope)
+                    role_obj = (await db.execute(select(Role).where(Role.name == role_name))).unique().scalar_one_or_none()
+                    if not role_obj:
+                        raise RoleNotFoundError(f"Role '{role_name}' not found.")
+                    check_stmt = select(user_roles_association).where(
+                        user_roles_association.c.user_id == user_id,
+                        user_roles_association.c.role_id == role_obj.id,
+                        user_roles_association.c.scope == scope_val
+                    )
+                    if not (await db.execute(check_stmt)).first():
+                        raise OperationForbiddenError(f"User does not have role '{role_name}' with scope '{scope_val}'.")
+                    api_scope = ApiKeyScope(api_key_id=new_api_key.id, user_id=user_id, role_id=role_obj.id, scope=scope_val)
+                    db.add(api_scope)
 
-            await self._db_manager.log_audit_event(user_id, "API_KEY_CREATED", "system", {"key_id": new_api_key.id, "name": name}, db=db)
+            await self._db_manager.log_audit_event(user_id, "API_KEY_CREATED", "system", {"key_id": new_api_key.id, "name": name, "key_type": key_type}, db=db)
             await db.commit()
             await db.refresh(new_api_key)
-
-            # Attach plaintext for caller convenience (won't be persisted)
             setattr(new_api_key, 'plaintext', full_key)
             return new_api_key
 
@@ -1553,6 +1579,3 @@ class AuthTunaAsync:
             user = await self.tokens.validate(db, token_id, "passwordless_login", ip_address)
             await db.commit()
             return user
-
-
-

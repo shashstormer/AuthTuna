@@ -191,10 +191,16 @@ class Settings(BaseSettings):
     # COOKIE = BROWSER COOKIES AUTH ONLY
     # AUTO = BROWSER COOKIES AUTH OR API KEY (higher pref to bearer token).
 
-
+    # API KEY CONFIGURATION
     API_KEY_PREFIX_SECRET: str = "sk"
     API_KEY_PREFIX_PUBLISHABLE: str = "pk"
     API_KEY_PREFIX_MASTER: str = "mk"
+    API_KEY_PREFIX_OTHER: str = "key"
+    MAX_MASTER_KEYS_PER_USER: int = 5
+    MAX_API_KEYS_PER_USER: int = 100
+    MAX_SCOPES_PER_SECRET_KEY: int = 0  # 0 = unlimited
+
+    # THEME CONFIG
     THEME: Theme = Theme()
     model_config = SettingsConfigDict(env_file=None if dont_use_env else os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
                                       extra='ignore')
