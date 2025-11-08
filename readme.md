@@ -31,6 +31,9 @@ Battle-tested, batteries-included authentication, session management, RBAC, SSO,
 
 ---
 
+## Upgrading To v0.2.0
+You may need to run [upgrade script](https://github.com/shashstormer/stormauth/blob/28c50aef8a8b80f563bbaf7e548f1deeb162b2aa/test.py) if you are not able to access the dashboard as the user dashboard now check the User role instead of get_current_user which was not present some versions ago and also set `TRY_FULL_INITIALIZE_WHEN_SYSTEM_USER_EXISTS_AGAIN=True` in .env. 
+
 ## Getting Started (Basic Auth & Login)
 
 **1. Install dependencies:**
