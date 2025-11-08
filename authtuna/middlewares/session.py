@@ -128,8 +128,6 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             from authtuna.manager.asynchronous import AuthTunaAsync
             auth_service = AuthTunaAsync(db_manager)
             api_key = await auth_service.api.validate_key(api_key_token)
-            print("K0002")
-            print(api_key)
             if api_key:
                 request.state.user_id = api_key.user_id
                 request.state.api_key = api_key
