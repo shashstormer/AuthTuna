@@ -163,10 +163,11 @@ class DatabaseSessionMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
 
         if response:
-            if session_token is None:
-                response.delete_cookie(settings.SESSION_TOKEN_NAME)
-            else:
-                response.set_cookie(
+            if token_method == "COOKIE":
+                if session_token is None:
+                    response.delete_cookie(settings.SESSION_TOKEN_NAME)
+                else:
+                    response.set_cookie(
                     key=settings.SESSION_TOKEN_NAME,
                     value=session_token,
                     samesite=settings.SESSION_SAME_SITE,
