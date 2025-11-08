@@ -5,6 +5,9 @@ include CONTRIBUTING.md
 include pytest.ini
 include LICENSE.txt
 include coverage.xml
+include authtuna/templates/dashboard/settings.html
+include authtuna/templates/dashboard/user_dashboard.html
+include authtuna/templates/dashboard/user_profile.html
 include authtuna/templates/email/authorize_confirm.html
 include authtuna/templates/email/mfa_added.html
 include authtuna/templates/email/mfa_failed.html
@@ -12,10 +15,15 @@ include authtuna/templates/email/mfa_removed.html
 include authtuna/templates/email/new_login.html
 include authtuna/templates/email/new_social_account_connected.html
 include authtuna/templates/email/org_invite.html
+include authtuna/templates/email/passwordless_login.html
 include authtuna/templates/email/password_change.html
 include authtuna/templates/email/password_reset.html
+include authtuna/templates/email/team_invite.html
 include authtuna/templates/email/verification.html
 include authtuna/templates/email/welcome.html
+include authtuna/templates/pages/admin_dashboard.html
+include authtuna/templates/pages/admin_role_detail.html
+include authtuna/templates/pages/admin_user_detail.html
 include authtuna/templates/pages/authorize_action.html
 include authtuna/templates/pages/error.html
 include authtuna/templates/pages/forgot_password.html
