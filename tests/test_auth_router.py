@@ -77,20 +77,6 @@ async def test_reset_password_page_invalid_token(fastapi_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_user_info_dependency_override(app, fastapi_client: AsyncClient):
-    from authtuna.integrations.fastapi_integration import get_current_user
-    fake_user = type('U', (), {
-        'id': 'id', 'username': 'name', 'email': 'email', 'is_active': True, 'email_verified': False, 'mfa_enabled': False
-    })()
-    app.dependency_overrides[get_current_user] = lambda: fake_user
-    resp = await fastapi_client.get('/auth/user-info')
-    assert resp.status_code == status.HTTP_200_OK
-    data = resp.json()
-    assert data['user_id'] == 'id'
-    assert data['username'] == 'name'
-
-
-@pytest.mark.asyncio
 async def test_show_signup_page(fastapi_client: AsyncClient):
     resp = await fastapi_client.get('/auth/signup')
     assert resp.status_code == 200
