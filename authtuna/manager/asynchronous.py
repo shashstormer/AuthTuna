@@ -1322,16 +1322,9 @@ class APIKEYManager:
             db.add(new_api_key)
             await db.flush()
 
-            if key_type == 'MASTER':
-                if scopes:
-                    raise ValueError("Master keys cannot have specific scopes.")
-                stmt = select(user_roles_association).where(user_roles_association.c.user_id == user_id)
-                result = await db.execute(stmt)
-                rows = result.mappings().all()
-                for r in rows:
-                    api_scope = ApiKeyScope(api_key_id=new_api_key.id, user_id=user_id, role_id=r['role_id'], scope=r['scope'])
-                    db.add(api_scope)
-            elif key_type == 'PUBLIC':
+            if key_type == 'PUBLIC' or key_type == 'MASTER':
+                # Made Master key roles resolve in integration from user roles at that time
+                # Public keys have no roles/scopes and are identity only.
                 if scopes:
                     raise ValueError("Public keys cannot have scopes.")
             else:

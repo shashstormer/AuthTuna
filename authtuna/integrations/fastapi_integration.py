@@ -180,6 +180,28 @@ class PermissionChecker:
                     return None
                 request.state.api_key = api_key
 
+            # Dynamic master key handling: treat MASTER keys like COOKIE sessions (evaluate user's current roles/permissions)
+            if getattr(api_key, 'key_type', '').upper() == 'MASTER':
+                # Use the same permission resolution as COOKIE users (dynamic based on user's current roles)
+                if self.mode == 'AND':
+                    for perm in self.permissions:
+                        has_perm = await auth_service.roles.has_permission(user.id, perm, scope)
+                        if not has_perm:
+                            if self.raise_error:
+                                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Missing required permission: '{perm}'")
+                            return None
+                else:  # OR
+                    has_at_least_one_perm = False
+                    for perm in self.permissions:
+                        if await auth_service.roles.has_permission(user.id, perm, scope):
+                            has_at_least_one_perm = True
+                            break
+                    if not has_at_least_one_perm:
+                        if self.raise_error:
+                            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User must have at least one of: {', '.join(self.permissions)}")
+                        return None
+                return user
+
             # Build a set of scopes granted to the key
             key_scopes = {s.scope for s in api_key.api_key_scopes}
 
@@ -364,4 +386,3 @@ def resolve_token_method(request: Request) -> Optional[str]:
         tm = None
     request.state.token_method = tm
     return tm
-
