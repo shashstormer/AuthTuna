@@ -14,34 +14,66 @@ async def get_current_user(request: Request) -> User:
     FastAPI dependency that retrieves the current user based on the user_id
     populated by the session middleware.
 
-    OPTIMIZATION: This function now caches the full user object with roles pre-loaded
-    onto the request state. This ensures the database is hit only once per request
-    for user data, even if multiple dependencies need the user object.
+    Supports both COOKIE sessions (middleware-populated request.state.user_id)
+    and BEARER API keys. For BEARER, validates the API key and caches the
+    ApiKey object at request.state.api_key and the user object at
+    request.state.user_object.
     """
-    if hasattr(request.state, "user_object"):
+    if hasattr(request.state, "user_object") and request.state.user_object is not None:
         return request.state.user_object
+
+    # Determine token method: prefer explicit state but infer when missing for backwards compatibility
+    token_method = getattr(request.state, 'token_method', None)
     user_id = getattr(request.state, "user_id", None)
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
-    try:
-        user = await auth_service.users.get_by_id(user_id, with_relations=True)
+    if token_method is None:
+        # infer from available data
+        auth_header = request.headers.get("Authorization")
+        if user_id:
+            token_method = "COOKIE"
+        elif auth_header and auth_header.startswith("Bearer "):
+            token_method = "BEARER"
+        else:
+            token_method = None
+        # cache inference for subsequent calls
+        request.state.token_method = token_method
+
+    # COOKIE-backed session path
+    if token_method == "COOKIE":
+        if not user_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        try:
+            user = await auth_service.users.get_by_id(user_id, with_relations=True)
+            if not user:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found for this session")
+            request.state.user_object = user
+            return user
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Could not retrieve user: {e}")
+
+    # BEARER token path
+    if token_method == "BEARER":
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        token = auth_header.split(" ", 1)[1]
+        try:
+            api_key = await auth_service.api.validate_key(token)
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+        if not api_key:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+        # Cache api_key and load user
+        request.state.api_key = api_key
+        user = await auth_service.users.get_by_id(api_key.user_id, with_relations=True)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found for this session",
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found for this API key")
         request.state.user_object = user
         return user
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Could not retrieve user: {e}",
-        )
+
+    # If token_method is None or unrecognized
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
 
 async def get_current_user_optional(request: Request) -> Optional[User]:
@@ -53,11 +85,10 @@ async def get_current_user_optional(request: Request) -> Optional[User]:
     try:
         return await get_current_user(request)
     except HTTPException as e:
-        if e.detail == "Not authenticated":
-            pass
-        else:
-            raise e
-    return None
+        # Treat both explicit 'Not authenticated' and invalid api key as unauthenticated
+        if e.detail in ("Not authenticated", "Invalid API key"):
+            return None
+        raise
 
 
 
@@ -108,38 +139,101 @@ class PermissionChecker:
             prefix = self.scope_prefix or self.scope_from_path.replace('_id', '')
             scope = f"{prefix}:{path_param_value}"
 
-        if self.mode == 'AND':
-            for perm in self.permissions:
-                has_perm = await auth_service.roles.has_permission(user.id, perm, scope)
-                if not has_perm:
-                    if self.raise_error:
-                        raise HTTPException(
-                            status_code=status.HTTP_403_FORBIDDEN,
-                            detail=f"Missing required permission: '{perm}'"
-                        )
-                    return None
-        elif self.mode == 'OR':
-            has_at_least_one_perm = False
-            for perm in self.permissions:
-                if await auth_service.roles.has_permission(user.id, perm, scope):
-                    has_at_least_one_perm = True
-                    break
-            if not has_at_least_one_perm:
-                if self.raise_error:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=f"User must have at least one of: {', '.join(self.permissions)}"
-                    )
-                return None
-        return user
+        token_method = resolve_token_method(request)
 
-    async def __call__(self, request: Request, user: User = Depends(get_current_user_optional)) -> Optional[User]:
-        if request.state.token_method == "COOKIE":
-            return await self._user_helper(request, user)
-        elif request.state.token_method == "BEARER":
-            pass
+        # COOKIE-backed users: use the normal has_permission which checks the user's roles
+        if token_method == "COOKIE":
+            if self.mode == 'AND':
+                for perm in self.permissions:
+                    has_perm = await auth_service.roles.has_permission(user.id, perm, scope)
+                    if not has_perm:
+                        if self.raise_error:
+                            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Missing required permission: '{perm}'")
+                        return None
+            else:  # OR
+                has_at_least_one_perm = False
+                for perm in self.permissions:
+                    if await auth_service.roles.has_permission(user.id, perm, scope):
+                        has_at_least_one_perm = True
+                        break
+                if not has_at_least_one_perm:
+                    if self.raise_error:
+                        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User must have at least one of: {', '.join(self.permissions)}")
+                    return None
+            return user
+
+        # BEARER token: restrict permission checks to the scopes granted on the API key
+        if token_method == "BEARER":
+            api_key = getattr(request.state, 'api_key', None)
+            if not api_key:
+                # Ensure api_key is loaded
+                auth_header = request.headers.get("Authorization")
+                if not auth_header or not auth_header.startswith("Bearer "):
+                    if self.raise_error:
+                        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+                    return None
+                token = auth_header.split(" ", 1)[1]
+                api_key = await auth_service.api.validate_key(token)
+                if not api_key:
+                    if self.raise_error:
+                        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+                    return None
+                request.state.api_key = api_key
+
+            # Build a set of scopes granted to the key
+            key_scopes = {s.scope for s in api_key.api_key_scopes}
+
+            async def key_has_permission(perm_name: str) -> bool:
+                # Check each candidate scope derived from requested scope (including global)
+                candidates = ['global']
+                parts = []
+                if scope and scope != 'global':
+                    parts = scope.split('/') if '/' in scope else [scope]
+                # Build paths similar to has_permission
+                if parts:
+                    current = ''
+                    for p in parts:
+                        current = f"{current}/{p}" if current else p
+                        candidates.append(current)
+                # For each candidate scope, ensure the key grants it and the user actually has the permission in that scope
+                for cand in candidates:
+                    if cand in key_scopes:
+                        # user has role with perm in that scope? re-use existing has_permission check restricted to exact scope
+                        if await auth_service.roles.has_permission(user.id, perm_name, cand):
+                            return True
+                return False
+
+            if self.mode == 'AND':
+                for perm in self.permissions:
+                    if not await key_has_permission(perm):
+                        if self.raise_error:
+                            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Missing required permission: '{perm}'")
+                        return None
+            else:  # OR
+                ok = False
+                for perm in self.permissions:
+                    if await key_has_permission(perm):
+                        ok = True
+                        break
+                if not ok:
+                    if self.raise_error:
+                        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User must have at least one of: {', '.join(self.permissions)}")
+                    return None
+            return user
+
+        # Default deny
+        if self.raise_error:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
         return None
 
+
+    async def __call__(self, request: Request, user: User = Depends(get_current_user_optional)) -> Optional[User]:
+        token_method = resolve_token_method(request)
+        if token_method == "COOKIE":
+            return await self._user_helper(request, user)
+        elif token_method == "BEARER":
+            return await self._user_helper(request, user)
+        return None
 
 
 
@@ -175,30 +269,104 @@ class RoleChecker:
             user = await get_current_user_optional(request)
             if user is None:
                 return None
-        user_role_names = {role.name for role in user.roles}
-        if self.mode == 'OR':
-            if not self.roles.intersection(user_role_names):
+
+        token_method = resolve_token_method(request)
+
+        # COOKIE-backed users: standard role checks
+        if token_method == "COOKIE":
+            user_role_names = {role.name for role in user.roles}
+            if self.mode == 'OR':
+                if not self.roles.intersection(user_role_names):
+                    if self.raise_error:
+                        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User lacks required role(s). Requires at least one of: {', '.join(self.roles)}")
+                    return None
+                return user
+            if not self.roles.issubset(user_role_names):
                 if self.raise_error:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=f"User lacks required role(s). Requires at least one of: {', '.join(self.roles)}"
-                    )
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User lacks required role(s). Requires: {', '.join(self.roles)}")
                 return None
+            request.state.user_object = user
             return user
-        if not self.roles.issubset(user_role_names):
-            if self.raise_error:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"User lacks required role(s). Requires: {', '.join(self.roles)}"
-                )
-            return None
-        request.state.user_object = user
-        return user
+
+        # BEARER: ensure the API key grants one of the required roles (and scope) before allowing
+        if token_method == "BEARER":
+            api_key = getattr(request.state, 'api_key', None)
+            if not api_key:
+                auth_header = request.headers.get("Authorization")
+                if not auth_header or not auth_header.startswith("Bearer "):
+                    if self.raise_error:
+                        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+                    return None
+                token = auth_header.split(" ", 1)[1]
+                api_key = await auth_service.api.validate_key(token)
+                if not api_key:
+                    if self.raise_error:
+                        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+                    return None
+                request.state.api_key = api_key
+
+            # async helper to load role names from ids
+            async def api_role_has_name(role_name: str) -> bool:
+                for s in api_key.api_key_scopes:
+                    # load role object for each scope row
+                    r = (await auth_service.roles.get_by_id(s.role_id))
+                    if r and r.name == role_name:
+                        return True
+                return False
+
+            # Evaluate mode
+            if self.mode == 'OR':
+                for required in self.roles:
+                    if await api_role_has_name(required):
+                        return user
+                if self.raise_error:
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User lacks required role(s). Requires at least one of: {', '.join(self.roles)}")
+                return None
+            else:
+                # AND mode: all required roles must be present on the API key
+                for required in self.roles:
+                    if not await api_role_has_name(required):
+                        if self.raise_error:
+                            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User lacks required role(s). Requires: {', '.join(self.roles)}")
+                        return None
+                request.state.user_object = user
+                return user
+
+        # default deny
+        if self.raise_error:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        return None
 
     async def __call__(self, request: Request) -> Optional[User]:
-        if request.state.token_method == "COOKIE":
+        token_method = resolve_token_method(request)
+        if token_method == "COOKIE":
             return await self._user_helper(request)
-        elif request.state.token_method == "BEARER":
-            pass
+        elif token_method == "BEARER":
+            return await self._user_helper(request)
         return None
+
+
+def get_user_ip(request: Request) -> str:
+    """Return the resolved client IP address set by the session middleware."""
+    return getattr(request.state, 'user_ip_address', None)
+
+
+def resolve_token_method(request: Request) -> Optional[str]:
+    """Infer and cache the token method (COOKIE or BEARER) on the request.state.
+    Gracefully handles when middleware didn't set it (e.g., in unit tests).
+    """
+    tm = getattr(request.state, 'token_method', None)
+    if tm:
+        return tm
+    # infer
+    auth_header = request.headers.get('Authorization')
+    user_id = getattr(request.state, 'user_id', None)
+    if user_id:
+        tm = 'COOKIE'
+    elif auth_header and auth_header.startswith('Bearer '):
+        tm = 'BEARER'
+    else:
+        tm = None
+    request.state.token_method = tm
+    return tm
 

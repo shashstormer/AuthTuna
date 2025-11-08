@@ -1,18 +1,19 @@
 import datetime
 import time
-from typing import Optional, Tuple, List, Dict, Any, Union, Coroutine, Literal
+from typing import Optional, Tuple, List, Dict, Any, Union, Literal
 
 import pyotp
 from sqlalchemy import or_, select, func, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
-from authtuna.core.encryption import encryption_utils
+
 from authtuna.core.config import settings
 from authtuna.core.database import (
     DatabaseManager, User, Role, Permission, DeletedUser,
     Session as DBSession, Token, user_roles_association, role_permissions_association, Session, AuditEvent,
     PasskeyCredential, Organization, Team, organization_members, team_members, ApiKey, ApiKeyScope
 )
+from authtuna.core.encryption import encryption_utils
 from authtuna.core.exceptions import (
     UserAlreadyExistsError, InvalidCredentialsError, EmailNotVerifiedError,
     InvalidTokenError, TokenExpiredError, RateLimitError, UserNotFoundError,
@@ -1242,7 +1243,7 @@ class OrganizationManager:
         return org_teams
 
 
-class APIManager:
+class APIKEYManager:
     def __init__(self, db_manager: DatabaseManager):
         self._db_manager = db_manager
 
@@ -1372,7 +1373,7 @@ class AuthTunaAsync:
         self.audit = AuditManager(db_manager)
         self.passkeys = PasskeyManager(db_manager)
         self.orgs = OrganizationManager(db_manager, self.users, self.roles, self.tokens)
-        self.api = APIManager(db_manager)
+        self.api = APIKEYManager(db_manager)
 
     async def get_dashboard_stats(self) -> Dict[str, Any]:
         """Gathers all necessary statistics for the admin dashboard."""
@@ -1552,4 +1553,6 @@ class AuthTunaAsync:
             user = await self.tokens.validate(db, token_id, "passwordless_login", ip_address)
             await db.commit()
             return user
+
+
 

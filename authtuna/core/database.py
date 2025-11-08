@@ -10,7 +10,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 import asyncio
-from sqlalchemy import Column, event, Table, ForeignKey, text, AsyncAdaptedQueuePool, VARCHAR, LargeBinary, ForeignKeyConstraint
+from sqlalchemy import Column, event, Table, ForeignKey, text, AsyncAdaptedQueuePool, VARCHAR, LargeBinary, ForeignKeyConstraint, select
 from sqlalchemy.dialects.postgresql import CITEXT, JSONB
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -662,6 +662,44 @@ class ApiKey(Base):
     def __repr__(self):
         return f"<ApiKey {self.id} (User: {self.user_id})>"
 
+    @property
+    def scopes(self):
+        """Return a lightweight list of scope entries linked to this ApiKey.
+
+        Each entry is a dict: {'role_id': <int>, 'scope': <str>}.
+        This does not perform any DB I/O and reads from the in-memory relationship
+        collection (so ensure the relationship is loaded).
+        """
+        return [{'role_id': s.role_id, 'scope': s.scope} for s in self.api_key_scopes]
+
+    def has_scope(self, scope: str) -> bool:
+        """Check whether this ApiKey includes the exact scope string (no DB access)."""
+        return any(s.scope == scope for s in self.api_key_scopes)
+
+    def granted_role_ids(self) -> set:
+        """Return set of role_id integers granted to this key (no DB access)."""
+        return {s.role_id for s in self.api_key_scopes}
+
+    async def load_scope_role_names(self, db: AsyncSession):
+        """Load the role names for the scopes on this ApiKey in a single query.
+
+        Returns a list of dicts: [{'role_name': <str>, 'scope': <str>}]. This is
+        useful for authorization checks where role names are required without
+        issuing N queries.
+        """
+        # Collect unique role_ids
+        role_ids = {s.role_id for s in self.api_key_scopes}
+        if not role_ids:
+            return []
+        stmt = select(Role).where(Role.id.in_(role_ids))
+        result = await db.execute(stmt)
+        roles = {r.id: r.name for r in result.scalars().all()}
+        return [{'role_name': roles.get(s.role_id), 'scope': s.scope} for s in self.api_key_scopes]
+
+    async def grants_role_name(self, role_name: str, db: AsyncSession) -> bool:
+        """Efficiently check if this ApiKey grants the given role name by batch-loading role names once."""
+        rows = await self.load_scope_role_names(db)
+        return any(r['role_name'] == role_name for r in rows)
 
 # class RefreshFramework(Base):
 #     """
