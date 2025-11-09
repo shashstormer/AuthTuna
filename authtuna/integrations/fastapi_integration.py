@@ -25,18 +25,6 @@ async def get_current_user(request: Request) -> User:
     # Determine token method: prefer explicit state but infer when missing for backwards compatibility
     token_method = getattr(request.state, 'token_method', None)
     user_id = getattr(request.state, "user_id", None)
-    if token_method is None:
-        # infer from available data
-        auth_header = request.headers.get("Authorization")
-        if user_id:
-            token_method = "COOKIE"
-        elif auth_header and auth_header.startswith("Bearer "):
-            token_method = "BEARER"
-        else:
-            token_method = None
-        # cache inference for subsequent calls
-        request.state.token_method = token_method
-
     # COOKIE-backed session path
     if token_method == "COOKIE":
         if not user_id:
@@ -410,17 +398,4 @@ def resolve_token_method(request: Request) -> Optional[str]:
     """Infer and cache the token method (COOKIE or BEARER) on the request.state.
     Gracefully handles when middleware didn't set it (e.g., in unit tests).
     """
-    tm = getattr(request.state, 'token_method', None)
-    if tm:
-        return tm
-    # infer
-    auth_header = request.headers.get('Authorization')
-    user_id = getattr(request.state, 'user_id', None)
-    if user_id:
-        tm = 'COOKIE'
-    elif auth_header and auth_header.startswith('Bearer '):
-        tm = 'BEARER'
-    else:
-        tm = None
-    request.state.token_method = tm
-    return tm
+    return getattr(request.state, 'token_method', None)
