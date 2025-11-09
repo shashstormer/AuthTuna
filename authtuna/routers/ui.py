@@ -152,11 +152,11 @@ async def get_available_scopes(request: Request, user: User = Depends(RoleChecke
 
     scopes_info = []
     for role in user_with_roles.roles:
-        role_scope = user_with_roles.get_role_scope(role.id)
+        role_scopes = user_with_roles.get_role_scope(role.id)
         scopes_info.append({
             "role_name": role.name,
-            "scope": role_scope,
-            "display": f"{role.name}:{role_scope}",
+            "scope": role_scopes,
+            "display": ", ".join([f"{role.name}:{role_scope}" for role_scope in role_scopes]),
         })
 
     return {"scopes": scopes_info}
