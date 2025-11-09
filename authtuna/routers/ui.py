@@ -148,15 +148,15 @@ async def get_available_scopes(request: Request, user: User = Depends(RoleChecke
     """
     Returns the user's available roles and scopes for creating API keys.
     """
-    # Get user with roles
     user_with_roles = await auth_service.users.get_by_id(user.id, with_relations=True)
 
     scopes_info = []
     for role in user_with_roles.roles:
+        role_scope = user_with_roles.get_role_scope(role.id)
         scopes_info.append({
             "role_name": role.name,
-            "scope": role.scope,
-            "display": f"{role.name}:{role.scope}",
+            "scope": role_scope,
+            "display": f"{role.name}:{role_scope}",
         })
 
     return {"scopes": scopes_info}

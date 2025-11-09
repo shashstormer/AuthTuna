@@ -271,6 +271,18 @@ class User(Base):
                 return True
         return False
 
+    def get_role_scope(self, role_id: int):
+        """
+        Returns the scope of a given role assigned to the user. If no role is found, returns None.
+        :param role_id:
+        :return:
+        """
+        scopes = []
+        for user_role in self.roles:
+            if user_role.role_id == role_id:
+                scopes.append(user_role.scope)
+        return scopes
+
     def __repr__(self):
         return f"<User {self.username}>"
 
