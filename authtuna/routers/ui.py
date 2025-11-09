@@ -153,16 +153,10 @@ async def get_available_scopes(request: Request, user: User = Depends(RoleChecke
 
     scopes_info = []
     for role in user_with_roles.roles:
-        # Get the scope from user_roles_association
-        scope = getattr(role, '_sa_instance_state', None)
-        scope_value = "global"  # default
-
-        # Try to get the actual scope from the relationship
-        # The scope is stored in the association table
         scopes_info.append({
             "role_name": role.name,
-            "scope": "global",  # simplified for now
-            "display": f"{role.name}:global"
+            "scope": role.scope,
+            "display": f"{role.name}:{role.scope}",
         })
 
     return {"scopes": scopes_info}
