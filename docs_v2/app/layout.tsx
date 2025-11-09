@@ -16,8 +16,16 @@ export const metadata: Metadata = {
 };
 
 const links: LinkItem[] = [
-    {id: "getting-started", label: "Intro", href: "/getting-started" },
+    {id: "getting-started", label: "Getting Started", href: "/getting-started" },
     {id: "simple-example", label: "Simple Example", href: "/simple-example" },
+    {id: "configuration-options", label: "Configuration Options", href: "/configuration-options" },
+    {id: "integrations", label: "Dependency Injection", href: "/integrations" },
+    {id: "defaults", label: "Default users and roles", href: "/defaults" },
+    {id: "creating-roles", label: "Creating Roles", href: "/creating-roles" },
+    {id: "managing-permissions", label: "Managing Permissions", href: "/managing-permissions" },
+    {id: "managing-user-roles", label: "Managing User Roles", href: "/managing-user-roles" },
+    {id: "role-permission-checker", label: "Role & Permission Checker", href: "/role-permission-checker" },
+    {id: "batteries-included", label: "Batteries Included", href: "/batteries-included" },
 ];
 
 export default function RootLayout({

@@ -80,8 +80,8 @@ export default function Nav({ title = "Docs", links }: NavProps) {
         </header>
 
         <div
-          className={`fixed w-full bg-white/90 dark:bg-gray-900/90 border-b border-gray-200 dark:border-gray-800 transition-all duration-800 ease-in-out ${
-            open ? "max-h-96 overflow-auto" : "max-h-0 overflow-hidden"
+          className={`fixed w-full bg-white/90 dark:bg-gray-900/90 border-b border-gray-200 dark:border-gray-800 transition-all duration-600 ease-in-out ${
+            open ? "max-h-screen overflow-auto" : "max-h-0 overflow-hidden"
           }`}
         >
           <nav className="flex flex-col p-4 space-y-2 mt-16" aria-label="Mobile documentation navigation">
