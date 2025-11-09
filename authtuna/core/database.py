@@ -227,6 +227,7 @@ class User(Base):
         back_populates="user",
         lazy="joined",
         cascade="all, delete-orphan",
+        viewonly=True
     )
 
     passkey_credentials = relationship("PasskeyCredential", back_populates="user", cascade="all, delete-orphan")
@@ -339,7 +340,8 @@ class Role(Base):
         "UserRoleAssociation",
         back_populates="role",
         lazy="selectin",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        viewonly=True,
     )
 
     def __repr__(self):
