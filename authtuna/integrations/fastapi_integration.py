@@ -98,6 +98,24 @@ def get_user_ip(request: Request) -> str:
     """
     return request.state.user_ip_address
 
+
+def get_scope_helper(request: Request, scope_from_path: Optional[str], raise_error: bool, scope_prefix: Optional[str]) -> str:
+    """Helper to extract scope from request path parameters."""
+    scope = "global"
+    if scope_from_path:
+        path_param_value = request.path_params.get(scope_from_path)
+        if not path_param_value:
+            if raise_error:
+                raise HTTPException(
+                        status_code=500,
+                        detail=f"Scope parameter '{scope_from_path}' not found in URL path."
+                    )
+            return None
+        prefix = scope_prefix or scope_from_path.replace('_id', '')
+        scope = f"{prefix}:{path_param_value}"
+    return scope
+
+
 class PermissionChecker:
     """
     A dependency factory class for checking user permissions. This class relies on the
@@ -120,19 +138,12 @@ class PermissionChecker:
 
     def _get_scope(self, request) -> Optional[str]:
         """Helper to extract scope from request path parameters."""
-        scope = "global"
-        if self.scope_from_path:
-            path_param_value = request.path_params.get(self.scope_from_path)
-            if not path_param_value:
-                if self.raise_error:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Scope parameter '{self.scope_from_path}' not found in URL path."
-                    )
-                return None
-            prefix = self.scope_prefix or self.scope_from_path.replace('_id', '')
-            scope = f"{prefix}:{path_param_value}"
-        return scope
+        return get_scope_helper(
+            request=request,
+            scope_from_path=self.scope_from_path,
+            raise_error=self.raise_error,
+            scope_prefix=self.scope_prefix
+        )
 
     async def _cookie_helper(self, request: Request, user: User) -> Optional[User]:
         """Handle permission checks for COOKIE-based authentication."""
@@ -294,6 +305,15 @@ class RoleChecker:
         self.scope_from_path = scope_from_path
         self.raise_error = raise_error
 
+    def _get_scope(self, request) -> Optional[str]:
+        """Helper to extract scope from request path parameters."""
+        return get_scope_helper(
+            request=request,
+            scope_from_path=self.scope_from_path,
+            raise_error=self.raise_error,
+            scope_prefix=self.scope_prefix
+        )
+
     async def _cookie_helper(self, request: Request) -> Optional[User]:
         """Handle role checks for COOKIE-based authentication."""
         if self.raise_error:
@@ -344,12 +364,15 @@ class RoleChecker:
                 return None
             request.state.api_key = api_key
 
-        # async helper to load role names from ids
+        async with db_manager.get_db() as db:
+            role_scope_list = await api_key.load_scope_role_names(db)
+            granted_role_names = {r['role_name'] for r in role_scope_list if r['role_name']}
+        r_scope = self._get_scope(request)
         async def api_role_has_name(role_name: str) -> bool:
-            for s in api_key.api_key_scopes:
-                # load role object for each scope row
-                r = (await auth_service.roles.get_by_id(s.role_id))
-                if r and r.name == role_name:
+            if role_name in granted_role_names:
+                if r_scope is None or r_scope == 'global':
+                    return True
+                if any(rs['scope'] == r_scope and rs['role_name'] == role_name for rs in role_scope_list):
                     return True
             return False
 
