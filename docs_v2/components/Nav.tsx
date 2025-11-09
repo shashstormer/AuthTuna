@@ -17,7 +17,7 @@ export default function Nav({ title = "Docs", links }: NavProps) {
       {/* Desktop sidebar (hidden on small screens) */}
       <aside className="hidden md:flex md:flex-col w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-6">
         <div className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">{title}</div>
-        <nav className="flex flex-col space-y-2">
+        <nav className="flex flex-col space-y-2" aria-label="Documentation navigation">
           {links.map((link) => (
             <a
               key={link.id}
@@ -31,9 +31,9 @@ export default function Nav({ title = "Docs", links }: NavProps) {
       </aside>
 
       {/* Mobile header + collapsible menu (visible on small screens) */}
-      <div className="md:hidden flex-1">
-        <header className="flex items-center justify-between p-4 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800">
-          <div className="text-lg font-semibold text-zinc-900 dark:text-white">{title} Docs</div>
+      <div className="md:hidden">
+        <header className="sticky top-0 z-40 flex items-center justify-between p-4 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800">
+          <div className="text-lg font-semibold text-zinc-900 dark:text-white">{title}</div>
           <button
             onClick={() => setOpen(!open)}
             aria-expanded={open}
@@ -53,11 +53,11 @@ export default function Nav({ title = "Docs", links }: NavProps) {
         </header>
 
         <div
-          className={`absolute left-0 right-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 transform transition-transform duration-200 ease-in-out z-30 ${
-            open ? "translate-y-0" : "-translate-y-full"
+          className={`bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 overflow-hidden transition-all duration-200 ease-in-out ${
+            open ? "max-h-96" : "max-h-0"
           }`}
         >
-          <nav className="flex flex-col p-4 space-y-2">
+          <nav className="flex flex-col p-4 space-y-2" aria-label="Mobile documentation navigation">
             {links.map((link) => (
               <a
                 key={link.id}
@@ -74,4 +74,3 @@ export default function Nav({ title = "Docs", links }: NavProps) {
     </>
   );
 }
-

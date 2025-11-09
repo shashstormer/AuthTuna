@@ -35,7 +35,7 @@ export default function RootLayout({
             className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
         <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans">
-            <div className="flex">
+            <div className="flex flex-col md:flex-row">
                 <Nav title="AuthTuna" links={links}/>
 
                 {/* Main content */}
