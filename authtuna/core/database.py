@@ -226,7 +226,9 @@ class User(Base):
         "UserRoleAssociation",
         back_populates="user",
         lazy="joined",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        primaryjoin=lambda: User.id == user_roles_association.c.user_id,
+        secondaryjoin=lambda: Role.id == user_roles_association.c.role_id,
     )
 
     passkey_credentials = relationship("PasskeyCredential", back_populates="user", cascade="all, delete-orphan")
