@@ -37,8 +37,6 @@ export default function RootLayout({
         <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans">
             <div className="flex flex-col md:flex-row">
                 <Nav title="AuthTuna" links={links}/>
-
-                {/* Main content */}
                 <main
                     className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-start py-16 px-6 sm:items-start mx-auto">
                     {children}
