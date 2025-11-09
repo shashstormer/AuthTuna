@@ -144,7 +144,7 @@ async def is_password_valid(password):
     if len(password) < 8:
         return {"error": "Password must be at least 8 characters"}
     # If any non-alphanumeric characters are present, fail on letter/number requirement
-    if any(not ch.isalnum() for ch in password):
+    if not any(ch.isalnum() for ch in password):
         return {"error": "Password must contain at least one letter and one number"}
     if not any(ch.isupper() for ch in password):
         return {"error": "Password must contain at least one uppercase letter"}
