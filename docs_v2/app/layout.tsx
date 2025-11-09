@@ -1,18 +1,14 @@
 import type {Metadata} from "next";
-import {Geist, Geist_Mono} from "next/font/google";
+import {Inter} from "next/font/google";
 import "./globals.css";
 import Nav, {LinkItem} from "@/components/Nav";
 import React from "react";
 
-const geistSans = Geist({
-    variable: "--font-geist-sans",
+const inter = Inter({
+    variable: "--font-inter",
     subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
-    subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
     title: "Create Next App",
@@ -32,13 +28,13 @@ export default function RootLayout({
     return (
         <html lang="en">
         <body
-            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+            className={`${inter.variable} antialiased`}
         >
         <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans">
             <div className="flex flex-col md:flex-row">
                 <Nav title="AuthTuna" links={links}/>
                 <main
-                    className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-start py-16 px-6 sm:items-start mx-auto">
+                    className="flex min-h-screen w-full flex-col items-center justify-start py-16 sm:items-start mx-auto">
                     {children}
                 </main>
             </div>
