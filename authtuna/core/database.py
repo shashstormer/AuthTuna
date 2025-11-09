@@ -160,6 +160,15 @@ team_members = Table(
     Column('joined_at', Float, default=time.time, nullable=False)
 )
 
+class UserRoleAssociation(Base):
+    """
+    Association object mapping Users to Roles, including the 'scope'
+    and audit data (who gave the role and when).
+    """
+    __table__ = user_roles_association
+    user = relationship("User", back_populates="role_associations")
+    role = relationship("Role", back_populates="user_associations")
+
 class ApiKeyScope(Base):
     """
     Normalized mapping between an ApiKey and a specific entry in user_roles.
@@ -212,6 +221,12 @@ class User(Base):
         primaryjoin=lambda: User.id == user_roles_association.c.user_id,
         secondaryjoin=lambda: Role.id == user_roles_association.c.role_id,
         cascade="all, delete",
+    )
+    role_associations = relationship(
+        "UserRoleAssociation",
+        back_populates="user",
+        lazy="joined",
+        cascade="all, delete-orphan"
     )
 
     passkey_credentials = relationship("PasskeyCredential", back_populates="user", cascade="all, delete-orphan")
@@ -278,9 +293,9 @@ class User(Base):
         :return:
         """
         scopes = []
-        for user_role in self.roles:
-            if user_role.role_id == role_id:
-                scopes.append(user_role.scope)
+        for assoc in self.role_associations:
+            if assoc.role_id == role_id:
+                scopes.append(assoc.scope)
         return scopes
 
     def __repr__(self):
@@ -319,6 +334,16 @@ class Role(Base):
         backref="grantable_by_roles",
         lazy="joined"
     )
+
+    user_associations = relationship(
+        "UserRoleAssociation",
+        back_populates="role",
+        lazy="selectin",
+        primaryjoin=lambda: Role.id == user_roles_association.c.role_id,
+        secondaryjoin=lambda: User.id == user_roles_association.c.user_id,
+        cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
         return f"<Role {self.name}>"
 
