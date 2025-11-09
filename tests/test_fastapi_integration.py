@@ -11,7 +11,7 @@ import asyncio
 async def test_get_current_user_authenticated():
     user_obj = MagicMock(id='u1')
     request = MagicMock()
-    request.state = types.SimpleNamespace(user_id='u1')
+    request.state = types.SimpleNamespace(user_id='u1', token_method="COOKIE")
     with patch('authtuna.integrations.fastapi_integration.auth_service.users.get_by_id', new=AsyncMock(return_value=user_obj)):
         user = await get_current_user(request)
         test_getting_cached = await get_current_user(request)
@@ -45,7 +45,7 @@ async def test_get_current_user_error():
     with patch('authtuna.integrations.fastapi_integration.auth_service.users.get_by_id', new=AsyncMock(side_effect=Exception('fail'))):
         with pytest.raises(HTTPException) as exc:
             await get_current_user(request)
-        assert exc.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert exc.value.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_get_user_ip():
