@@ -15,7 +15,7 @@ export default function Nav({ title = "Docs", links }: NavProps) {
   return (
     <>
       {/* Desktop sidebar (hidden on small screens) */}
-      <aside className="hidden md:flex md:flex-col w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-6">
+      <aside className="hidden md:flex md:flex-col w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-6 fixed">
           <div className="text-2xl font-bold text-zinc-900 dark:text-white mb-6"><a href={"/"}><span className={"text-3xl"}>🐟</span>{title}</a></div>
         <nav className="flex flex-col space-y-2" aria-label="Documentation navigation">
           {links.map((link) => (
@@ -45,8 +45,8 @@ export default function Nav({ title = "Docs", links }: NavProps) {
       </aside>
 
       {/* Mobile header + collapsible menu (visible on small screens) */}
-      <div className="md:hidden">
-        <header className="sticky top-0 z-40 flex items-center justify-between p-4 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800">
+      <div className="md:hidden w-full">
+        <header className="fixed w-full top-0 z-40 flex items-center justify-between p-4 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center space-x-2">
             <div className="text-lg font-semibold text-zinc-900 dark:text-white"><a href={"/"}><span className={"text-2xl"}>🐟</span>{title}</a></div>
             <a
@@ -81,10 +81,10 @@ export default function Nav({ title = "Docs", links }: NavProps) {
 
         <div
           className={`bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 overflow-hidden transition-all duration-200 ease-in-out ${
-            open ? "max-h-96" : "max-h-0"
+            open ? "max-h-96 overflow-auto" : "max-h-0 hidden"
           }`}
         >
-          <nav className="flex flex-col p-4 space-y-2" aria-label="Mobile documentation navigation">
+          <nav className="fixed flex flex-col p-4 space-y-2 mt-16" aria-label="Mobile documentation navigation">
             {links.map((link) => (
               <a
                 key={link.id}

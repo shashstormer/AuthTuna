@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 };
 
 const links: LinkItem[] = [
-    {id: "intro", label: "Intro"},
-    {id: "installation", label: "Installation"},
+    {id: "getting-started", label: "Intro", href: "/getting-started" },
+    {id: "simple-example", label: "Simple Example", href: "/simple-example" },
 ];
 
 export default function RootLayout({
@@ -34,7 +34,7 @@ export default function RootLayout({
             <div className="flex flex-col md:flex-row">
                 <Nav title="AuthTuna" links={links}/>
                 <main
-                    className="flex min-h-screen w-full flex-col items-center justify-start py-16 sm:items-start mx-auto">
+                    className="flex min-h-screen w-full flex-col items-center justify-start py-20 sm:items-start mx-auto md:ml-[15%]">
                     {children}
                 </main>
             </div>
