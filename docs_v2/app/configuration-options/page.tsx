@@ -856,7 +856,7 @@ custom_theme = Theme(
 )
 
 # Override settings with custom theme
-init_settings(THEME=custom_theme, dont_use_env=False))`}
+init_settings(THEME=custom_theme, dont_use_env=False)) # remember to keep THEME ALL CAPS otherwise youd be wondering why colorz not changin.`}
                     language="python"
                 />
                 <p className="text-base md:text-lg text-gray-700 dark:text-gray-300">
