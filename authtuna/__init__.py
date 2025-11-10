@@ -25,7 +25,7 @@ import threading
 
 from fastapi import FastAPI
 
-from .core.config import settings, init_settings
+from .core.config import settings, init_settings, Theme, ThemeMode
 
 
 # Was implementing RPC-based middleware so that we will not have to add database conn string on every instance but didnt work, will try again in future.
