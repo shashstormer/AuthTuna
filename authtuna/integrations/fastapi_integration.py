@@ -2,6 +2,7 @@ from typing import Optional, Literal
 
 from fastapi import Depends, HTTPException, status, Request
 
+from authtuna import settings
 from authtuna.core.database import User, db_manager
 from authtuna.manager.asynchronous import AuthTunaAsync
 
@@ -9,7 +10,7 @@ from authtuna.manager.asynchronous import AuthTunaAsync
 auth_service = AuthTunaAsync(db_manager)
 
 
-async def get_current_user(request: Request) -> User:
+async def get_current_user(request: Request, allow_public_key=False) -> User:
     """
     FastAPI dependency that retrieves the current user based on the user_id
     populated by the session middleware.
@@ -46,6 +47,9 @@ async def get_current_user(request: Request) -> User:
         if not auth_header or not auth_header.startswith("Bearer "):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
         token = auth_header.split(" ", 1)[1]
+        if not allow_public_key:
+            if token.startswith(settings.API_KEY_PREFIX_PUBLISHABLE):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Publishable API keys cannot be used for this request")
         try:
             api_key = await auth_service.api.validate_key(token)
         except Exception as e:
