@@ -166,8 +166,8 @@ class UserRoleAssociation(Base):
     and audit data (who gave the role and when).
     """
     __table__ = user_roles_association
-    user = relationship("User", back_populates="role_associations")
-    role = relationship("Role", back_populates="user_associations")
+    user = relationship("User", back_populates="role_associations", viewonly=True)
+    role = relationship("Role", back_populates="user_associations", viewonly=True)
 
 class ApiKeyScope(Base):
     """
