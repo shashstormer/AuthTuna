@@ -36,7 +36,7 @@ export default function RootLayout({
     return (
         <html lang="en">
         <body
-            className={`${inter.variable} antialiased`}
+            className={`${inter.variable} antialiased max-w-[99vw]`}
         >
         <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans">
             <div className="flex flex-col md:flex-row">
