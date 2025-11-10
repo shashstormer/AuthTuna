@@ -87,7 +87,7 @@ export default function ConfigurationOptionsPage() {
                             <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`TRY_FULL_INITIALIZE_WHEN_SYSTEM_USER_EXISTS_AGAIN`}</td>
                             <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`False`}</td>
                             <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Retry full initialization if system user exists`}</td>
-                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Advanced setting`}</td>
+                            <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Was added for regen of default roles when i added new roles (dont set to True as it just makes extra queries to db on startup, to check for every default role and user).`}</td>
                         </tr>
                         </tbody>
                     </table>
