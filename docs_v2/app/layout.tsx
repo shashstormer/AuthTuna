@@ -17,7 +17,6 @@ export const metadata: Metadata = {
 
 const links: LinkItem[] = [
     {id: "getting-started", label: "Getting Started", href: "/getting-started" },
-    {id: "simple-example", label: "Simple Example", href: "/simple-example" },
     {id: "configuration-options", label: "Configuration Options", href: "/configuration-options" },
     {id: "integrations", label: "Dependency Injection", href: "/integrations" },
     {id: "defaults", label: "Default users and roles", href: "/defaults" },
@@ -26,6 +25,7 @@ const links: LinkItem[] = [
     {id: "managing-user-roles", label: "Managing User Roles", href: "/managing-user-roles" },
     {id: "role-permission-checker", label: "Role & Permission Checker", href: "/role-permission-checker" },
     {id: "batteries-included", label: "Batteries Included", href: "/batteries-included" },
+    {id: "rbac-example", label: "Example on using RBAC", href: "/rbac-example" },
 ];
 
 export default function RootLayout({
