@@ -833,6 +833,7 @@ init_settings({
                 />
             </section>
             <section className="mb-8">
+                            <section className="mb-8">
                 <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Theme Configuration</h2>
                 <p className="text-base md:text-lg text-gray-700 dark:text-gray-300 mb-4">
                     The theme setting is a complex Pydantic model that controls the visual appearance of the AuthTuna
@@ -856,13 +857,179 @@ custom_theme = Theme(
 )
 
 # Override settings with custom theme
-init_settings(THEME=custom_theme, dont_use_env=False)) # remember to keep THEME ALL CAPS otherwise youd be wondering why colorz not changin.`}
+init_settings(THEME=custom_theme, dont_use_env=False))
+# remember to keep THEME ALL CAPS otherwise youd be wondering why colorz not changin.`}
                     language="python"
                 />
                 <p className="text-base md:text-lg text-gray-700 dark:text-gray-300">
-                    For a complete list of theme properties, refer to the Theme model in the AuthTuna source code.
+                    For a complete list of theme properties look down.
                 </p>
             </section>
+        <p className="text-base md:text-lg text-gray-700 dark:text-gray-300 mb-4">
+          The theme is a structured Pydantic model (see <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">authtuna.core.config.Theme</code>) that defines
+          the visual appearance for light and dark modes. Because it has many fields and nested values, we strongly
+          recommend overriding it programmatically to avoid mistakes.
+        </p>
+
+        <p className="text-base md:text-lg text-gray-700 dark:text-gray-300 mb-6">
+          Below is a table describing every theme property, the default value for the <strong>light</strong> and
+          <strong>dark</strong> modes, and what each property controls in the UI.
+        </p>
+
+        <div className="overflow-x-auto mb-4">
+          <table className="min-w-full table-auto border-collapse border border-gray-300 dark:border-gray-600">
+            <thead>
+              <tr className="bg-gray-100 dark:bg-gray-800">
+                <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left">Property</th>
+                <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left">Light default</th>
+                <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left">Dark default</th>
+                <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left">What it controls</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`mode`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"system"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"system"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Controls theme mode selection: "single", "multi", or "system"`}</td>
+              </tr>
+
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`background_start`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F8FAFC"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#0B0B0F"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Page background gradient start (behind content)`}</td>
+              </tr>
+
+              <tr>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`background_end`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#FFFFFF"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#020817"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Page background gradient end`}</td>
+              </tr>
+
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`foreground`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#020817"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F8FAFC"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Primary text color`}</td>
+              </tr>
+
+              <tr>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`muted_foreground`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#64748B"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#94A3B8"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Secondary / muted text color (helper text, captions)`}</td>
+              </tr>
+
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`card`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#FFFFFF"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#777e9145"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Card / panel background color`}</td>
+              </tr>
+
+              <tr>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`card_foreground`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#020817"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F8FAFC"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Text color used on cards`}</td>
+              </tr>
+
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`popover`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#FFFFFF"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#020817"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Popovers / modal backgrounds`}</td>
+              </tr>
+
+              <tr>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`popover_foreground`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#020817"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F8FAFC"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Text color inside popovers/modals`}</td>
+              </tr>
+
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`primary`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#6D28D9"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#7C3AED"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Primary interactive color (buttons, links)`}</td>
+              </tr>
+
+              <tr>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`primary_foreground`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F8FAFC"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F8FAFC"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Text color used on primary elements`}</td>
+              </tr>
+
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`secondary`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F1F5F9"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#6572887d"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Secondary interactive color / surfaces`}</td>
+              </tr>
+
+              <tr>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`secondary_foreground`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#0F172A"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F8FAFC"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Text color on secondary elements`}</td>
+              </tr>
+
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`muted`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F1F5F9"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#1E293B"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Muted surfaces / dividers`}</td>
+              </tr>
+
+              <tr>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`accent`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F1F5F9"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#93b2e6a8"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Accent overlays / highlights`}</td>
+              </tr>
+
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`destructive`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#EF4444"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#7F1D1D"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Destructive actions (e.g., delete buttons)`}</td>
+              </tr>
+
+              <tr>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`destructive_foreground`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F8FAFC"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#F8FAFC"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Text color for destructive elements`}</td>
+              </tr>
+
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`border`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"transparent"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"transparent"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Border color for elements`}</td>
+              </tr>
+
+              <tr>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`input`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#E2E8F0"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#1E293B"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Input field borders`}</td>
+              </tr>
+
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`ring`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#94A3B8"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`"#475569"`}</td>
+                <td className="border border-gray-300 dark:border-gray-600 px-4 py-2">{`Focus rings for accessibility`}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
         </div>
     );
 }
