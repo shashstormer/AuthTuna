@@ -150,10 +150,9 @@ export default function CreatingRolesPage() {
                 <h3 className="text-lg font-semibold mb-4">Creating a Role</h3>
                 <CodeBlock
                     language="python"
-                    code={`from authtuna.core.database import db_manager
-from authtuna.manager.role import RoleManager
+                    code={`from authtuna.integrations import auth_service 
 
-role_manager = RoleManager(db_manager)
+role_manager = auth_service.roles
 
 # Create a hierarchical admin role
 admin_role = await role_manager.create(

@@ -111,10 +111,9 @@ export default function ManagingPermissionsPage() {
         <h3 className="text-lg font-semibold mb-4">Creating a Permission</h3>
         <CodeBlock
           language="python"
-          code={`from authtuna.core.database import db_manager
-from authtuna.manager.permission import PermissionManager
+          code={`from authtuna.integrations import auth_service
 
-permission_manager = PermissionManager(db_manager)
+permission_manager = auth_service.permissions
 
 # Create a new permission
 new_permission = await permission_manager.create(
