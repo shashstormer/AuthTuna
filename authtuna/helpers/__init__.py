@@ -204,3 +204,17 @@ def generate_random_username(prefix: str = "user") -> str:
     """Generates a random username with an optional prefix."""
     random_string = encryption_utils.gen_random_string(12, string.digits)  # Generate a short, random string
     return f"{prefix}-{random_string}"
+
+def is_permission_name_valid(permission: str) -> bool:
+    """
+    Validates if the permission name contains only alphanumeric characters, underscores, or hyphens.
+
+    :param permission: The permission name to validate.
+    :type permission: str
+    :return: True if the permission name is valid, False otherwise.
+    :rtype: bool
+    """
+    for char in permission:
+        if not (char.isalnum() or char in ["_", "-", ":"]):
+            return False
+    return True

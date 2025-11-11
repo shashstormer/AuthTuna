@@ -21,7 +21,7 @@ from authtuna.core.exceptions import (
 )
 from authtuna.core.mfa import MFAManager
 from authtuna.core.passkeys import PasskeysCore
-from authtuna.helpers import is_email_valid
+from authtuna.helpers import is_email_valid, is_permission_name_valid
 from authtuna.helpers.mail import email_manager
 
 
@@ -651,6 +651,8 @@ class PermissionManager:
         return new_perm, True
 
     async def create(self, name: str, description: str = "") -> Permission:
+        if not is_permission_name_valid(name):
+            raise ValueError(f"Invalid permission name: {name}")
         async with self._db_manager.get_db() as db:
             if await self.get_by_name(name):
                 raise ValueError(f"Permission with name '{name}' already exists.")
