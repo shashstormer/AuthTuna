@@ -509,7 +509,7 @@ class RoleManager:
             await db.commit()
 
     async def grant_relationship(self, granter_role_name: str, grantable_name: str,
-                                 grantable_manager, relationship_attr: str, db_override: AsyncSession = None):
+                                 grantable_manager: Union["RoleManager", "Permission"], relationship_attr: Literal["can_assign_roles", "Permission"] = "can_assign_roles", db_override: AsyncSession = None):
         async def _action(db: AsyncSession):
             granter_role = await self.get_by_name(granter_role_name)
             if not granter_role:

@@ -514,7 +514,7 @@ for perm_name in analyst_permissions:
           <li><strong>Hierarchical & Flat:</strong> Combines hierarchical admin roles with flat organization-based roles</li>
           <li><strong>Secure by Default:</strong> Admin users are disabled unless explicitly configured</li>
           <li><strong>Extensible:</strong> Easy to add custom permissions and roles for your specific use cases</li>
-          <li><strong>Idempotent:</strong> Safe to run multiple times without conflicts</li>
+          <li>Safe to run multiple times without conflicts</li>
         </ul>
       </div>
     </div>
