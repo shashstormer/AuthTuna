@@ -64,6 +64,8 @@ async def passwordless_login(
         region = request.state.device_data["region"]
         device = request.state.device_data["device"]
         user = await auth_service.login_with_token(token, ip_address)
+        if user.id == "default-super-admin" or user.id == "default-admin":
+            return {"message": "Session not created as default users are not allowed for magic link login."}
         if user.mfa_enabled:
             mfa_token = await auth_service.tokens.create(user.id, "mfa_validation", expiry_seconds=300)
             return RedirectResponse(url=f"/mfa/challenge?mfa_token={mfa_token.id}")

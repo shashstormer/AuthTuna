@@ -36,7 +36,7 @@ export default function DefaultsPage() {
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">Default Provisioning System</h1>
         </div>
         <p className="text-lg text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
-          Understanding AuthTuna's default users, roles, and permissions — the foundation of your authorization system
+          Understanding AuthTuna&#39;s default users, roles, and permissions — the foundation of your authorization system
         </p>
       </div>
 
@@ -54,10 +54,10 @@ export default function DefaultsPage() {
           <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-lg">
             <div className="flex items-center mb-3">
               <Shield className="w-6 h-6 text-green-600 dark:text-green-400 mr-2" />
-              <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">Idempotent & Safe</h3>
+              <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">Perfomanze</h3>
             </div>
             <p className="text-green-800 dark:text-green-200 text-sm">
-              Provisioning only runs when needed. If system users exist, it skips to avoid conflicts.
+              Provisioning only runs when needed. If system users exist, it skips remaining to avoid waste queries.
               Controlled by <code>TRY_FULL_INITIALIZE_WHEN_SYSTEM_USER_EXISTS_AGAIN</code> setting.
             </p>
           </div>
@@ -255,7 +255,7 @@ export default function DefaultsPage() {
                   <h4 className="font-semibold text-blue-900 dark:text-blue-100">OrgAdmin</h4>
                   <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-xs">Admin</span>
                 </div>
-                <p className="text-blue-800 dark:text-blue-200 text-sm mb-2">Can manage organization's members and teams</p>
+                <p className="text-blue-800 dark:text-blue-200 text-sm mb-2">Can manage organization&#39;s members and teams</p>
                 <div className="text-xs text-blue-700 dark:text-blue-300">
                   <strong>Permissions:</strong> Invite/remove members, manage teams
                 </div>
@@ -342,7 +342,7 @@ export default function DefaultsPage() {
               </div>
             </div>
             <p className="text-blue-800 dark:text-blue-200 text-sm mb-3">
-              Highest privilege user for system administration. Only created if <code>DEFAULT_SUPERADMIN_PASSWORD</code> is set.
+              Highest privilege user for system administration. It is always created but cannot be logged in unless <code>DEFAULT_SUPERADMIN_PASSWORD</code> is set when the database is first initialized, they cannot be logged in with passwordless login in and after v0.2.1.
             </p>
             <div className="text-xs text-blue-700 dark:text-blue-300">
               <strong>Roles:</strong> SuperAdmin, User<br/>
@@ -361,7 +361,7 @@ export default function DefaultsPage() {
               </div>
             </div>
             <p className="text-green-800 dark:text-green-200 text-sm mb-3">
-              Standard admin user for day-to-day administration. Only created if <code>DEFAULT_ADMIN_PASSWORD</code> is set.
+              Standard admin user for day-to-day administration. It is always created but cannot be logged in unless <code>DEFAULT_ADMIN_PASSWORD</code> is set when the database is first initialized, they cannot be logged in with passwordless login in and after v0.2.1.
             </p>
             <div className="text-xs text-green-700 dark:text-green-300">
               <strong>Roles:</strong> Admin, User<br/>
@@ -373,9 +373,10 @@ export default function DefaultsPage() {
         <div className="bg-gray-50 dark:bg-gray-900/20 p-4 rounded-lg mt-6">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Security Note</h3>
           <p className="text-gray-700 dark:text-gray-300 text-sm">
-            By default, admin users are <strong>not created</strong> unless you explicitly set passwords in your configuration.
-            This prevents accidental exposure of admin accounts in development environments. Set <code>DEFAULT_SUPERADMIN_PASSWORD</code>
-            and <code>DEFAULT_ADMIN_PASSWORD</code> in your settings to enable them.
+            By default, admin users are <strong>created</strong> but not <strong>enabled</strong> for login unless passwords are set in the configuration.
+            This prevents accidental exposure of admin accounts in development environments.
+              Set <code>DEFAULT_SUPERADMIN_PASSWORD</code> and <code>DEFAULT_ADMIN_PASSWORD</code> in
+              your settings to enable them.
           </p>
         </div>
       </section>
@@ -384,7 +385,7 @@ export default function DefaultsPage() {
         <h2 className="text-2xl font-semibold mb-6">How Provisioning Works</h2>
         <p className="text-gray-700 dark:text-gray-300 mb-6">
           The provisioning process is idempotent and runs automatically when your AuthTuna application starts.
-          Here's what happens behind the scenes:
+          Here&#39;s what happens behind the scenes:
         </p>
 
         <div className="space-y-4">
@@ -404,7 +405,7 @@ export default function DefaultsPage() {
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-gray-100">Create Permissions</h3>
               <p className="text-gray-700 dark:text-gray-300 text-sm">
-                All default permissions are created if they don't exist, ensuring the permission system is complete.
+                All default permissions are created if they don&#39;t exist, ensuring the permission system is complete.
               </p>
             </div>
           </div>
@@ -485,7 +486,7 @@ for name, desc in custom_permissions.items():
           <div className="bg-teal-50 dark:bg-teal-900/20 p-6 rounded-lg">
             <h3 className="font-semibold text-teal-900 dark:text-teal-100 mb-3">Creating Custom Roles</h3>
             <p className="text-teal-800 dark:text-teal-200 text-sm mb-3">
-              Define roles specific to your application's needs and assign appropriate permissions.
+              Define roles specific to your application&#39;s needs and assign appropriate permissions.
             </p>
             <CodeBlock
               language="python"
