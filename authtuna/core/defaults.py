@@ -33,11 +33,11 @@ DEFAULT_ROLES = {
     "User": {"level": 0, "description": "Standard user with basic permissions will be assigned to all users by default (from v0.1.11), allows configuring if all users can create orgs or only specific users so based on requirement you will be able to update and build further."},
 
     # These are addedd for organization management. These will be using the role based grant system instead of hierarchical
-    "OrgMember": {"level": 0, "description": "Default member of an organization."},
-    "TeamMember": {"level": 0, "description": "Default member of a team."},
-    "TeamLead": {"level": 0, "description": "Can manage a specific team and its members."},
-    "OrgAdmin": {"level": 0, "description": "Can manage an organization's members and teams."},
-    "OrgOwner": {"level": 0, "description": "Full control over an organization."},
+    "OrgMember": {"description": "Default member of an organization."},
+    "TeamMember": {"description": "Default member of a team."},
+    "TeamLead": {"description": "Can manage a specific team and its members."},
+    "OrgAdmin": {"description": "Can manage an organization's members and teams."},
+    "OrgOwner": {"description": "Full control over an organization."},
 
     # the following roles meant purely for administrative purposes for the auth service owners and use hierarchical grant system.
     "Moderator": {"level": 50, "description": "Can manage users and content."},
@@ -61,6 +61,7 @@ ROLE_PERMISSIONS = {
 
 DEFAULT_ROLE_GRANTS = {
     # System Admin Roles
+    "System": ["SuperAdmin", "Admin", "Moderator", "OrgOwner", "OrgAdmin", "TeamLead", "OrgMember", "User"],
     "SuperAdmin": ["Admin", "Moderator", "OrgOwner", "OrgAdmin", "TeamLead", "OrgMember", "User"], # anyway hierarchical system exists so this and the next line dont actually matter.
     "Admin": ["Moderator", "OrgOwner", "OrgAdmin", "TeamLead", "OrgMember", "User"],
 
