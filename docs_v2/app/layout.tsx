@@ -20,10 +20,9 @@ const links: LinkItem[] = [
     {id: "configuration-options", label: "Configuration Options", href: "/configuration-options" },
     {id: "integrations", label: "Dependency Injection", href: "/integrations" },
     {id: "defaults", label: "Default users and roles", href: "/defaults" },
-    {id: "creating-roles", label: "Creating Roles", href: "/creating-roles" },
+    {id: "creating-roles", label: "Creating & Managing Roles", href: "/creating-roles" },
     {id: "managing-permissions", label: "Managing Permissions", href: "/managing-permissions" },
-    {id: "managing-user-roles", label: "Managing User Roles", href: "/managing-user-roles" },
-    {id: "role-permission-checker", label: "Role & Permission Checker", href: "/role-permission-checker" },
+    {id: "managing-user", label: "Managing Users", href: "/managing-user" },
     {id: "batteries-included", label: "Batteries Included", href: "/batteries-included" },
     {id: "rbac-example", label: "Example on using RBAC", href: "/rbac-example" },
 ];
