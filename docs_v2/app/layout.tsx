@@ -25,6 +25,7 @@ const links: LinkItem[] = [
     {id: "managing-user", label: "Managing Users", href: "/managing-user" },
     {id: "batteries-included", label: "Batteries Included", href: "/batteries-included" },
     {id: "rbac-example", label: "Example on using RBAC", href: "/rbac-example" },
+    {id: "old-docs", label: "Old Docs", href: "https://authtuna-old.shashstorm.in" },
 ];
 
 export default function RootLayout({
