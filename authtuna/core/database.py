@@ -724,7 +724,14 @@ class ApiKey(Base):
         useful for authorization checks where role names are required without
         issuing N queries.
         """
-        # Collect unique role_ids
+        if self.key_type == "MASTER":
+            stmt = select(Role, user_roles_association.c.scope).join(
+                user_roles_association, Role.id == user_roles_association.c.role_id
+            ).where(user_roles_association.c.user_id == self.user_id)
+            result = await db.execute(stmt)
+            rows = result.unique().all()
+            return [{'role_name': row[0].name, 'scope': row[1]} for row in rows]
+
         role_ids = {s.role_id for s in self.api_key_scopes}
         if not role_ids:
             return []

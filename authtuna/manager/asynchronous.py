@@ -429,7 +429,7 @@ class RoleManager:
 
             # Step 2: Perform the 3-pathway 'OR' authorization check
 
-            can_manage_role = self._is_authorized_to_manage_role(assigner, role_to_assign, db)
+            can_manage_role = await self._is_authorized_to_manage_role(assigner, role_to_assign, db)
 
             if not can_manage_role:
                 raise OperationForbiddenError(

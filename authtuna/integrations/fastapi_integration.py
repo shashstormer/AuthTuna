@@ -105,6 +105,8 @@ def get_scope_helper(request: Request, scope_from_path: Optional[str], raise_err
             return None
         prefix = scope_prefix or scope_from_path.replace('_id', '')
         scope = f"{prefix}:{path_param_value}"
+    elif scope_prefix:
+        scope = scope_prefix
     return scope
 
 
