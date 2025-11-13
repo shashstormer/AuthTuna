@@ -318,7 +318,6 @@ class RoleChecker:
                 return None
 
         scope = self._get_scope(request)
-        print(scope)
         if scope is None:
             # When scope is required but missing and raise\_error is False, treat as no-op
             return None
@@ -336,7 +335,6 @@ class RoleChecker:
             for p in parts:
                 current = f"{current}/{p}" if current else p
                 candidates.append(current)
-        print(candidates)
         def user_has_role_in_scope(role_name: str) -> bool:
             for cand in candidates:
                 for assoc in user.role_associations:
