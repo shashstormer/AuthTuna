@@ -99,7 +99,7 @@ class UserManager:
                 raise UserNotFoundError("User not found.")
 
             for key, value in update_data.items():
-                if hasattr(user, key) and key not in ['id', 'password_hash']:
+                if hasattr(user, key) and key in ['username', 'email']:
                     setattr(user, key, value)
 
             await self._db_manager.log_audit_event(user_id, "USER_UPDATED", ip_address,
