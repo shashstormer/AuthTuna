@@ -319,7 +319,6 @@ class RoleChecker:
 
         scope = self._get_scope(request)
         if scope is None:
-            # When scope is required but missing and raise\_error is False, treat as no-op
             return None
 
         # Cache role id->name mapping
@@ -335,6 +334,7 @@ class RoleChecker:
             for p in parts:
                 current = f"{current}/{p}" if current else p
                 candidates.append(current)
+
         def user_has_role_in_scope(role_name: str) -> bool:
             for cand in candidates:
                 for assoc in user.role_associations:
@@ -389,32 +389,50 @@ class RoleChecker:
                 return None
             request.state.api_key = api_key
 
+        scope = self._get_scope(request)
+        if scope is None:
+            return None
+        candidates = ['global']
+        if scope and scope != 'global':
+            parts = scope.split('/') if '/' in scope else [scope]
+            current = ''
+            for p in parts:
+                current = f"{current}/{p}" if current else p
+                candidates.append(current)
         async with db_manager.get_db() as db:
             role_scope_list = await api_key.load_scope_role_names(db)
-            granted_role_names = {r['role_name'] for r in role_scope_list if r['role_name']}
-        r_scope = self._get_scope(request)
-        async def api_role_has_name(role_name: str) -> bool:
-            if role_name in granted_role_names:
-                if r_scope is None or r_scope == 'global':
-                    return True
-                if any(rs['scope'] == r_scope and rs['role_name'] == role_name for rs in role_scope_list):
+
+        role_scope_pairs = {
+            (rs['role_name'], rs['scope'])
+            for rs in role_scope_list
+            if rs.get('role_name') and rs.get('scope') is not None
+        }
+
+        def api_role_has_name(role_name: str) -> bool:
+            for cand in candidates:
+                if (role_name, cand) in role_scope_pairs:
                     return True
             return False
 
-        # Evaluate mode
         if self.mode == 'OR':
             for required in self.roles:
-                if await api_role_has_name(required):
+                if api_role_has_name(required):
+                    request.state.user_object = user
                     return user
             if self.raise_error:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User lacks required role(s). Requires at least one of: {', '.join(self.roles)}")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"User lacks required role(s). Requires at least one of: {', '.join(self.roles)}"
+                )
             return None
         else:
-            # AND mode: all required roles must be present on the API key
             for required in self.roles:
-                if not await api_role_has_name(required):
+                if not api_role_has_name(required):
                     if self.raise_error:
-                        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User lacks required role(s). Requires: {', '.join(self.roles)}")
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail=f"User lacks required role(s). Requires: {', '.join(self.roles)}"
+                        )
                     return None
             request.state.user_object = user
             return user
