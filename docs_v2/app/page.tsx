@@ -78,6 +78,9 @@ export default function Home() {
                         Why should you use AuthTuna?
                     </h2>
                     <p className="text-lg text-gray-700 dark:text-gray-300 mb-4">
+                        Imagine you are working on a API endpoint which is an authenticated endpoint and you want to quickly test it. With regular auth systems you may need to cook up a quick login page etc etc and some ui but if you use my library you can just login, create a master/secret (scoped) api key and use it in postman/curl or whatever so that you can quickly test your endpoint without any hassle.
+                    </p>
+                    <p className="text-lg text-gray-700 dark:text-gray-300 mb-4">
                         This library simplifies integrating auth into any application. Previously you could have either used fastapi-users and spent time to extend its capabilities. But this library has enough features to have the highest security and the simplest usage.
                     </p>
                     <p className="text-lg text-gray-700 dark:text-gray-300 mb-4">
