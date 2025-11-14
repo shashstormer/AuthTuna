@@ -347,46 +347,6 @@ async def create_team(
 team_checker = RoleChecker("TeamLead", "TeamMember", scope_from_path="team_id", mode="OR")
 
 
-@router.get("/teams/{team_id}", response_class=HTMLResponse, name="team_details")
-async def team_details_page(request: Request, team_id: str, user: User = Depends(team_checker)):
-    """Team details page showing members and settings."""
-    try:
-        team = await auth_service.orgs.get_team_by_id(team_id)
-        if not team:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-
-        org = await auth_service.orgs.get_organization_by_id(team.organization_id)
-        members = await auth_service.orgs.get_team_members(team_id)
-
-        # Convert timestamps
-        team_created_human = _format_ts(getattr(team, 'created_at', None))
-        for m in members:
-            if isinstance(m, dict):
-                m['joined_at'] = _format_ts(m.get('joined_at'))
-        try:
-            setattr(team, 'created_at_human', team_created_human)
-        except Exception:
-            pass
-
-        # Check if user is team lead or org admin/owner
-        user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"team:{team_id}")
-        is_lead = any(role.name == "TeamLead" for role in user_roles)
-
-        org_user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"org:{org.id}")
-        is_org_admin = any(role.name in ["OrgAdmin", "OrgOwner"] for role in org_user_roles)
-
-        return templates.TemplateResponse("team_details.html", {
-            "request": request,
-            "user": user,
-            "team": team,
-            "org": org,
-            "members": members,
-            "is_lead": is_lead,
-            "is_org_admin": is_org_admin,
-            "can_manage": is_lead or is_org_admin
-        })
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 class TeamInvite(BaseModel):
@@ -433,6 +393,48 @@ async def accept_team_invite_page(request: Request, token: str):
             "type": "team",
             "name": team.name,
             "team_id": team.id
+        })
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/teams/{team_id}", response_class=HTMLResponse, name="team_details")
+async def team_details_page(request: Request, team_id: str, user: User = Depends(team_checker)):
+    """Team details page showing members and settings."""
+    try:
+        team = await auth_service.orgs.get_team_by_id(team_id)
+        if not team:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+
+        org = await auth_service.orgs.get_organization_by_id(team.organization_id)
+        members = await auth_service.orgs.get_team_members(team_id)
+
+        # Convert timestamps
+        team_created_human = _format_ts(getattr(team, 'created_at', None))
+        for m in members:
+            if isinstance(m, dict):
+                m['joined_at'] = _format_ts(m.get('joined_at'))
+        try:
+            setattr(team, 'created_at_human', team_created_human)
+        except Exception:
+            pass
+
+        # Check if user is team lead or org admin/owner
+        user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"team:{team_id}")
+        is_lead = any(role.name == "TeamLead" for role in user_roles)
+
+        org_user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"org:{org.id}")
+        is_org_admin = any(role.name in ["OrgAdmin", "OrgOwner"] for role in org_user_roles)
+
+        return templates.TemplateResponse("team_details.html", {
+            "request": request,
+            "user": user,
+            "team": team,
+            "org": org,
+            "members": members,
+            "is_lead": is_lead,
+            "is_org_admin": is_org_admin,
+            "can_manage": is_lead or is_org_admin
         })
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
