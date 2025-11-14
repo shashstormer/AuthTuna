@@ -93,34 +93,6 @@ async def create_organization(org: OrgCreate = Form(...), user: User = Depends(P
 org_checker = RoleChecker("OrgOwner", "OrgMember", "OrgAdmin", scope_from_path="org_id", mode="OR")
 
 
-@router.get("/organizations/{org_id}", response_class=HTMLResponse, name="org_details")
-async def org_details_page(request: Request, org_id: str, user: User = Depends(org_checker)):
-    """Organization details page showing teams, members, and settings."""
-    try:
-        org = await auth_service.orgs.get_organization_by_id(org_id)
-        if not org:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
-
-        members = await auth_service.orgs.get_org_members(org_id)
-        teams = await auth_service.orgs.get_org_teams(org_id)
-
-        # Check if user is owner or admin
-        user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"org:{org_id}")
-        is_owner = org.owner_id == user.id
-        is_admin = any(role.name == "OrgAdmin" for role in user_roles)
-
-        return templates.TemplateResponse("org_details.html", {
-            "request": request,
-            "user": user,
-            "org": org,
-            "members": members,
-            "teams": teams,
-            "is_owner": is_owner,
-            "is_admin": is_admin,
-            "can_manage": is_owner or is_admin
-        })
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 class OrgInvite(BaseModel):
@@ -169,6 +141,36 @@ async def accept_org_invite_page(request: Request, token: str):
             "type": "organization",
             "name": org.name,
             "org_id": org.id
+        })
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/organizations/{org_id}", response_class=HTMLResponse, name="org_details")
+async def org_details_page(request: Request, org_id: str, user: User = Depends(org_checker)):
+    """Organization details page showing teams, members, and settings."""
+    try:
+        org = await auth_service.orgs.get_organization_by_id(org_id)
+        if not org:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+
+        members = await auth_service.orgs.get_org_members(org_id)
+        teams = await auth_service.orgs.get_org_teams(org_id)
+
+        # Check if user is owner or admin
+        user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"org:{org_id}")
+        is_owner = org.owner_id == user.id
+        is_admin = any(role.name == "OrgAdmin" for role in user_roles)
+
+        return templates.TemplateResponse("org_details.html", {
+            "request": request,
+            "user": user,
+            "org": org,
+            "members": members,
+            "teams": teams,
+            "is_owner": is_owner,
+            "is_admin": is_admin,
+            "can_manage": is_owner or is_admin
         })
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
