@@ -278,6 +278,21 @@ class RoleManager:
         result = await db.execute(stmt)
         return [row[0] for row in result.all()]
 
+    async def get_role_scopes(self, user_id: str, role_name: str, db: AsyncSession) -> List[str]:
+        """
+        Retrieves all scopes in which a user has a specific role.
+        Uses the provided AsyncSession (no new transaction/context manager).
+        Returns a list of scope strings (may include 'global').
+        """
+        stmt = select(user_roles_association.c.scope).distinct().join_from(
+            user_roles_association, Role, user_roles_association.c.role_id == Role.id
+        ).where(
+            user_roles_association.c.user_id == user_id,
+            Role.name == role_name
+        )
+        result = await db.execute(stmt)
+        return [row[0] for row in result.all()]
+
     async def get_self_assignable_roles(self, user_id: str) -> List[Dict[str, Any]]:
         """
         Returns a list of roles the current user can assign to themselves,
@@ -347,29 +362,63 @@ class RoleManager:
             results = (await db.execute(stmt)).all()
             return [{"username": row[0], "scope": row[1]} for row in results]
 
-    async def _is_authorized_to_manage_role(self, manager_user: User, role_to_manage: Role, db: AsyncSession) -> bool:
-        """Private helper to check the 3 authorization pathways for role assignment."""
+    async def _is_authorized_to_manage_role(self, manager_user: User, role_to_manage: Role, target_scope: str,
+                                            db: AsyncSession) -> bool:
+        """
+        Private helper to check the 3 authorization pathways for role assignment.
+        Now includes scope validation to prevent scope escalation.
+
+        Args:
+            manager_user: The user attempting to assign/revoke the role
+            role_to_manage: The role being assigned/revoked
+            target_scope: The scope in which the role is being assigned/revoked
+            db: Database session
+
+        Returns:
+            True if authorized, False otherwise
+        """
         # Pathway 1: Permission Override
         required_permission = f"roles:assign:{role_to_manage.name}"
-        if await self.has_permission(manager_user.id, required_permission, db=db):
+        if await self.has_permission(manager_user.id, required_permission, scope_prefix=target_scope, db=db):
             return True
 
         # Pathway 2: Direct Grant
         for manager_role in manager_user.roles:
             if any(assignable.id == role_to_manage.id for assignable in manager_role.can_assign_roles):
-                return True
+                # Check if the manager has this role in a scope that encompasses the target scope
+                manager_role_scopes = await self.get_role_scopes(manager_user.id, manager_role.name, db)
+
+                # Check if manager has global scope or matching/parent scope
+                if 'global' in manager_role_scopes:
+                    return True
+
+                # Check if target scope is covered by any of manager's scopes
+                for manager_scope in manager_role_scopes:
+                    if target_scope == manager_scope or target_scope.startswith(f"{manager_scope}/"):
+                        return True
 
         # Pathway 3: Level Hierarchy
         if manager_user.roles:
             manager_max_level = max((role.level for role in manager_user.roles if role.level is not None), default=-1)
             if role_to_manage.level is not None and manager_max_level > role_to_manage.level:
-                return True
+                # Even with sufficient level, verify scope coverage
+                stmt = select(user_roles_association.c.scope).where(
+                    user_roles_association.c.user_id == manager_user.id
+                )
+                result = await db.execute(stmt)
+                manager_scopes = [row[0] for row in result.all()]
+
+                if 'global' in manager_scopes:
+                    return True
+
+                for manager_scope in manager_scopes:
+                    if target_scope == manager_scope or target_scope.startswith(f"{manager_scope}/"):
+                        return True
 
         return False
 
     async def assign_to_user(self, user_id: str, role_name: str, assigner_id: str, scope: str = 'none', db=None):
         async def _main(db):
-            # Step 1: Fetch all necessary objects
             user_manager = UserManager(self._db_manager)
             assigner = await user_manager.get_by_id(assigner_id, with_relations=True, db=db)
             if not assigner:
@@ -379,17 +428,16 @@ class RoleManager:
             if not role_to_assign:
                 raise RoleNotFoundError(f"Role '{role_name}' not found.")
 
-            # Step 2: Perform the 3-pathway 'OR' authorization check
-
-            can_manage_role = await self._is_authorized_to_manage_role(assigner, role_to_assign, db)
+            # Pass scope to authorization check
+            can_manage_role = await self._is_authorized_to_manage_role(assigner, role_to_assign, scope, db)
             if not can_manage_role:
                 raise OperationForbiddenError(
-                    "You lack the required permission, direct grant, or sufficient role level to assign this role."
+                    "You lack the required permission, direct grant, or sufficient role level/scope to assign this role."
                 )
 
-            # Step 3: If authorized, proceed with the assignment
             target_user = await user_manager.get_by_id(user_id, db=db)
-            if not target_user: raise UserNotFoundError("Target user not found.")
+            if not target_user:
+                raise UserNotFoundError("Target user not found.")
 
             assoc_stmt = select(user_roles_association).where(
                 user_roles_association.c.user_id == user_id,
@@ -397,7 +445,7 @@ class RoleManager:
                 user_roles_association.c.scope == scope
             )
             if (await db.execute(assoc_stmt)).first():
-                return  # Already assigned
+                return
 
             insert_stmt = user_roles_association.insert().values(
                 user_id=target_user.id, role_id=role_to_assign.id, scope=scope,
@@ -408,6 +456,7 @@ class RoleManager:
                 user_id, "ROLE_ASSIGNED", "system",
                 {"role": role_name, "scope": scope, "by": assigner_id}, db=db
             )
+
         if db:
             await _main(db)
         else:
@@ -415,37 +464,38 @@ class RoleManager:
                 await _main(db)
                 await db.commit()
 
-    async def remove_from_user(self, user_id: str, role_name: str, remover_id: str, scope: str = 'none', db: AsyncSession = None):
+    async def remove_from_user(self, user_id: str, role_name: str, remover_id: str, scope: str = 'none',
+                               db: AsyncSession = None):
         async def _remove(db):
-            # Step 1: Fetch all necessary objects
             user_manager = UserManager(self._db_manager)
-            assigner = await user_manager.get_by_id(remover_id, with_relations=True, db=db)
-            if not assigner:
-                raise UserNotFoundError("Assigner user not found.")
+            remover = await user_manager.get_by_id(remover_id, with_relations=True, db=db)
+            if not remover:
+                raise UserNotFoundError("Remover user not found.")
 
-            role_to_assign = await self.get_by_name(role_name, db=db)
-            if not role_to_assign:
+            role_to_remove = await self.get_by_name(role_name, db=db)
+            if not role_to_remove:
                 raise RoleNotFoundError(f"Role '{role_name}' not found.")
 
-            # Step 2: Perform the 3-pathway 'OR' authorization check
-
-            can_manage_role = await self._is_authorized_to_manage_role(assigner, role_to_assign, db)
-
+            # Pass scope to authorization check
+            can_manage_role = await self._is_authorized_to_manage_role(remover, role_to_remove, scope, db)
             if not can_manage_role:
                 raise OperationForbiddenError(
-                    "You lack the required permission, direct grant, or sufficient role level to assign this role."
+                    "You lack the required permission, direct grant, or sufficient role level/scope to remove this role."
                 )
+
             target_user = await user_manager.get_by_id(user_id, db=db)
-            if not target_user: raise UserNotFoundError("Target user not found.")
+            if not target_user:
+                raise UserNotFoundError("Target user not found.")
+
             assoc_stmt = select(user_roles_association).where(
                 user_roles_association.c.user_id == user_id,
-                user_roles_association.c.role_id == role_to_assign.id,
+                user_roles_association.c.role_id == role_to_remove.id,
                 user_roles_association.c.scope == scope,
             )
             if (await db.execute(assoc_stmt)).first():
                 delete_stmt = user_roles_association.delete().where(
                     user_roles_association.c.user_id == user_id,
-                    user_roles_association.c.role_id == role_to_assign.id,
+                    user_roles_association.c.role_id == role_to_remove.id,
                     user_roles_association.c.scope == scope,
                 )
                 await db.execute(delete_stmt)
@@ -454,7 +504,7 @@ class RoleManager:
                     {"role": role_name, "scope": scope, "by": remover_id}, db=db
                 )
             else:
-                raise RoleNotFoundError(f"Role '{role_name}' not found for this user.")
+                raise RoleNotFoundError(f"Role '{role_name}' not found for this user in scope '{scope}'.")
 
         if db:
             await _remove(db)
