@@ -1528,34 +1528,109 @@ class AuthTunaAsync:
             email_verified=not settings.EMAIL_ENABLED
         )
         await self.roles.assign_to_user(user.id, "User", assigner_id="system", scope="global")
+        await self.db_manager.log_audit_event(
+            user.id, "USER_SIGNUP_COMPLETED", ip_address,
+            {"email_verification_required": settings.EMAIL_ENABLED},
+        )
         token = None
         if settings.EMAIL_ENABLED:
             token = await self.tokens.create(user.id, "email_verification")
         return user, token
 
+    async def _check_login_rate_limit(self, db: AsyncSession, user_id: Optional[str], ip_address: str):
+        """
+        Checks if the user or IP address has exceeded login attempt limits.
+        Raises RateLimitError if rate limit is exceeded.
+        """
+        current_time = time.time()
+        window_start = current_time - settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS
+
+        # Check IP-based rate limit
+        ip_attempts_stmt = select(func.count()).select_from(AuditEvent).where(
+            AuditEvent.event_type == "LOGIN_FAILED",
+            AuditEvent.ip_address == ip_address,
+            AuditEvent.timestamp > window_start
+        )
+        ip_attempts = await db.scalar(ip_attempts_stmt)
+
+        if ip_attempts >= settings.MAX_LOGIN_ATTEMPTS_PER_IP:
+            await self.db_manager.log_audit_event(
+                user_id or "unknown", "LOGIN_RATE_LIMITED", ip_address,
+                {"reason": "ip_rate_limit_exceeded", "attempts": ip_attempts}, db=db
+            )
+            raise RateLimitError(f"Too many login attempts from this IP address. Please try again after {settings.LOGIN_LOCKOUT_DURATION_SECONDS // 60} minutes.")
+
+        # Check user-based rate limit if user_id is provided
+        if user_id:
+            user_attempts_stmt = select(func.count()).select_from(AuditEvent).where(
+                AuditEvent.event_type == "LOGIN_FAILED",
+                AuditEvent.user_id == user_id,
+                AuditEvent.timestamp > window_start
+            )
+            user_attempts = await db.scalar(user_attempts_stmt)
+
+            if user_attempts >= settings.MAX_LOGIN_ATTEMPTS_PER_USER:
+                await self.db_manager.log_audit_event(
+                    user_id, "LOGIN_RATE_LIMITED", ip_address,
+                    {"reason": "user_rate_limit_exceeded", "attempts": user_attempts}, db=db
+                )
+                raise RateLimitError(f"Too many failed login attempts for this account. Please try again after {settings.LOGIN_LOCKOUT_DURATION_SECONDS // 60} minutes.")
+
     async def login(self, username_or_email: str, password: str, ip_address: str, region: str, device: str) -> Union[
         Tuple[Any, Token], Tuple[Any, Session]]:
         async with self.db_manager.get_db() as db:
+            # Log login attempt
+            await self.db_manager.log_audit_event(
+                "system", "LOGIN_ATTEMPT", ip_address,
+                {"username_or_email": username_or_email, "device": device, "region": region}, db=db
+            )
+
             stmt = select(User).where((User.email == username_or_email) | (User.username == username_or_email))
             user = (await db.execute(stmt)).unique().scalar_one_or_none()
+
             if not user:
+                # Check rate limit for IP even if user not found
+                await self._check_login_rate_limit(db, None, ip_address)
+                await self.db_manager.log_audit_event(
+                    "system", "LOGIN_FAILED", ip_address,
+                    {"reason": "user_not_found", "username_or_email": username_or_email}, db=db
+                )
+                await db.commit()
                 raise InvalidCredentialsError("Incorrect username/email or password.")
+
+            # Check rate limits before password verification
+            await self._check_login_rate_limit(db, user.id, ip_address)
+
             password_valid = await user.check_password(password, ip_address, self.db_manager, db)
             if password_valid is False:
+                await db.commit()
                 raise InvalidCredentialsError("Incorrect username/email or password.")
             elif password_valid is None:
+                await db.commit()
                 raise EmailNotVerifiedError("Email Not Verified.")
             elif password_valid is True:
                 pass
             else:
+                await self.db_manager.log_audit_event(
+                    user.id, "LOGIN_FAILED", ip_address, {"reason": "config_error"}, db=db
+                )
+                await db.commit()
                 raise InvalidCredentialsError("Incorrect username/email or password (config error).")
+
             if not user.is_active:
                 await self.db_manager.log_audit_event(
                     user.id, "LOGIN_FAILED", ip_address, {"reason": "user_suspended"}, db=db
                 )
                 await db.commit()
                 raise OperationForbiddenError("This account has been suspended.")
+
+            # Log successful login
+            await self.db_manager.log_audit_event(
+                user.id, "LOGIN_SUCCESS_VERIFIED", ip_address,
+                {"device": device, "region": region, "mfa_required": user.mfa_enabled}, db=db
+            )
             await db.commit()
+
             if user.mfa_enabled:
                 return user, await self.tokens.create(user.id, "mfa_validation", expiry_seconds=300)
             else:
@@ -1572,18 +1647,38 @@ class AuthTunaAsync:
             if not user_in_session:
                 raise UserNotFoundError("User not found.")
 
+            await self.db_manager.log_audit_event(
+                user.id, "PASSWORD_CHANGE_ATTEMPT", ip_address, db=db
+            )
+
             password_valid = await user_in_session.check_password(current_password, ip_address, db_manager_custom=self.db_manager, db=db)
             if not password_valid:
+                await self.db_manager.log_audit_event(
+                    user.id, "PASSWORD_CHANGE_FAILED", ip_address,
+                    {"reason": "incorrect_current_password"}, db=db
+                )
+                await db.commit()
                 raise InvalidCredentialsError("The current password you entered is incorrect.")
 
             await user_in_session.set_password(new_password, ip_address, db_manager_custom=self.db_manager, db=db)
             await self.sessions.terminate_all_for_user(user.id, ip_address, except_session_id=current_session_id, db=db)
+
+            await self.db_manager.log_audit_event(
+                user.id, "PASSWORD_CHANGED", ip_address,
+                {"sessions_terminated": True}, db=db
+            )
             await db.commit()
 
-    async def request_password_reset(self, email: str) -> Optional[Token]:
+    async def request_password_reset(self, email: str, ip_address: str = 'unknown') -> Optional[Token]:
         async with self.db_manager.get_db() as db:
             user = await self.users.get_by_email(email)
-            if not user: return None
+            if not user:
+                await self.db_manager.log_audit_event(
+                    "unknown", "PASSWORD_RESET_REQUESTED", ip_address,
+                    {"email": email, "result": "user_not_found"}, db=db
+                )
+                await db.commit()
+                return None
 
             count_stmt = select(func.count()).select_from(Token).where(
                 Token.user_id == user.id,
@@ -1593,8 +1688,17 @@ class AuthTunaAsync:
             recent_tokens_count = (await db.execute(count_stmt)).scalar()
 
             if recent_tokens_count >= settings.TOKENS_MAX_COUNT_PER_DAY_PER_USER_PER_ACTION:
+                await self.db_manager.log_audit_event(
+                    user.id, "PASSWORD_RESET_RATE_LIMITED", ip_address,
+                    {"attempts": recent_tokens_count}, db=db
+                )
+                await db.commit()
                 raise RateLimitError("Too many password reset requests.")
 
+            await self.db_manager.log_audit_event(
+                user.id, "PASSWORD_RESET_REQUESTED", ip_address, db=db
+            )
+            await db.commit()
             return await self.tokens.create(user.id, "password_reset")
 
     async def reset_password(self, token_id: str, new_password: str, ip_address: str) -> User:
@@ -1602,6 +1706,9 @@ class AuthTunaAsync:
         async with self.db_manager.get_db() as db:
             user = await self.tokens.validate(db, token_id, "password_reset", ip_address)
             await user.set_password(new_password, ip_address, self.db_manager, db)
+            await self.db_manager.log_audit_event(
+                user.id, "PASSWORD_RESET_COMPLETED", ip_address, db=db
+            )
             await db.commit()
             return user
 
@@ -1611,6 +1718,9 @@ class AuthTunaAsync:
             user = await self.tokens.validate(db, token_id, "email_verification", ip_address)
             if not getattr(user, 'email_verified', False):
                 user.email_verified = True
+                await self.db_manager.log_audit_event(
+                    user.id, "EMAIL_VERIFIED", ip_address, db=db
+                )
             await db.commit()
             return user
 
@@ -1621,22 +1731,49 @@ class AuthTunaAsync:
         async with self.db_manager.get_db() as db:
             user = await self.tokens.validate(db, mfa_token, "mfa_validation", ip_address)
 
+            await self.db_manager.log_audit_event(
+                user.id, "MFA_VALIDATION_ATTEMPT", ip_address,
+                {"device": device_data.get("device"), "region": device_data.get("region")}, db=db
+            )
+
             user_with_mfa = await self.users.get_by_id(user.id, with_relations=True, db=db)
             if not user_with_mfa or not user_with_mfa.mfa_methods:
+                await self.db_manager.log_audit_event(
+                    user.id, "MFA_VALIDATION_FAILED", ip_address,
+                    {"reason": "mfa_not_configured"}, db=db
+                )
+                await db.commit()
                 raise InvalidTokenError("MFA is not configured correctly for this user.")
 
             # Assuming one TOTP method for now
             totp_method = next((m for m in user_with_mfa.mfa_methods if m.method_type == 'totp'), None)
             if not totp_method or not totp_method.secret:
+                await self.db_manager.log_audit_event(
+                    user.id, "MFA_VALIDATION_FAILED", ip_address,
+                    {"reason": "totp_secret_not_found"}, db=db
+                )
+                await db.commit()
                 raise InvalidTokenError("TOTP secret not found.")
+
             totp = pyotp.TOTP(totp_method.secret)
             is_valid_code = totp.verify(code)
             is_valid_recovery = False
             if not is_valid_code:
                 is_valid_recovery = await self.mfa.verify_recovery_code(user, code, db)
+
             if not is_valid_code and not is_valid_recovery:
+                await self.db_manager.log_audit_event(
+                    user.id, "MFA_VALIDATION_FAILED", ip_address,
+                    {"reason": "invalid_code", "device": device_data.get("device")}, db=db
+                )
+                await db.commit()
                 raise InvalidTokenError("Invalid MFA code.")
 
+            await self.db_manager.log_audit_event(
+                user.id, "MFA_VALIDATION_SUCCESS", ip_address,
+                {"method": "recovery_code" if is_valid_recovery else "totp",
+                 "device": device_data.get("device"), "region": device_data.get("region")}, db=db
+            )
             await db.commit()
         session = await self.sessions.create(
             user.id, ip_address, device_data["region"], device_data["device"]
@@ -1651,10 +1788,16 @@ class AuthTunaAsync:
             })
         return session
 
-    async def request_passwordless_login(self, email: str) -> Optional[Token]:
+    async def request_passwordless_login(self, email: str, ip_address: str = 'unknown') -> Optional[Token]:
         async with self.db_manager.get_db() as db:
             user = await self.users.get_by_email(email)
-            if not user: return None
+            if not user:
+                await self.db_manager.log_audit_event(
+                    "unknown", "PASSWORDLESS_LOGIN_REQUESTED", ip_address,
+                    {"email": email, "result": "user_not_found"}, db=db
+                )
+                await db.commit()
+                return None
 
             count_stmt = select(func.count()).select_from(Token).where(
                 Token.user_id == user.id,
@@ -1664,13 +1807,26 @@ class AuthTunaAsync:
             recent_tokens_count = (await db.execute(count_stmt)).scalar()
 
             if recent_tokens_count >= settings.TOKENS_MAX_COUNT_PER_DAY_PER_USER_PER_ACTION:
+                await self.db_manager.log_audit_event(
+                    user.id, "PASSWORDLESS_LOGIN_RATE_LIMITED", ip_address,
+                    {"attempts": recent_tokens_count}, db=db
+                )
+                await db.commit()
                 raise RateLimitError("Too many passwordless login requests.")
 
+            await self.db_manager.log_audit_event(
+                user.id, "PASSWORDLESS_LOGIN_REQUESTED", ip_address, db=db
+            )
+            await db.commit()
             return await self.tokens.create(user.id, "passwordless_login")
 
-    async def login_with_token(self, token_id: str, ip_address: str) -> User:
+    async def login_with_token(self, token_id: str, ip_address: str, region: str = 'unknown', device: str = 'unknown') -> User:
         """Performs token validation and returns the user."""
         async with self.db_manager.get_db() as db:
             user = await self.tokens.validate(db, token_id, "passwordless_login", ip_address)
+            await self.db_manager.log_audit_event(
+                user.id, "PASSWORDLESS_LOGIN_SUCCESS", ip_address,
+                {"device": device, "region": region}, db=db
+            )
             await db.commit()
             return user

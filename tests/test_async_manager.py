@@ -142,6 +142,8 @@ async def test_login_success(user_manager):
     mock_result = MagicMock()
     mock_result.unique.return_value.scalar_one_or_none.return_value = mock_user
     session_mock.execute = AsyncMock(return_value=mock_result)
+    # Mock scalar to return 0 for rate limit checks
+    session_mock.scalar = AsyncMock(return_value=0)
 
     with patch('authtuna.manager.asynchronous.select'), \
          patch.object(auth_tuna.sessions, 'create', new=AsyncMock(return_value=MagicMock())) as mock_session_create:
@@ -161,6 +163,8 @@ async def test_login_invalid_credentials(user_manager):
     mock_result = MagicMock()
     mock_result.unique.return_value.scalar_one_or_none.return_value = None
     session_mock.execute = AsyncMock(return_value=mock_result)
+    # Mock scalar to return 0 for rate limit checks
+    session_mock.scalar = AsyncMock(return_value=0)
 
     with patch('authtuna.manager.asynchronous.select'):
         with pytest.raises(InvalidCredentialsError):
@@ -203,6 +207,8 @@ async def test_login_suspended_user(user_manager):
     mock_result = MagicMock()
     mock_result.unique.return_value.scalar_one_or_none.return_value = mock_user
     session_mock.execute = AsyncMock(return_value=mock_result)
+    # Mock scalar to return 0 for rate limit checks
+    session_mock.scalar = AsyncMock(return_value=0)
 
     with patch('authtuna.manager.asynchronous.select'):
         with pytest.raises(OperationForbiddenError):
