@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ org.name }} - Organization Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>{{ get_theme_css() }}</style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900">
+    <div class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white dark:bg-gray-800 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ org.name }}</h1>
+                    <div class="flex gap-4">
+                        <a href="/ui/organizations" class="text-blue-600 dark:text-blue-400 hover:underline">← Back to Organizations</a>
+                        <a href="/ui/dashboard" class="text-blue-600 dark:text-blue-400 hover:underline">Dashboard</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Organization Info -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ org.name }}</h2>
+                        <p class="text-gray-600 dark:text-gray-400">Organization ID: {{ org.id }}</p>
+                        <p class="text-gray-600 dark:text-gray-400">Created: {{ org.created_at }}</p>
+                    </div>
+                    {% if can_manage %}
+                    <div class="flex gap-2">
+                        {% if is_owner %}
+                        <button onclick="deleteOrg()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                            Delete Organization
+                        </button>
+                        {% else %}
+                        <button onclick="leaveOrg()" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
+                            Leave Organization
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Members Section -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Members ({{ members|length }})</h3>
+                    {% if can_manage %}
+                    <button onclick="showInviteModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        Invite Member
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Username</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Joined At</th>
+                                {% if can_manage %}
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {% for member in members %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ member.username }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{{ member.email }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{{ member.joined_at }}</td>
+                                {% if can_manage %}
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    {% if member.user_id != org.owner_id %}
+                                    <button onclick="removeMember('{{ member.user_id }}', '{{ member.email }}')" class="text-red-600 hover:text-red-900">Remove</button>
+                                    {% else %}
+                                    <span class="text-gray-400">Owner</span>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Teams Section -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Teams ({{ teams|length }})</h3>
+                    {% if can_manage %}
+                    <button onclick="showCreateTeamModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        Create Team
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for team in teams %}
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition">
+                        <h4 class="font-semibold text-gray-900 dark:text-white mb-2">{{ team.name }}</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Created: {{ team.created_at }}</p>
+                        <a href="/ui/teams/{{ team.id }}" class="text-blue-600 dark:text-blue-400 hover:underline">View Details →</a>
+                    </div>
+                    {% endfor %}
+                    {% if teams|length == 0 %}
+                    <p class="text-gray-600 dark:text-gray-400 col-span-3">No teams yet. Create one to get started!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invite Member Modal -->
+    <div id="inviteModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Invite Member</h3>
+            <form id="inviteForm" onsubmit="inviteMember(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
+                    <input type="email" id="inviteEmail" required class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role</label>
+                    <select id="inviteRole" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="OrgMember">Member</option>
+                        <option value="OrgAdmin">Admin</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="hideInviteModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Send Invite</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Team Modal -->
+    <div id="teamModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Create Team</h3>
+            <form id="teamForm" onsubmit="createTeam(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Team Name</label>
+                    <input type="text" id="teamName" required class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="hideCreateTeamModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const orgId = "{{ org.id }}";
+
+        function showInviteModal() {
+            document.getElementById('inviteModal').classList.remove('hidden');
+        }
+
+        function hideInviteModal() {
+            document.getElementById('inviteModal').classList.add('hidden');
+            document.getElementById('inviteForm').reset();
+        }
+
+        function showCreateTeamModal() {
+            document.getElementById('teamModal').classList.remove('hidden');
+        }
+
+        function hideCreateTeamModal() {
+            document.getElementById('teamModal').classList.add('hidden');
+            document.getElementById('teamForm').reset();
+        }
+
+        async function inviteMember(event) {
+            event.preventDefault();
+            const email = document.getElementById('inviteEmail').value;
+            const role = document.getElementById('inviteRole').value;
+
+            try {
+                const response = await fetch(`/ui/organizations/${orgId}/invite`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, role_name: role })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+                    hideInviteModal();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            } catch (error) {
+                alert('Error sending invite: ' + error);
+            }
+        }
+
+        async function createTeam(event) {
+            event.preventDefault();
+            const name = document.getElementById('teamName').value;
+
+            try {
+                const response = await fetch(`/ui/organizations/${orgId}/teams`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            } catch (error) {
+                alert('Error creating team: ' + error);
+            }
+        }
+
+        async function removeMember(userId, email) {
+            if (!confirm(`Remove ${email} from the organization?`)) return;
+
+            try {
+                const response = await fetch(`/ui/organizations/${orgId}/members/${userId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            } catch (error) {
+                alert('Error removing member: ' + error);
+            }
+        }
+
+        async function deleteOrg() {
+            if (!confirm('Are you sure you want to delete this organization? This action cannot be undone.')) return;
+
+            try {
+                const response = await fetch(`/ui/organizations/${orgId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+                    window.location.href = '/ui/organizations';
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            } catch (error) {
+                alert('Error deleting organization: ' + error);
+            }
+        }
+
+        async function leaveOrg() {
+            if (!confirm('Are you sure you want to leave this organization?')) return;
+
+            try {
+                const response = await fetch(`/ui/organizations/${orgId}/leave`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+                    window.location.href = '/ui/organizations';
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            } catch (error) {
+                alert('Error leaving organization: ' + error);
+            }
+        }
+    </script>
+</body>
+</html>
+

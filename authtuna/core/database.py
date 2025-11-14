@@ -566,7 +566,7 @@ class Organization(Base):
     __tablename__ = 'organization'
 
     id = Column(String(64), primary_key=True, default=lambda: f"org_{encryption_utils.gen_random_string(28)}")
-    name = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=False, unique=True)
     owner_id = Column(String(64), ForeignKey('users.id'), nullable=False)
     created_at = Column(Float, nullable=False, default=time.time)
 

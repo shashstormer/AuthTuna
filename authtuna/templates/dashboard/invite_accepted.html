@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invitation Accepted</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>{{ get_theme_css() }}</style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900">
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+            <!-- Success Icon -->
+            <div class="mb-6">
+                <svg class="mx-auto h-16 w-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+
+            <!-- Success Message -->
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Invitation Accepted!</h1>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">
+                You have successfully joined <strong class="text-gray-900 dark:text-white">{{ name }}</strong>
+            </p>
+
+            <!-- Action Buttons -->
+            <div class="space-y-3">
+                {% if type == "organization" %}
+                <a href="/ui/organizations/{{ org_id }}" class="block w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+                    View Organization
+                </a>
+                {% elif type == "team" %}
+                <a href="/ui/teams/{{ team_id }}" class="block w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+                    View Team
+                </a>
+                {% endif %}
+
+                <a href="/ui/dashboard" class="block w-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+                    Go to Dashboard
+                </a>
+            </div>
+
+            <!-- Additional Info -->
+            <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    You now have access to all the resources and features available to {{ type }} members.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

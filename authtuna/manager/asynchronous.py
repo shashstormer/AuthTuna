@@ -415,15 +415,15 @@ class RoleManager:
                 await _main(db)
                 await db.commit()
 
-    async def remove_from_user(self, user_id: str, role_name: str, remover_id: str, scope: str = 'none'):
-        async with self._db_manager.get_db() as db:
+    async def remove_from_user(self, user_id: str, role_name: str, remover_id: str, scope: str = 'none', db: AsyncSession = None):
+        async def _remove(db):
             # Step 1: Fetch all necessary objects
             user_manager = UserManager(self._db_manager)
             assigner = await user_manager.get_by_id(remover_id, with_relations=True, db=db)
             if not assigner:
                 raise UserNotFoundError("Assigner user not found.")
 
-            role_to_assign = await self.get_by_name(role_name)
+            role_to_assign = await self.get_by_name(role_name, db=db)
             if not role_to_assign:
                 raise RoleNotFoundError(f"Role '{role_name}' not found.")
 
@@ -453,9 +453,15 @@ class RoleManager:
                     user_id, "ROLE_REMOVED", "system",
                     {"role": role_name, "scope": scope, "by": remover_id}, db=db
                 )
-                await db.commit()
             else:
                 raise RoleNotFoundError(f"Role '{role_name}' not found for this user.")
+
+        if db:
+            await _remove(db)
+        else:
+            async with self._db_manager.get_db() as session:
+                await _remove(session)
+                await session.commit()
 
     async def get_by_name(self, name: str, db=None) -> Optional[Role]:
         async def _get(db):
@@ -539,6 +545,24 @@ class RoleManager:
             ).where(user_roles_association.c.user_id == user_id)
             results = (await db.execute(stmt)).all()
             return [{"role_name": row[0], "scope": row[1]} for row in results]
+
+    async def get_user_roles(self, user_id: str, scope: Optional[str] = None, db: AsyncSession = None) -> List[Role]:
+        """Get user roles, optionally filtered by scope."""
+        async def _get(session: AsyncSession):
+            stmt = select(Role).join(
+                user_roles_association, Role.id == user_roles_association.c.role_id
+            ).where(user_roles_association.c.user_id == user_id)
+
+            if scope is not None:
+                stmt = stmt.where(user_roles_association.c.scope == scope)
+
+            result = await session.execute(stmt)
+            return list(result.unique().scalars().all())
+
+        if db:
+            return await _get(db)
+        async with self._db_manager.get_db() as session:
+            return await _get(session)
 
     async def has_permission(self, user_id: str, permission_name: str, scope_prefix: Optional[str] = None,
                              db: AsyncSession = None) -> bool:
@@ -1145,10 +1169,11 @@ class OrganizationManager:
             raise RoleNotFoundError(f"Team {team_id} not found.")
         async with self._db_manager.get_db() as db:
             stmt_exists = select(team_members).where(
-                team_members.c.user_id == inviter.id,
+                team_members.c.user_id == invitee.id,
                 team_members.c.team_id == team_id
             )
-            if (await db.execute(stmt_exists)).first():
+            exists = (await db.execute(stmt_exists)).first()
+            if exists:
                 return False
         async with self._db_manager.get_db() as db:
             await self._db_manager.log_audit_event(

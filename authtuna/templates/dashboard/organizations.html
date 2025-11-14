@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Your Organizations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  {{ get_theme_css()|safe }}
+  <style>
+    body { font-family: 'Poppins', sans-serif; background-size: 400% 400%; animation: gradientAnimation 15s ease infinite; }
+    @keyframes gradientAnimation { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<div class="relative min-h-screen lg:flex">
+
+    <div class="lg:hidden flex justify-between items-center p-4">
+        <h1 class="text-2xl font-bold">AuthTuna</h1>
+        <button id="menu-toggle-button" class="focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+            </svg>
+        </button>
+    </div>
+
+    <aside id="sidebar" class="w-64 card p-6 flex-col justify-between fixed inset-y-0 left-0 z-30 transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex">
+        <div>
+            <h1 class="text-2xl font-bold mb-8 hidden lg:block">AuthTuna</h1>
+            <nav class="space-y-4">
+                <a href="{{ url_for('ui_dashboard') }}" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-secondary">
+                    <span class="ml-3">Dashboard</span>
+                </a>
+                <a href="{{ url_for('ui_profile') }}" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-secondary">
+                    <span class="ml-3">Profile</span>
+                </a>
+                <a href="{{ url_for('ui_settings') }}" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-secondary">
+                    <span class="ml-3">Settings</span>
+                </a>
+                <a href="{{ url_for('orgs_dashboard') }}" class="flex items-center p-2 text-base font-normal rounded-lg bg-secondary card">
+                    <span class="ml-3">Organizations</span>
+                </a>
+            </nav>
+        </div>
+        <div>
+            <a href="/auth/logout" class="flex items-center p-2 text-base font-normal rounded-lg hover:bg-secondary">
+                <span class="ml-3">Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-6 lg:p-10">
+        <h1 class="text-3xl font-bold">Organizations</h1>
+        <p class="text-muted mb-6">Manage your organizations and teams.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card p-6 rounded-lg shadow-lg">
+                <h3 class="font-semibold">Owned Organizations</h3>
+                <div class="mt-4">
+                    {% if owned_orgs and owned_orgs|length > 0 %}
+                        <ul class="space-y-3">
+                            {% for org in owned_orgs %}
+                            <li class="p-3 bg-white dark:bg-gray-800 rounded flex justify-between items-center">
+                                <div>
+                                    <div class="font-semibold">{{ org.name }}</div>
+                                    <div class="text-sm text-muted">ID: {{ org.id }}</div>
+                                </div>
+                                <div class="space-x-2">
+                                    <a href="/ui/organizations/{{ org.id }}" class="px-3 py-1 bg-blue-600 text-white rounded">Open</a>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="p-3 bg-white dark:bg-gray-800 rounded">You don't own any organizations.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card p-6 rounded-lg shadow-lg">
+                <h3 class="font-semibold">Member Of</h3>
+                <div class="mt-4">
+                    {% if orgs and orgs|length > 0 %}
+                        <ul class="space-y-3">
+                            {% for org in orgs %}
+                            <li class="p-3 bg-white dark:bg-gray-800 rounded flex justify-between items-center">
+                                <div>
+                                    <div class="font-semibold">{{ org.name }}</div>
+                                    <div class="text-sm text-muted">ID: {{ org.id }}</div>
+                                </div>
+                                <div class="space-x-2">
+                                    <a href="/ui/organizations/{{ org.id }}" class="px-3 py-1 bg-blue-600 text-white rounded">Open</a>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="p-3 bg-white dark:bg-gray-800 rounded">You are not a member of any organizations.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if can_create_org %}
+        <div class="mt-8 card p-6 rounded-lg shadow-lg max-w-xl">
+            <h3 class="font-semibold mb-4">Create Organization</h3>
+            <form action="/ui/organizations/create" method="post" class="space-y-4">
+                <div>
+                    <label for="org-name" class="block text-sm font-medium">Organization Name</label>
+                    <input id="org-name" name="name" type="text" required class="mt-1 block w-full rounded border px-3 py-2 bg-white dark:bg-gray-800">
+                </div>
+                <div>
+                    <button class="px-4 py-2 bg-green-600 text-white rounded">Create</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+    </main>
+</div>
+
+<script>
+    const sidebar = document.getElementById('sidebar');
+    const menuButton = document.getElementById('menu-toggle-button');
+    function toggleMenu() { sidebar.classList.toggle('-translate-x-full'); }
+    if (menuButton) menuButton.addEventListener('click', toggleMenu);
+    document.addEventListener('click', (event) => {
+        if (!sidebar) return;
+        const isClickInsideSidebar = sidebar.contains(event.target);
+        const isClickOnMenuButton = menuButton && menuButton.contains(event.target);
+        if (!isClickInsideSidebar && !isClickOnMenuButton && !sidebar.classList.contains('-translate-x-full')) {
+             if (window.innerWidth < 1024) { toggleMenu(); }
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -5,13 +5,13 @@ from authtuna.core.exceptions import UserAlreadyExistsError, UserNotFoundError, 
 async def test_create_user(auth_tuna_async):
     """Test creating a new user."""
     user = await auth_tuna_async.users.create(
-        email="test@example.com",
-        username="testuser",
+        email="test25@example.com",
+        username="testuser25",
         password="password123",
         ip_address="127.0.0.1"
     )
-    assert user.email == "test@example.com"
-    assert user.username == "testuser"
+    assert user.email == "test25@example.com"
+    assert user.username == "testuser25"
 
 @pytest.mark.asyncio
 async def test_create_duplicate_user(auth_tuna_async):

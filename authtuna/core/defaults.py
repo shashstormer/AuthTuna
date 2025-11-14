@@ -61,13 +61,13 @@ ROLE_PERMISSIONS = {
 
 DEFAULT_ROLE_GRANTS = {
     # System Admin Roles
-    "System": ["SuperAdmin", "Admin", "Moderator", "OrgOwner", "OrgAdmin", "TeamLead", "OrgMember", "User"],
-    "SuperAdmin": ["Admin", "Moderator", "OrgOwner", "OrgAdmin", "TeamLead", "OrgMember", "User"], # anyway hierarchical system exists so this and the next line dont actually matter.
+    "System": ["SuperAdmin", "Admin", "Moderator", "OrgOwner", "OrgAdmin", "TeamLead", "OrgMember", "User", "TeamMember"],
+    "SuperAdmin": ["Admin", "Moderator", "OrgOwner", "OrgAdmin", "TeamLead", "OrgMember", "User", "TeamMember"], # anyway hierarchical system exists so this and the next line dont actually matter.
     "Admin": ["Moderator", "OrgOwner", "OrgAdmin", "TeamLead", "OrgMember", "User"],
 
     # Organization Roles
-    "OrgOwner": ["OrgAdmin", "TeamLead", "OrgMember"],
-    "OrgAdmin": ["TeamLead", "OrgMember"],
+    "OrgOwner": ["OrgAdmin", "TeamLead", "OrgMember", "TeamMember"],
+    "OrgAdmin": ["TeamLead", "OrgMember", "TeamMember"],
     "TeamLead": ["TeamMember"],
 }
 
