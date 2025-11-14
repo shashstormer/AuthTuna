@@ -256,6 +256,7 @@ class EmailManager:
             "join_link": join_link,
             "inviter_name": inviter_name,
             "team_name": team_name,
+            "APP_NAME": settings.APP_NAME,
         }
         await self.send_email_async(
             subject="You've been invited to a team!",
