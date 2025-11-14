@@ -234,16 +234,17 @@ class EmailManager:
     async def send_org_invite_email(self, email: str, token: str, org_name: str, inviter_name: str,
                                     background_tasks: BackgroundTasks):
         """Sends an organization invitation email."""
-        join_link = f"{settings.API_BASE_URL}/orgs/join?token={token}"
+        join_link = f"{settings.API_BASE_URL}/ui/organizations/join?token={token}"
         context = {
             "join_link": join_link,
             "inviter_name": inviter_name,
             "org_name": org_name,
+            "APP_NAME": settings.APP_NAME,
         }
         await self.send_email_async(
             subject="You've been invited to an organization!",
             email_to=email,
-            template_name="org_invite.html",  # New template
+            template_name="org_invite.html",
             context=context,
             background_tasks=background_tasks
         )
