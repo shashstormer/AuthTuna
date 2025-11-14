@@ -1555,7 +1555,7 @@ class AuthTunaAsync:
 
         if ip_attempts >= settings.MAX_LOGIN_ATTEMPTS_PER_IP:
             await self.db_manager.log_audit_event(
-                user_id or "unknown", "LOGIN_RATE_LIMITED", ip_address,
+                user_id or "system", "LOGIN_RATE_LIMITED", ip_address,
                 {"reason": "ip_rate_limit_exceeded", "attempts": ip_attempts}, db=db
             )
             raise RateLimitError(f"Too many login attempts from this IP address. Please try again after {settings.LOGIN_LOCKOUT_DURATION_SECONDS // 60} minutes.")
@@ -1674,7 +1674,7 @@ class AuthTunaAsync:
             user = await self.users.get_by_email(email)
             if not user:
                 await self.db_manager.log_audit_event(
-                    "unknown", "PASSWORD_RESET_REQUESTED", ip_address,
+                    "system", "PASSWORD_RESET_REQUESTED", ip_address,
                     {"email": email, "result": "user_not_found"}, db=db
                 )
                 await db.commit()
@@ -1713,9 +1713,61 @@ class AuthTunaAsync:
             return user
 
     async def verify_email(self, token_id: str, ip_address: str) -> User:
-        """Performs email verification in a single atomic transaction."""
+        """Performs email verification in a single atomic transaction with rate limiting."""
         async with self.db_manager.get_db() as db:
-            user = await self.tokens.validate(db, token_id, "email_verification", ip_address)
+            # Rate limit by IP to help prevent token enumeration
+            current_time = time.time()
+            window_start = current_time - settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS
+
+            ip_attempts_stmt = select(func.count()).select_from(AuditEvent).where(
+                AuditEvent.event_type == "EMAIL_VERIFICATION_FAILED",
+                AuditEvent.ip_address == ip_address,
+                AuditEvent.timestamp > window_start
+            )
+            ip_attempts = await db.scalar(ip_attempts_stmt)
+            if ip_attempts >= settings.MAX_LOGIN_ATTEMPTS_PER_IP:
+                await self.db_manager.log_audit_event(
+                    "system", "EMAIL_VERIFICATION_RATE_LIMITED", ip_address,
+                    {"reason": "ip_rate_limit_exceeded", "attempts": ip_attempts}, db=db
+                )
+                await db.commit()
+                raise RateLimitError("Too many verification attempts from this IP address. Please try again later.")
+
+            # Validate the token; catch and log failures as EMAIL_VERIFICATION_FAILED
+            try:
+                user = await self.tokens.validate(db, token_id, "email_verification", ip_address)
+            except TokenExpiredError as e:
+                details = {"reason": "token_expired"}
+                if getattr(e, 'new_token_id', None):
+                    details["new_token_id"] = e.new_token_id
+                await self.db_manager.log_audit_event(
+                    "system", "EMAIL_VERIFICATION_FAILED", ip_address, details, db=db
+                )
+                await db.commit()
+                raise
+            except InvalidTokenError:
+                await self.db_manager.log_audit_event(
+                    "system", "EMAIL_VERIFICATION_FAILED", ip_address,
+                    {"reason": "invalid_token"}, db=db
+                )
+                await db.commit()
+                raise
+
+            # Check per-user failed verification attempts
+            user_attempts_stmt = select(func.count()).select_from(AuditEvent).where(
+                AuditEvent.event_type == "EMAIL_VERIFICATION_FAILED",
+                AuditEvent.user_id == user.id,
+                AuditEvent.timestamp > window_start
+            )
+            user_attempts = await db.scalar(user_attempts_stmt)
+            if user_attempts >= settings.MAX_LOGIN_ATTEMPTS_PER_USER:
+                await self.db_manager.log_audit_event(
+                    user.id, "EMAIL_VERIFICATION_RATE_LIMITED", ip_address,
+                    {"reason": "user_rate_limit_exceeded", "attempts": user_attempts}, db=db
+                )
+                await db.commit()
+                raise RateLimitError("Too many verification attempts for this account. Please try again later.")
+
             if not getattr(user, 'email_verified', False):
                 user.email_verified = True
                 await self.db_manager.log_audit_event(
@@ -1793,7 +1845,7 @@ class AuthTunaAsync:
             user = await self.users.get_by_email(email)
             if not user:
                 await self.db_manager.log_audit_event(
-                    "unknown", "PASSWORDLESS_LOGIN_REQUESTED", ip_address,
+                    "system", "PASSWORDLESS_LOGIN_REQUESTED", ip_address,
                     {"email": email, "result": "user_not_found"}, db=db
                 )
                 await db.commit()

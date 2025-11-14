@@ -275,11 +275,14 @@ async def test_reset_password_success(user_manager):
 
 @pytest.mark.asyncio
 async def test_verify_email_success(user_manager):
-    manager, _ = user_manager
+    manager, session_mock = user_manager
     auth_tuna = AuthTunaAsync(manager._db_manager)
 
     mock_user = MagicMock(spec=User)
     mock_user.email_verified = False
+
+    # Mock scalar to return 0 for rate limit checks
+    session_mock.scalar = AsyncMock(return_value=0)
 
     with patch.object(auth_tuna.tokens, 'validate', new=AsyncMock(return_value=mock_user)) as mock_validate:
         user = await auth_tuna.verify_email("valid_token", "127.0.0.1")
