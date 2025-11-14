@@ -170,7 +170,7 @@ async def org_details_page(request: Request, org_id: str, user: User = Depends(o
             try:
                 setattr(t, 'created_at_human', _format_ts(t.created_at))
             except Exception:
-                pass
+                setattr(t, 'created_at_human', None)
 
         # Check if user is owner or admin
         user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"org:{org_id}")
@@ -417,7 +417,7 @@ async def team_details_page(request: Request, team_id: str, user: User = Depends
         try:
             setattr(team, 'created_at_human', team_created_human)
         except Exception:
-            pass
+            setattr(team, 'created_at_human', None)
 
         # Check if user is team lead or org admin/owner
         user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"team:{team_id}")
