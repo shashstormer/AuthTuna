@@ -469,7 +469,7 @@ class Session(Base):
 class Token(Base):
     __tablename__ = 'tokens'
     id = Column(String(64), primary_key=True)
-    purpose = Column(String(50), nullable=False, index=True)
+    purpose = Column(String(200), nullable=False, index=True)
     user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
     ctime = Column(Float, nullable=False, default=time.time)
     etime = Column(Float, nullable=False, default=lambda: time.time() + settings.TOKENS_EXPIRY_SECONDS)
