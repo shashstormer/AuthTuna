@@ -159,7 +159,7 @@ async def org_details_page(request: Request, org_id: str, user: User = Depends(o
         teams = await auth_service.orgs.get_org_teams(org_id)
 
         # Convert timestamps to human readable strings
-        org_created_human = _format_ts(getattr(org, 'created_at', None))
+        org_created_human = _format_ts(org.created_at)
         # Mutate member join timestamps to human readable
         for m in members:
             if isinstance(m, dict):
@@ -168,7 +168,7 @@ async def org_details_page(request: Request, org_id: str, user: User = Depends(o
         # Attach human-readable created_at to team objects (transient attribute)
         for t in teams:
             try:
-                setattr(t, 'created_at_human', _format_ts(getattr(t, 'created_at', None)))
+                setattr(t, 'created_at_human', _format_ts(t.created_at))
             except Exception:
                 pass
 
@@ -410,7 +410,7 @@ async def team_details_page(request: Request, team_id: str, user: User = Depends
         members = await auth_service.orgs.get_team_members(team_id)
 
         # Convert timestamps
-        team_created_human = _format_ts(getattr(team, 'created_at', None))
+        team_created_human = _format_ts(team.created_at)
         for m in members:
             if isinstance(m, dict):
                 m['joined_at'] = _format_ts(m.get('joined_at'))
