@@ -31,7 +31,7 @@
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ team.name }}</h2>
                         <p class="text-gray-600 dark:text-gray-400">Team ID: {{ team.id }}</p>
                         <p class="text-gray-600 dark:text-gray-400">Organization: {{ org.name }}</p>
-                        <p class="text-gray-600 dark:text-gray-400">Created: {{ team.created_at }}</p>
+                        <p class="text-gray-600 dark:text-gray-400">Created: {{ team.created_at_human if getattr(team, 'created_at_human', None) else team.created_at }}</p>
                     </div>
                     <div class="flex gap-2">
                         {% if can_manage %}
@@ -211,4 +211,3 @@
     </script>
 </body>
 </html>
-

@@ -30,7 +30,7 @@
                     <div>
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{{ org.name }}</h2>
                         <p class="text-gray-600 dark:text-gray-400">Organization ID: {{ org.id }}</p>
-                        <p class="text-gray-600 dark:text-gray-400">Created: {{ org.created_at }}</p>
+                        <p class="text-gray-600 dark:text-gray-400">Created: {{ org_created_at }}</p>
                     </div>
                     {% if can_manage %}
                     <div class="flex gap-2">
@@ -106,7 +106,7 @@
                     {% for team in teams %}
                     <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition">
                         <h4 class="font-semibold text-gray-900 dark:text-white mb-2">{{ team.name }}</h4>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Created: {{ team.created_at }}</p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Created: {{ team.created_at_human if getattr(team, 'created_at_human', None) else team.created_at }}</p>
                         <a href="/ui/teams/{{ team.id }}" class="text-blue-600 dark:text-blue-400 hover:underline">View Details →</a>
                     </div>
                     {% endfor %}
@@ -289,4 +289,3 @@
     </script>
 </body>
 </html>
-

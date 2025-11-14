@@ -1186,7 +1186,7 @@ class OrganizationManager:
         if settings.EMAIL_ENABLED:
             token_purpose = f"team_invite:{team_id}:{role_name}"
             invite_token = await self.tokens.create(invitee.id, token_purpose, expiry_seconds=604800)
-            await email_manager.send_team_invite_email(invitee_email=invitee_email,
+            await email_manager.send_team_invite_email(email=invitee_email,
                                                        token=invite_token.id,
                                                        team_name=team.name,
                                                        inviter_name=inviter.username,

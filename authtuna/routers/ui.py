@@ -2,6 +2,7 @@
 This file gonna contain routes for ui (dashboards, user info and logins etc etc, gonna work on this soon)
 """
 from typing import List, Optional
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Request, HTTPException, Form, BackgroundTasks
 from fastapi import status
@@ -157,6 +158,20 @@ async def org_details_page(request: Request, org_id: str, user: User = Depends(o
         members = await auth_service.orgs.get_org_members(org_id)
         teams = await auth_service.orgs.get_org_teams(org_id)
 
+        # Convert timestamps to human readable strings
+        org_created_human = _format_ts(getattr(org, 'created_at', None))
+        # Mutate member join timestamps to human readable
+        for m in members:
+            if isinstance(m, dict):
+                m['joined_at'] = _format_ts(m.get('joined_at'))
+
+        # Attach human-readable created_at to team objects (transient attribute)
+        for t in teams:
+            try:
+                setattr(t, 'created_at_human', _format_ts(getattr(t, 'created_at', None)))
+            except Exception:
+                pass
+
         # Check if user is owner or admin
         user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"org:{org_id}")
         is_owner = org.owner_id == user.id
@@ -166,6 +181,7 @@ async def org_details_page(request: Request, org_id: str, user: User = Depends(o
             "request": request,
             "user": user,
             "org": org,
+            "org_created_at": org_created_human,
             "members": members,
             "teams": teams,
             "is_owner": is_owner,
@@ -341,6 +357,16 @@ async def team_details_page(request: Request, team_id: str, user: User = Depends
 
         org = await auth_service.orgs.get_organization_by_id(team.organization_id)
         members = await auth_service.orgs.get_team_members(team_id)
+
+        # Convert timestamps
+        team_created_human = _format_ts(getattr(team, 'created_at', None))
+        for m in members:
+            if isinstance(m, dict):
+                m['joined_at'] = _format_ts(m.get('joined_at'))
+        try:
+            setattr(team, 'created_at_human', team_created_human)
+        except Exception:
+            pass
 
         # Check if user is team lead or org admin/owner
         user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"team:{team_id}")
@@ -718,3 +744,14 @@ async def delete_api_key(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="API key not found.")
 
     return {"message": "API key deleted successfully."}
+
+
+def _format_ts(ts: Optional[float]) -> str:
+    """Return a human-readable timestamp string or a placeholder if None."""
+    if not ts:
+        return "—"
+    try:
+        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return str(ts)
+
