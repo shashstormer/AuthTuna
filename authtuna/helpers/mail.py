@@ -251,7 +251,7 @@ class EmailManager:
 
     async def send_team_invite_email(self, email: str, token: str, team_name: str, inviter_name: str, background_tasks: BackgroundTasks):
         """Sends a team invitation email."""
-        join_link = f"{settings.API_BASE_URL}/ui/teams/join/join?token={token}"
+        join_link = f"{settings.API_BASE_URL}/ui/teams/join?token={token}"
         context = {
             "join_link": join_link,
             "inviter_name": inviter_name,
