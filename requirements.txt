@@ -29,3 +29,4 @@ ua-parser
 jinja2
 qrcode
 Pillow
+python-multipart

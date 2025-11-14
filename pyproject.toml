@@ -54,6 +54,7 @@ dependencies = [
     "itsdangerous",
     "uvicorn",
     "cbor2>=5.4.6",
+    "python-multipart",
 ]
 
 [project.optional-dependencies]
