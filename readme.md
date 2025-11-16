@@ -20,18 +20,29 @@ Battle-tested, batteries-included authentication, session management, RBAC, SSO,
 ## Table of Contents
 
 1. [Getting Started (Basic Auth & Login)](#getting-started-basic-auth--login)
-2. [Configuring AuthTuna (Environment, Secrets Manager, etc.)](#configuring-authtuna-environment-secrets-manager-etc)
-   - [Required Config Keys (`FERNET_KEYS`, `API_BASE_URL`)](#required-config-keys-fernet_keys-api_base_url)
+2. [Configuration Options](#configuration-options)
+   - [Required Config Keys](#required-config-keys)
    - [All Config Options](#all-config-options)
-   - [Using .env or Environment Variables](#using-env-or-environment-variables)
-   - [Using a Secrets Manager or Custom `init_settings`](#using-a-secrets-manager-or-custom-init_settings)
-3. [SSO (Social Login)](#sso-social-login)
-4. [MFA (Multi-Factor Authentication)](#mfa-multi-factor-authentication)
-5. [Permission Checker](#permission-checker)
-6. [Role Checker](#role-checker)
-7. [Sample Backend Code](#sample-backend-code)
-8. [Advanced Guide & Patterns](#advanced-guide--patterns)
-9. [Proof of Endless Possibility](#proof-of-endless-possibility)
+   - [Setting Configuration](#setting-configuration)
+3. [FastAPI Integration](#fastapi-integration)
+   - [Dependencies](#dependencies)
+   - [Permission Checker](#permission-checker)
+   - [Role Checker](#role-checker)
+4. [Managing Permissions](#managing-permissions)
+   - [Creating Permissions](#creating-permissions)
+   - [Permission Naming](#permission-naming)
+5. [Managing Users](#managing-users)
+6. [Creating Roles](#creating-roles)
+7. [Batteries Included](#batteries-included)
+8. [RBAC Example](#rbac-example)
+9. [Advanced Features](#advanced-features)
+   - [SSO (Social Login)](#sso-social-login)
+   - [MFA (Multi-Factor Authentication)](#mfa-multi-factor-authentication)
+   - [Passkeys](#passkeys)
+   - [API Keys](#api-keys)
+10. [Sample Backend Code](#sample-backend-code)
+11. [Advanced Guide & Patterns](#advanced-guide--patterns)
+12. [Community & Support](#community--support)
 
 ---
 
@@ -74,9 +85,9 @@ uvicorn main:app --reload
 ```
 ---
 
-## Configuring AuthTuna (Environment, Secrets Manager, etc.)
+## Configuration Options
 
-### Required Config Keys (`FERNET_KEYS`, `API_BASE_URL`)
+### Required Config Keys
 
 - **`FERNET_KEYS`**: Comma-separated base64-encoded keys for encrypting sensitive data (sessions, cookies, etc).
   - To generate:
@@ -168,7 +179,7 @@ uvicorn main:app --reload
 
 **See [core/config.py](authtuna/core/config.py) for ALL options.**
 
-### Using `.env` or Environment Variables
+### Setting Configuration
 
 - Place your config in a `.env` file (see above).
 - Or export them in your shell:
@@ -198,34 +209,30 @@ init_settings(**fetch_secrets())
 
 ---
 
-## SSO (Social Login)
+## FastAPI Integration
 
-- Enable and configure Google, GitHub, or other OAuth providers in your config:
+### Dependencies
+
+- Install AuthTuna and FastAPI:
+  ```bash
+  pip install authtuna fastapi uvicorn[standard]
   ```
-  GOOGLE_CLIENT_ID=...
-  GOOGLE_CLIENT_SECRET=...
-  GITHUB_CLIENT_ID=...
-  GITHUB_CLIENT_SECRET=...
-  ```
-- Mount the built-in routers:
+- Add middleware to your FastAPI app:
   ```python
-  from authtuna.routers import social as social_router
-  app.include_router(social_router.router, prefix="/social", tags=["Social Login"])
+  from authtuna.middlewares.session import DatabaseSessionMiddleware
+
+  app.add_middleware(DatabaseSessionMiddleware)
   ```
-
----
-
-## MFA (Multi-Factor Authentication)
-
-- AuthTuna supports TOTP, email MFA, and backup codes.
-- Enable MFA in your app settings and use the built-in flows:
+- Use dependency injection for getting the current user:
   ```python
-  # Flows available in templates/pages and routers
+  from authtuna.integrations.fastapi_integration import get_current_user
+
+  @app.get("/me")
+  async def me(user=Depends(get_current_user)):
+      return {"id": user.id, "username": user.username}
   ```
 
----
-
-## Permission Checker
+### Permission Checker
 
 - Protect any route with fine-grained, context-aware permissions:
   ```python
@@ -239,9 +246,7 @@ init_settings(**fetch_secrets())
       ...
   ```
 
----
-
-## Role Checker
+### Role Checker
 
 - Require a role for access (supports multiple roles, hierarchical RBAC):
   ```python
@@ -254,56 +259,634 @@ init_settings(**fetch_secrets())
 
 ---
 
+## Managing Permissions
+
+Permissions are the granular capabilities that define what actions users can perform in your system. They are the atomic units of authorization, representing specific operations like "create a post", "delete a user", or "view analytics". Unlike roles, permissions are never assigned directly to users — they are always bundled into roles for better management.
+
+### Creating Permissions
+
+Creating permissions involves defining their name and description. AuthTuna validates permissions to prevent duplicates and ensures proper naming conventions.
+
+**Permission Properties:**
+- `name`: string (required) - The unique identifier for the permission
+- `description`: string (optional) - Human-readable description
+
+**Creating a Permission:**
+```python
+from authtuna.integrations import auth_service
+
+permission_manager = auth_service.permissions
+
+# Create a new permission
+new_permission = await permission_manager.create(
+    name="posts:create",
+    description="Allows users to create new blog posts"
+)
+
+# Or use get_or_create for idempotent operations
+permission, created = await permission_manager.get_or_create(
+    name="posts:publish",
+    defaults={"description": "Allows publishing posts to make them public"}
+)
+
+if created:
+    print("Permission was created")
+else:
+    print("Permission already exists")
+```
+
+### Permission Naming Conventions
+
+Well-structured permission names make your authorization system maintainable and understandable. AuthTuna follows a hierarchical naming pattern that's both readable and scalable.
+
+**The Pattern: resource:action**
+Use colon-separated hierarchies to organize permissions by resource and action. This creates a natural taxonomy that's easy to understand and query.
+
+**Examples:**
+- `posts:create` - Create blog posts
+- `users:manage` - Manage user accounts
+- `reports:view` - View analytics reports
+- `org:teams:invite` - Invite members to organization teams
+
+**Good Practices:**
+- Use lowercase: `posts:create` not `Posts:Create`
+- Be specific: `posts:publish` not `posts:edit`
+- Use hierarchies: `org:teams:manage` for nested resources
+- Be consistent: Follow patterns across your application
+- Use verbs: create, read, update, delete, manage, view, etc.
+
+**Anti-Patterns:**
+- Too generic: `admin` - what does it allow?
+- Mixed case: `Posts:Create` - inconsistent
+- Too specific: `posts:create:with:image` - over-complicated
+
+---
+
+## Managing Users
+
+AuthTuna provides comprehensive user management capabilities through the `auth_service.users` manager.
+
+### Creating Users
+
+```python
+from authtuna.integrations import auth_service
+
+user_manager = auth_service.users
+
+# Create a new user
+new_user = await user_manager.create(
+    email="john@example.com",
+    username="johndoe",
+    password="secure_password_123"
+)
+
+# Create user with additional metadata
+user_with_meta = await user_manager.create(
+    email="jane@example.com",
+    username="janedoe",
+    password="secure_password_123",
+    first_name="Jane",
+    last_name="Doe",
+    is_active=True
+)
+```
+
+### User Operations
+
+```python
+# Get user by ID
+user = await user_manager.get_by_id(user_id)
+
+# Get user by email
+user = await user_manager.get_by_email("john@example.com")
+
+# Update user
+updated_user = await user_manager.update(
+    user_id,
+    {"first_name": "John", "last_name": "Smith"}
+)
+
+# Suspend user
+await user_manager.suspend_user(user_id, admin_id, "Violation of terms")
+
+# Unsuspend user
+await user_manager.unsuspend_user(user_id, admin_id, "Appeal approved")
+
+# Delete user (soft delete)
+await user_manager.delete(user_id)
+
+# List users with pagination
+users = await user_manager.list(skip=0, limit=50)
+```
+
+### User Authentication
+
+User authentication is handled through the main AuthTuna service:
+
+```python
+from authtuna.integrations import auth_service
+
+# Login user
+user, session_or_token = await auth_service.login(
+    username_or_email="johndoe",
+    password="secure_password_123",
+    ip_address="192.168.1.1",
+    region="US",
+    device="Chrome on Windows"
+)
+
+# Change password
+await auth_service.change_password(
+    user=user,
+    current_password="old_password",
+    new_password="new_secure_password",
+    ip_address="192.168.1.1",
+    current_session_id=session_id
+)
+
+# Request password reset
+token = await auth_service.request_password_reset(
+    email="john@example.com",
+    ip_address="192.168.1.1"
+)
+
+# Reset password with token
+user = await auth_service.reset_password(
+    token_id=token.id,
+    new_password="new_password",
+    ip_address="192.168.1.1"
+)
+```
+---
+
+## Creating Roles
+
+Roles are groups of permissions that can be assigned to users. They provide a way to manage permissions at scale.
+
+### Role Management
+
+```python
+from authtuna.integrations import auth_service
+
+role_manager = auth_service.roles
+
+# Create a new role
+new_role = await role_manager.create(
+    name="editor",
+    description="Content editor with publishing rights"
+)
+
+# Add permissions to role
+await role_manager.add_permission_to_role(
+    role_name="editor",
+    permission_name="posts:create"
+)
+
+await role_manager.add_permission_to_role(
+    role_name="editor",
+    permission_name="posts:edit"
+)
+
+# Assign role to user
+await role_manager.assign_to_user(
+    user_id=user.id,
+    role_name="editor",
+    assigner_id=admin_id
+)
+
+# Remove role from user
+await role_manager.remove_from_user(
+    user_id=user.id,
+    role_name="editor",
+    remover_id=admin_id
+)
+```
+
+### Built-in Roles
+
+AuthTuna comes with several built-in roles:
+
+- **Superadmin**: Has all permissions in the system
+- **Admin**: Has administrative permissions for user and system management
+- **User**: Basic authenticated user permissions
+
+### Role Hierarchy
+
+Roles can be hierarchical. For example:
+- Superadmin > Admin > User
+- Admin can manage users, but User cannot
+
+---
+
+## Batteries Included
+
+AuthTuna includes sensible defaults and built-in roles/permissions to get you started quickly.
+
+### Default Roles
+
+1. **Superadmin**
+   - All permissions
+   - System administration
+   - User management
+   - Role management
+
+2. **Admin**
+   - User management (create, update, deactivate)
+   - Role assignment
+   - System monitoring
+
+3. **User**
+   - Basic authentication
+   - Profile management
+   - Access to user-specific resources
+
+### Default Permissions
+
+AuthTuna automatically creates common permissions:
+- `users:read` - View user profiles
+- `users:manage` - Create/update/delete users
+- `roles:read` - View roles
+- `roles:manage` - Create/update/delete roles
+- `permissions:read` - View permissions
+- `permissions:manage` - Create/update permissions
+
+### Auto-initialization
+
+On first startup, AuthTuna will:
+1. Create default roles
+2. Create default permissions
+3. Assign permissions to roles
+4. Create system users (superadmin, admin)
+
+---
+
+## RBAC Example
+
+Here's a complete example of setting up RBAC for a blog application.
+
+### 1. Define Permissions
+
+```python
+from authtuna.integrations import auth_service
+
+# Create permissions
+await auth_service.permissions.get_or_create("posts:create", {"description": "Create blog posts"})
+await auth_service.permissions.get_or_create("posts:read", {"description": "Read blog posts"})
+await auth_service.permissions.get_or_create("posts:update", {"description": "Update blog posts"})
+await auth_service.permissions.get_or_create("posts:delete", {"description": "Delete blog posts"})
+await auth_service.permissions.get_or_create("posts:publish", {"description": "Publish blog posts"})
+await auth_service.permissions.get_or_create("comments:moderate", {"description": "Moderate comments"})
+```
+
+### 2. Create Roles
+
+```python
+# Create Editor role
+editor_role = await auth_service.roles.create("editor", "Content editor")
+await auth_service.roles.add_permission_to_role("editor", "posts:create")
+await auth_service.roles.add_permission_to_role("editor", "posts:read")
+await auth_service.roles.add_permission_to_role("editor", "posts:update")
+await auth_service.roles.add_permission_to_role("editor", "posts:publish")
+
+# Create Moderator role
+moderator_role = await auth_service.roles.create("moderator", "Comment moderator")
+await auth_service.roles.add_permission_to_role("moderator", "posts:read")
+await auth_service.roles.add_permission_to_role("moderator", "comments:moderate")
+
+# Create Viewer role
+viewer_role = await auth_service.roles.create("viewer", "Content viewer")
+await auth_service.roles.add_permission_to_role("viewer", "posts:read")
+```
+
+### 3. Assign Roles to Users
+
+```python
+# Assign roles to users
+await auth_service.roles.assign_to_user(user_id=editor_user.id, role_name="editor", assigner_id=admin_id)
+await auth_service.roles.assign_to_user(user_id=moderator_user.id, role_name="moderator", assigner_id=admin_id)
+await auth_service.roles.assign_to_user(user_id=viewer_user.id, role_name="viewer", assigner_id=admin_id)
+```
+---
+
+## Advanced Features
+
+### SSO (Social Login)
+
+AuthTuna supports OAuth-based social login with Google, GitHub, and other providers.
+
+#### Configuration
+
+Add to your `.env` file:
+```
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URI=https://yourapp.com/auth/social/google/callback
+
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+GITHUB_REDIRECT_URI=https://yourapp.com/auth/social/github/callback
+```
+
+#### Setup
+
+```python
+from fastapi import FastAPI
+from authtuna.routers import social
+from authtuna import init_app
+
+app = FastAPI()
+init_app(app)
+
+# Mount social login routes
+app.include_router(social.router, prefix="/auth/social", tags=["Social Login"])
+```
+
+#### Usage
+
+Users can now login via:
+- `/auth/social/google/login`
+- `/auth/social/github/login`
+
+The social login will create user accounts automatically on first login.
+
+### MFA (Multi-Factor Authentication)
+
+AuthTuna supports multiple MFA methods: TOTP, email codes, and backup codes.
+
+#### Enabling MFA
+
+```python
+# In your .env
+MFA_ENABLED=True
+```
+
+#### MFA Setup Flow
+
+```python
+from authtuna.integrations import auth_service
+
+# Start MFA setup for user
+mfa_setup = await auth_service.mfa.start_setup(user_id)
+
+# Returns QR code URL for TOTP apps like Google Authenticator
+print(mfa_setup.qr_code_url)
+
+# Complete setup with verification code
+await auth_service.mfa.complete_setup(user_id, verification_code="123456")
+```
+
+#### MFA Verification
+
+```python
+# Verify MFA code during login
+is_valid = await auth_service.mfa.verify_code(user_id, code="123456")
+```
+
+### Passkeys
+
+Passkeys provide passwordless authentication using WebAuthn.
+
+#### Configuration
+
+```python
+# In your .env
+WEBAUTHN_ENABLED=True
+WEBAUTHN_RP_ID=yourdomain.com
+WEBAUTHN_RP_NAME=Your App Name
+WEBAUTHN_ORIGIN=https://yourdomain.com
+```
+
+#### Passkey Registration
+
+```python
+from authtuna.integrations import auth_service
+
+# Start passkey registration
+registration_options = await auth_service.passkeys.start_registration(user_id)
+
+# Return registration_options to frontend for WebAuthn API
+return registration_options
+
+# Complete registration with credential from browser
+await auth_service.passkeys.complete_registration(
+    user_id,
+    credential_data=frontend_credential
+)
+```
+
+#### Passkey Authentication
+
+```python
+# Start authentication
+auth_options = await auth_service.passkeys.start_authentication(user_id)
+
+# Verify authentication
+is_valid = await auth_service.passkeys.verify_authentication(
+    user_id,
+    credential_data=frontend_credential
+)
+```
+
+### API Keys
+
+API keys allow programmatic access to your application.
+
+#### Creating API Keys
+
+```python
+from authtuna.integrations import auth_service
+
+# Create API key for user
+api_key = await auth_service.api_keys.create_key(
+    user_id=user.id,
+    name="My API Key",
+    key_type="secret",
+    scopes=["posts:read", "posts:create"],
+    valid_seconds=31536000  # 1 year
+)
+
+print(api_key.plaintext)  # The actual API key to use (only shown once)
+```
+
+#### Using API Keys
+
+API keys can be used in two ways:
+
+1. **Bearer Token**: `Authorization: Bearer sk-...`
+2. **Query Parameter**: `?api_key=sk-...`
+
+#### API Key Management
+
+```python
+# List user's API keys
+keys = await auth_service.api_keys.get_all_keys_for_user(user.id)
+
+# Revoke API key
+await auth_service.api_keys.delete_key(key_id)
+```
+
+---
+
 ## Sample Backend Code
 
 ```python
 from fastapi import FastAPI, Depends, HTTPException
-from authtuna.middlewares.session import DatabaseSessionMiddleware
+from authtuna import init_app
 from authtuna.integrations.fastapi_integration import (
-    get_current_user, PermissionChecker, RoleChecker
+    get_current_user,
+    PermissionChecker,
+    RoleChecker
 )
-from authtuna.core.database import User
 
-app = FastAPI()
-app.add_middleware(DatabaseSessionMiddleware)
+app = FastAPI(title="AuthTuna Example API")
 
+# Initialize AuthTuna (adds all routes, middleware, etc.)
+init_app(app)
+
+# Public endpoint
+@app.get("/")
+async def root():
+    return {"message": "Welcome to AuthTuna API"}
+
+# Protected endpoint - requires authentication
 @app.get("/me")
-async def me(user: User = Depends(get_current_user)):
-    return {"id": user.id, "username": user.username}
+async def get_current_user_info(user=Depends(get_current_user)):
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "roles": [role.name for role in user.roles]
+    }
 
-@app.get("/project/{project_id}/edit")
-async def edit_project(
+# Permission-based protection
+@app.get("/admin/users")
+async def list_users(user=Depends(PermissionChecker("users:manage"))):
+    # Only users with users:manage permission
+    users = await get_all_users()
+    return {"users": users}
+
+# Role-based protection
+@app.post("/admin/roles")
+async def create_role(role_data: dict, user=Depends(RoleChecker("admin"))):
+    # Only admin role
+    new_role = await create_role_in_db(role_data)
+    return {"role": new_role}
+
+# Scoped permissions
+@app.get("/projects/{project_id}")
+async def get_project(
     project_id: str,
-    user: User = Depends(PermissionChecker("project:edit", scope_from_path="project_id"))
+    user=Depends(PermissionChecker("projects:read", scope_from_path="project_id"))
 ):
-    # Only users with 'edit' permission in this project
-    return {"msg": "Project edit granted"}
+    # Check if user can read this specific project
+    project = await get_project_by_id(project_id)
+    return {"project": project}
 
-@app.get("/superadmin")
-async def superadmin(user: User = Depends(RoleChecker("superadmin"))):
-    return {"msg": f"Welcome, {user.username}!"}
+# API key support
+@app.get("/api/data")
+async def get_data(user=Depends(get_current_user)):
+    # Works with both session cookies and API keys
+    data = await fetch_data_for_user(user.id)
+    return {"data": data}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
 ---
 
 ## Advanced Guide & Patterns
 
-- **Multi-Tenancy:** Use scoped permissions to isolate orgs/customers.
-- **Device/IP/Region Security:** Use session hooks to enforce device or location controls.
-- **Key Rotation:** Rotate `FERNET_KEYS`, `ENCRYPTION_PRIMARY_KEY` as needed. Old keys are accepted for decryption.
-- **Event Hooks:** Run logic on login, registration, session validation, etc.
-- **Custom User Models:** Extend or swap out models as needed.
-- **Pluggable Routers:** Use only pieces you want, or replace with your own.
+### Multi-Tenant Applications
 
----
+For applications serving multiple organizations:
 
-> If you can describe the business logic, you can implement it in AuthTuna.
+```python
+# Organization-scoped permissions
+@app.get("/orgs/{org_id}/projects")
+async def list_org_projects(
+    org_id: str,
+    user=Depends(PermissionChecker("projects:read", scope_from_path="org_id"))
+):
+    # User must have projects:read permission in this org
+    projects = await get_projects_for_org(org_id, user.id)
+    return {"projects": projects}
+```
 
-## Community & Support
-- Found a bug or need a feature? [Open an issue](https://github.com/shashstormer/AuthTuna/issues)
-- Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
+### Custom Permission Logic
 
----
-*No hype, no snake oil—just a modern, async security framework that works. PRs, questions, and feedback always welcome!*
+For complex permission requirements:
 
+```python
+from authtuna.integrations.fastapi_integration import PermissionChecker
 
+class CustomPermissionChecker(PermissionChecker):
+    async def __call__(self, request, user):
+        # Custom logic before standard permission check
+        if not await self.custom_validation(user, request):
+            raise HTTPException(status_code=403, detail="Custom validation failed")
+
+        # Standard permission check
+        return await super().__call__(request, user)
+
+    async def custom_validation(self, user, request):
+        # Your custom logic here
+        return True
+
+# Use custom checker
+@app.get("/protected")
+async def protected_endpoint(user=Depends(CustomPermissionChecker("some:permission"))):
+    return {"ok": True}
+```
+
+### Database Integration
+
+AuthTuna works with any async SQLAlchemy-supported database:
+
+```python
+# PostgreSQL
+DEFAULT_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/dbname
+
+# MySQL
+DEFAULT_DATABASE_URI=mysql+aiomysql://user:pass@localhost/dbname
+
+# SQLite (default)
+DEFAULT_DATABASE_URI=sqlite+aiosqlite:///./authtuna.db
+```
+
+### Custom User Model
+
+Extend the base User model for additional fields:
+
+```python
+from authtuna.models import User
+from sqlalchemy import Column, String
+
+class CustomUser(User):
+    __tablename__ = "custom_users"
+
+    # Additional fields
+    department = Column(String)
+    employee_id = Column(String)
+
+    # Inherit all AuthTuna user functionality
+```
+
+### Event Hooks
+
+AuthTuna supports various hooks for customization:
+
+```python
+from authtuna.core import hooks
+
+@hooks.on_user_created
+async def send_welcome_email(user):
+    # Send welcome email when user is created
+    pass
+
+@hooks.on_user_login
+async def log_login_attempt(user, request):
+    # Log login attempts
+    pass
+```
