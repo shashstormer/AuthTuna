@@ -66,3 +66,11 @@ class OperationForbiddenError(AuthTunaError):
 class InvalidEmailError(AuthTunaError):
     """Raised when an email address is invalid."""
     pass
+
+class PasswordResetRequiredError(AuthTunaError):
+    """Raised when a user must reset their password before proceeding."""
+    pass
+
+class UserSuspendedError(AuthTunaError):
+    """Raised when a suspended user attempts to login (sometimes coz i didnt raise this other places just returned msg)."""
+    pass

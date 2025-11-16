@@ -4,7 +4,7 @@ from fastapi import Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from ua_parser import user_agent_parser
 
-from authtuna.core import InvalidEmailError
+from authtuna.core import InvalidEmailError, UserSuspendedError
 from authtuna.core.config import settings
 from authtuna.core.database import Session as DBSession, User
 from authtuna.core.encryption import encryption_utils
@@ -162,6 +162,8 @@ async def create_session_and_set_cookie(user: User, request: Request, response: 
     Helper function to create a new database session, save it, and set the session cookie.
     """
     # if isinstance(db, DatabaseManager):
+    if not user.is_active:
+        raise UserSuspendedError("This account has been suspended and cannot create new sessions.")
     if True:
         async with db as db:
             device_data = await get_device_data(request)
