@@ -13,6 +13,8 @@ Battle-tested, batteries-included authentication, session management, RBAC, SSO,
 
 ## Check Documentation at [authtuna.shashstorm.in](https://authtuna.shashstorm.in)
 
+This documentation is so that LLM's can understand how to use the library.
+
 ### Below is some documentation on getting started.
 
 ---
@@ -326,6 +328,8 @@ Use colon-separated hierarchies to organize permissions by resource and action. 
 
 AuthTuna provides comprehensive user management capabilities through the `auth_service.users` manager.
 
+Read docs at (user docs)[https://authtuna.shashstorm.in/managing-user]
+
 ### Creating Users
 
 ```python
@@ -425,6 +429,8 @@ Roles are groups of permissions that can be assigned to users. They provide a wa
 
 ### Role Management
 
+just read on (authtuna role management docs)[https://authtuna.shashstorm.in/creating-roles]
+
 ```python
 from authtuna.integrations import auth_service
 
@@ -444,14 +450,16 @@ await role_manager.add_permission_to_role(
 
 await role_manager.add_permission_to_role(
     role_name="editor",
-    permission_name="posts:edit"
+    permission_name="posts:edit",
+    adder_id="system" # this is for audit logging.
 )
 
 # Assign role to user
 await role_manager.assign_to_user(
     user_id=user.id,
     role_name="editor",
-    assigner_id=admin_id
+    assigner_id=admin_id, # This checks if the assigner can assign or not, you need to correctly setup the role with either hierarchy or using grantable allow.
+    scope="org:project1", # either set this or set global, default = none to prevent misconfiguration
 )
 
 # Remove role from user
@@ -611,7 +619,7 @@ The social login will create user accounts automatically on first login.
 
 ### MFA (Multi-Factor Authentication)
 
-AuthTuna supports multiple MFA methods: TOTP, email codes, and backup codes.
+AuthTuna supports MFA methods: TOTP and backup codes.
 
 #### Enabling MFA
 
@@ -626,13 +634,13 @@ MFA_ENABLED=True
 from authtuna.integrations import auth_service
 
 # Start MFA setup for user
-mfa_setup = await auth_service.mfa.start_setup(user_id)
+secret, url = await auth_service.mfa.setup_totp(user_id, "Just put ur app nm here it will give appname:email as credential id on scanning on phone")
 
 # Returns QR code URL for TOTP apps like Google Authenticator
-print(mfa_setup.qr_code_url)
+print(url)
 
 # Complete setup with verification code
-await auth_service.mfa.complete_setup(user_id, verification_code="123456")
+await auth_service.mfa.verify_and_enable_totp(user_id, verification_code="123456")
 ```
 
 #### MFA Verification
@@ -656,37 +664,6 @@ WEBAUTHN_RP_NAME=Your App Name
 WEBAUTHN_ORIGIN=https://yourdomain.com
 ```
 
-#### Passkey Registration
-
-```python
-from authtuna.integrations import auth_service
-
-# Start passkey registration
-registration_options = await auth_service.passkeys.start_registration(user_id)
-
-# Return registration_options to frontend for WebAuthn API
-return registration_options
-
-# Complete registration with credential from browser
-await auth_service.passkeys.complete_registration(
-    user_id,
-    credential_data=frontend_credential
-)
-```
-
-#### Passkey Authentication
-
-```python
-# Start authentication
-auth_options = await auth_service.passkeys.start_authentication(user_id)
-
-# Verify authentication
-is_valid = await auth_service.passkeys.verify_authentication(
-    user_id,
-    credential_data=frontend_credential
-)
-```
-
 ### API Keys
 
 API keys allow programmatic access to your application.
@@ -701,7 +678,7 @@ api_key = await auth_service.api_keys.create_key(
     user_id=user.id,
     name="My API Key",
     key_type="secret",
-    scopes=["posts:read", "posts:create"],
+    scopes=["Admin:global", "Projects:{sm_org_ig}"], 
     valid_seconds=31536000  # 1 year
 )
 
@@ -814,32 +791,6 @@ async def list_org_projects(
     return {"projects": projects}
 ```
 
-### Custom Permission Logic
-
-For complex permission requirements:
-
-```python
-from authtuna.integrations.fastapi_integration import PermissionChecker
-
-class CustomPermissionChecker(PermissionChecker):
-    async def __call__(self, request, user):
-        # Custom logic before standard permission check
-        if not await self.custom_validation(user, request):
-            raise HTTPException(status_code=403, detail="Custom validation failed")
-
-        # Standard permission check
-        return await super().__call__(request, user)
-
-    async def custom_validation(self, user, request):
-        # Your custom logic here
-        return True
-
-# Use custom checker
-@app.get("/protected")
-async def protected_endpoint(user=Depends(CustomPermissionChecker("some:permission"))):
-    return {"ok": True}
-```
-
 ### Database Integration
 
 AuthTuna works with any async SQLAlchemy-supported database:
@@ -848,45 +799,6 @@ AuthTuna works with any async SQLAlchemy-supported database:
 # PostgreSQL
 DEFAULT_DATABASE_URI=postgresql+asyncpg://user:pass@localhost/dbname
 
-# MySQL
-DEFAULT_DATABASE_URI=mysql+aiomysql://user:pass@localhost/dbname
-
 # SQLite (default)
 DEFAULT_DATABASE_URI=sqlite+aiosqlite:///./authtuna.db
-```
-
-### Custom User Model
-
-Extend the base User model for additional fields:
-
-```python
-from authtuna.models import User
-from sqlalchemy import Column, String
-
-class CustomUser(User):
-    __tablename__ = "custom_users"
-
-    # Additional fields
-    department = Column(String)
-    employee_id = Column(String)
-
-    # Inherit all AuthTuna user functionality
-```
-
-### Event Hooks
-
-AuthTuna supports various hooks for customization:
-
-```python
-from authtuna.core import hooks
-
-@hooks.on_user_created
-async def send_welcome_email(user):
-    # Send welcome email when user is created
-    pass
-
-@hooks.on_user_login
-async def log_login_attempt(user, request):
-    # Log login attempts
-    pass
 ```
