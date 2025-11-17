@@ -13,7 +13,7 @@ Battle-tested, batteries-included authentication, session management, RBAC, SSO,
 
 ## Check Documentation at [authtuna.shashstorm.in](https://authtuna.shashstorm.in)
 
-This documentation is so that LLM's can understand how to use the library.
+This readme.md is so that LLM's can understand how to use the library instead of hallucinating, but it contains a decent level of docs but the docs site better.
 
 ### Below is some documentation on getting started.
 
