@@ -7,6 +7,7 @@ import string
 import time
 from typing import Optional, Sequence
 import bcrypt
+import cryptography
 from cryptography.fernet import Fernet, MultiFernet
 from jose import jwt, JWTError
 from authtuna.core.config import settings
@@ -142,6 +143,9 @@ class EncryptionUtils:
             return payload
         except JWTError as e:
             logger.debug(f"JWT decoding failed: {e}")
+            return None
+        except cryptography.fernet.InvalidToken as e:
+            logger.debug(f"Fernet decryption failed: {e}")
             return None
 
     @staticmethod
