@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from starlette.templating import Jinja2Templates
 
 from authtuna import settings
@@ -53,8 +53,9 @@ class UserSearchResult(BaseModel):
     is_active: bool
     mfa_enabled: bool
 
-    class Config:
-        from_attributes = True
+    mfa_enabled: bool
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserSuspend(BaseModel):
@@ -67,8 +68,9 @@ class AuditEventResponse(BaseModel):
     ip_address: Optional[str]
     details: Optional[dict]
 
-    class Config:
-        from_attributes = True
+    details: Optional[dict]
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GrantRoleAssignPermission(BaseModel):
@@ -83,8 +85,9 @@ class GrantPermissionGrantPermission(BaseModel):
 class PermissionInfo(BaseModel):
     name: str
 
-    class Config:
-        from_attributes = True
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserInRole(BaseModel):
@@ -118,7 +121,7 @@ async def search_users_endpoint(
 )
 async def serve_user_detail_page(request: Request):
     """Serves the HTML page for viewing a single user's details."""
-    return templates.TemplateResponse("admin_user_detail.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="admin_user_detail.html", context={})
 
 @router.get("/assignable-roles", dependencies=[Depends(PermissionChecker("admin:manage:roles"))])
 async def get_my_assignable_roles(current_user: User = Depends(get_current_user), ):
@@ -174,7 +177,7 @@ async def get_user_details_data(user_id: str):
 )
 async def serve_role_detail_page(request: Request):
     """Serves the HTML page for viewing a single role's details."""
-    return templates.TemplateResponse("admin_role_detail.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="admin_role_detail.html", context={})
 
 
 @router.get(
@@ -200,7 +203,7 @@ async def get_role_details_data(role_name: str):
 )
 async def serve_admin_dashboard(request: Request):
     """Serves the main admin dashboard HTML page."""
-    return templates.TemplateResponse("admin_dashboard.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="admin_dashboard.html", context={})
 
 
 @router.get(

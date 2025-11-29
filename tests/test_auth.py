@@ -83,11 +83,12 @@ async def test_logout_and_user_info(fastapi_client: AsyncClient):
         json={"username_or_email": "testuser2", "password": "pw123456"},
     )
     token = resp.cookies.get("session_token")
+    fastapi_client.cookies = {"session_token": token}
     # User info (GET)
-    resp = await fastapi_client.get("/auth/user-info", cookies={"session_token": token})
+    resp = await fastapi_client.get("/auth/user-info")
     assert resp.status_code == status.HTTP_200_OK
     # Logout (POST)
-    resp = await fastapi_client.post("/auth/logout", cookies={"session_token": token})
+    resp = await fastapi_client.post("/auth/logout")
     assert resp.status_code == status.HTTP_200_OK
 
 @pytest.mark.asyncio

@@ -419,7 +419,7 @@ async def test_json_type_serialization():
     """Test JsonType serialization and deserialization."""
     engine = create_engine('sqlite:///:memory:')
     
-    class TestModel(Base):
+    class TestJsonModel(Base):
         __tablename__ = 'test_json_model'
         id = Column(Integer, primary_key=True)
         data = Column(JsonType)
@@ -430,18 +430,18 @@ async def test_json_type_serialization():
     
     # Test with dictionary
     test_data = {"key": "value", "nested": {"inner": "data"}}
-    db.add(TestModel(data=test_data))
+    db.add(TestJsonModel(data=test_data))
     db.commit()
     
-    result = db.query(TestModel).first()
+    result = db.query(TestJsonModel).first()
     assert result.data == test_data
     
     # Test with list
     test_list = [1, 2, 3, {"nested": "list"}]
-    db.add(TestModel(data=test_list))
+    db.add(TestJsonModel(data=test_list))
     db.commit()
     
-    result = db.query(TestModel).filter(TestModel.data == test_list).first()
+    result = db.query(TestJsonModel).filter(TestJsonModel.data == test_list).first()
     assert result is not None
     assert result.data == test_list
     
@@ -453,7 +453,7 @@ async def test_case_insensitive_text():
     """Test CaseInsensitiveText type."""
     engine = create_engine('sqlite:///:memory:')
     
-    class TestModel(Base):
+    class TestCaseModel(Base):
         __tablename__ = 'test_case_model'
         id = Column(Integer, primary_key=True)
         name = Column(CaseInsensitiveText(50))
@@ -463,11 +463,11 @@ async def test_case_insensitive_text():
     db = SessionLocal()
     
     # Test case insensitive storage and retrieval
-    db.add(TestModel(name="TestName"))
+    db.add(TestCaseModel(name="TestName"))
     db.commit()
     
     # Retrieve and assert value stored and compare case-insensitively at Python level
-    result = db.query(TestModel).first()
+    result = db.query(TestCaseModel).first()
     assert result is not None
     assert result.name == "TestName"
     assert result.name.lower() == "testname"

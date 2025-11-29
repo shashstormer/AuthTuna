@@ -33,6 +33,17 @@ class MFALoginValidate(BaseModel):
     mfa_token: str
     code: str = Field(..., min_length=6, max_length=11)
 
+@router.get("/setup")
+async def show_mfa_setup_page(request: Request, user: User = Depends(RoleChecker("User"))):
+    """Serves the MFA setup page with a new QR code and setup token."""
+    try:
+        setup_token, qr_code_uri = await auth_service.mfa.setup_totp(user, settings.APP_NAME)
+        return templates.TemplateResponse(request=request, name="mfa_setup.html", context={
+            "setup_token": setup_token,
+            "qr_code_uri": qr_code_uri
+        })
+    except OperationForbiddenError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
 
 @router.post("/setup")
 async def setup_mfa(
@@ -127,21 +138,7 @@ async def disable_mfa(
     return {"message": "MFA has been successfully disabled."}
 
 
-@router.get("/setup")
-async def show_mfa_setup_page(request: Request, user: User = Depends(RoleChecker("User"))):
-    """Serves the MFA setup page with a new QR code and setup token."""
-    try:
-        setup_token, qr_code_uri = await auth_service.mfa.setup_totp(user, settings.APP_NAME)
-        return templates.TemplateResponse("mfa_setup.html", {
-            "request": request,
-            "setup_token": setup_token,
-            "qr_code_uri": qr_code_uri
-        })
-    except OperationForbiddenError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
-
-
 @router.get("/challenge")
 async def show_mfa_challenge_page(request: Request):
     """Serves the page where users enter their MFA code to complete a login."""
-    return templates.TemplateResponse("mfa_challenge.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="mfa_challenge.html", context={})

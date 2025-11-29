@@ -42,6 +42,7 @@ async def test_middleware_with_valid_token(auth_tuna_async):
     session_token = session.get_cookie_string()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/protected", cookies={ "session_token": session_token })
+        client.cookies = { "session_token": session_token }
+        response = await client.get("/protected")
         assert response.status_code == status.HTTP_200_OK
         assert response.json()["user_id"] == user.id

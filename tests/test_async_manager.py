@@ -11,6 +11,7 @@ def user_manager():
     db_manager = MagicMock()
 
     session_mock = AsyncMock()
+    session_mock.add = MagicMock()
 
     context_manager = AsyncMock()
     context_manager.__aenter__.return_value = session_mock

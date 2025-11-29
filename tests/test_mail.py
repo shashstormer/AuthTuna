@@ -56,7 +56,6 @@ def test_send_smtp_message_error(mock_smtp):
     mgr._send_smtp_message(msg)  # Should not raise
 
 @patch('authtuna.helpers.mail.settings', new=DummySettings)
-@pytest.mark.asyncio
 def test_send_email_async_disabled():
     mgr = EmailManager()
     mgr.sender_email = 'noreply@example.com'

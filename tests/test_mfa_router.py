@@ -15,7 +15,8 @@ async def test_mfa_setup_flow(fastapi_client, auth_tuna_async, authenticated_use
     await auth_tuna_async.roles.assign_to_user(authenticated_user.id, "User", assigner_id="system", scope="global")
 
     # 2. Initiate Setup
-    response = await fastapi_client.post("/mfa/setup", cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.post("/mfa/setup")
     assert response.status_code == 200
     data = response.json()
     assert "provisioning_uri" in data
@@ -32,7 +33,7 @@ async def test_mfa_setup_flow(fastapi_client, auth_tuna_async, authenticated_use
     totp = pyotp.TOTP(secret)
     code = totp.now()
     
-    response = await fastapi_client.post("/mfa/verify", json={"code": code}, cookies=cookies)
+    response = await fastapi_client.post("/mfa/verify", json={"code": code})
     assert response.status_code == 200
     data = response.json()
     assert "recovery_codes" in data
@@ -43,7 +44,7 @@ async def test_mfa_setup_flow(fastapi_client, auth_tuna_async, authenticated_use
     assert user.mfa_enabled is True
 
     # 5. Disable MFA
-    response = await fastapi_client.post("/mfa/disable", cookies=cookies)
+    response = await fastapi_client.post("/mfa/disable")
     assert response.status_code == 200
     
     # 6. Verify MFA Disabled
@@ -57,7 +58,8 @@ async def test_mfa_pages(fastapi_client, auth_tuna_async, authenticated_user):
     await auth_tuna_async.roles.assign_to_user(authenticated_user.id, "User", assigner_id="system", scope="global")
 
     # Setup Page
-    response = await fastapi_client.get("/mfa/setup", cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.get("/mfa/setup")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
 
@@ -107,9 +109,10 @@ async def test_mfa_errors(fastapi_client, auth_tuna_async, authenticated_user):
     await auth_tuna_async.roles.assign_to_user(authenticated_user.id, "User", assigner_id="system", scope="global")
 
     # Verify with invalid code
-    response = await fastapi_client.post("/mfa/verify", json={"code": "000000"}, cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.post("/mfa/verify", json={"code": "000000"})
     assert response.status_code == 400
 
     # Disable when not enabled
-    response = await fastapi_client.post("/mfa/disable", cookies=cookies)
+    response = await fastapi_client.post("/mfa/disable")
     assert response.status_code == 409

@@ -17,6 +17,25 @@ async def test_search_users_as_admin(auth_tuna_async, fastapi_client: AsyncClien
     await auth_tuna_async.permissions.create("admin:manage:system", "perm req to access admin router")
     await auth_tuna_async.roles.add_permission_to_role("Admin", "admin:manage:system")
 
+import pytest
+from fastapi import status
+from httpx import AsyncClient
+
+
+@pytest.mark.asyncio
+async def test_search_users_as_admin(auth_tuna_async, fastapi_client: AsyncClient):
+    """Test searching for users as an admin."""
+    # Create a test admin user and give them the necessary permissions
+    admin_user = await auth_tuna_async.users.create(
+        email="admin_for_test@example.com",
+        username="admin_for_test",
+        password="password123",
+        ip_address="127.0.0.1"
+    )
+    await auth_tuna_async.roles.assign_to_user(admin_user.id, "Admin", "system", "global")
+    await auth_tuna_async.permissions.create("admin:manage:system", "perm req to access admin router")
+    await auth_tuna_async.roles.add_permission_to_role("Admin", "admin:manage:system")
+
     # Log in as the admin user to get a session token
     response = await fastapi_client.post(
         "/auth/login",
@@ -24,11 +43,11 @@ async def test_search_users_as_admin(auth_tuna_async, fastapi_client: AsyncClien
     )
     assert response.status_code == status.HTTP_200_OK
     token = response.cookies.get("session_token")
+    fastapi_client.cookies = {"session_token": token}
 
     # Search for users
     response = await fastapi_client.get(
         "/admin/users/search",
-        cookies={"session_token": token},
     )
     print(response.json())
     assert response.status_code == status.HTTP_200_OK
@@ -63,6 +82,7 @@ async def get_admin_token(fastapi_client: AsyncClient, admin_user):
 async def test_suspend_and_unsuspend_user(auth_tuna_async, fastapi_client: AsyncClient):
     admin_user = await setup_admin_with_permissions(auth_tuna_async)
     token = await get_admin_token(fastapi_client, admin_user)
+    fastapi_client.cookies = {"session_token": token}
     user = await auth_tuna_async.users.create(
         email="user_suspend@example.com",
         username="user_suspend",
@@ -73,14 +93,12 @@ async def test_suspend_and_unsuspend_user(auth_tuna_async, fastapi_client: Async
     response = await fastapi_client.post(
         f"/admin/users/{user.id}/suspend",
         json={"reason": "test"},
-        cookies={"session_token": token},
     )
     assert response.status_code == status.HTTP_200_OK
     # Unsuspend
     response = await fastapi_client.post(
         f"/admin/users/{user.id}/unsuspend",
         json={"reason": "test"},
-        cookies={"session_token": token},
     )
     assert response.status_code == status.HTTP_200_OK
 
@@ -89,6 +107,7 @@ async def test_suspend_and_unsuspend_user(auth_tuna_async, fastapi_client: Async
 async def test_get_user_audit_log(auth_tuna_async, fastapi_client: AsyncClient):
     admin_user = await setup_admin_with_permissions(auth_tuna_async)
     token = await get_admin_token(fastapi_client, admin_user)
+    fastapi_client.cookies = {"session_token": token}
     user = await auth_tuna_async.users.create(
         email="user_audit@example.com",
         username="user_audit",
@@ -97,7 +116,6 @@ async def test_get_user_audit_log(auth_tuna_async, fastapi_client: AsyncClient):
     )
     response = await fastapi_client.get(
         f"/admin/users/{user.id}/audit-log",
-        cookies={"session_token": token},
     )
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(response.json(), list)
@@ -107,18 +125,17 @@ async def test_get_user_audit_log(auth_tuna_async, fastapi_client: AsyncClient):
 async def test_create_role_and_permission(auth_tuna_async, fastapi_client: AsyncClient):
     admin_user = await setup_admin_with_permissions(auth_tuna_async)
     token = await get_admin_token(fastapi_client, admin_user)
+    fastapi_client.cookies = {"session_token": token}
     # Create role
     response = await fastapi_client.post(
         "/admin/roles",
         json={"name": "TestRole", "description": "desc", "level": 1},
-        cookies={"session_token": token},
     )
     assert response.status_code == status.HTTP_201_CREATED
     # Create permission
     response = await fastapi_client.post(
         "/admin/permissions",
         json={"name": "perm:test", "description": "desc"},
-        cookies={"session_token": token},
     )
     # assert response.status_code == status.HTTP_201_CREATED
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -128,13 +145,13 @@ async def test_create_role_and_permission(auth_tuna_async, fastapi_client: Async
 async def test_add_permission_to_role_and_assign_revoke(auth_tuna_async, fastapi_client: AsyncClient):
     admin_user = await setup_admin_with_permissions(auth_tuna_async)
     token = await get_admin_token(fastapi_client, admin_user)
+    fastapi_client.cookies = {"session_token": token}
     await auth_tuna_async.roles.create(name="RoleForPerm", description="desc", level=1)
     await auth_tuna_async.permissions.create("perm:assign", "desc")
     # Add permission to role
     response = await fastapi_client.post(
         "/admin/roles/RoleForPerm/permissions",
         json={"permission_name": "perm:assign"},
-        cookies={"session_token": token},
     )
     assert response.status_code == status.HTTP_200_OK
     # Assign role to user
@@ -147,14 +164,12 @@ async def test_add_permission_to_role_and_assign_revoke(auth_tuna_async, fastapi
     response = await fastapi_client.post(
         "/admin/users/roles/assign",
         json={"user_id": user.id, "role_name": "RoleForPerm", "scope": "global"},
-        cookies={"session_token": token},
     )
     assert response.status_code == status.HTTP_200_OK
     # Revoke role from user
     response = await fastapi_client.post(
         "/admin/users/roles/revoke",
         json={"user_id": user.id, "role_name": "RoleForPerm", "scope": "global"},
-        cookies={"session_token": token},
     )
     assert response.status_code == status.HTTP_200_OK
 
@@ -163,11 +178,11 @@ async def test_add_permission_to_role_and_assign_revoke(auth_tuna_async, fastapi
 async def test_delete_role_and_grants(auth_tuna_async, fastapi_client: AsyncClient):
     admin_user = await setup_admin_with_permissions(auth_tuna_async)
     token = await get_admin_token(fastapi_client, admin_user)
+    fastapi_client.cookies = {"session_token": token}
     await auth_tuna_async.roles.create(name="RoleToDelete", description="desc", level=1)
     # Delete role
     response = await fastapi_client.delete(
         "/admin/roles/RoleToDelete",
-        cookies={"session_token": token},
     )
     assert response.status_code == status.HTTP_200_OK
     # Grant role assignment permission
@@ -176,7 +191,6 @@ async def test_delete_role_and_grants(auth_tuna_async, fastapi_client: AsyncClie
     response = await fastapi_client.post(
         "/admin/roles/grants/assign-role",
         json={"assigner_role_name": "GranterRole", "assignable_role_name": "AssignableRole"},
-        cookies={"session_token": token},
     )
     assert response.status_code == status.HTTP_201_CREATED
     # Grant permission granting permission
@@ -184,7 +198,6 @@ async def test_delete_role_and_grants(auth_tuna_async, fastapi_client: AsyncClie
     response = await fastapi_client.post(
         "/admin/roles/grants/grant-permission",
         json={"granter_role_name": "GranterRole", "grantable_permission_name": "perm:grant"},
-        cookies={"session_token": token},
     )
     # assert response.status_code == status.HTTP_201_CREATED
     assert response.status_code == status.HTTP_403_FORBIDDEN

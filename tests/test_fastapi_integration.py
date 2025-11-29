@@ -65,12 +65,14 @@ async def test_get_current_user_cookie(integration_client, auth_tuna_async, auth
     cookie_value = session.get_cookie_string()
 
     # Test valid cookie
-    response = await integration_client.get("/protected", cookies={"session_token": cookie_value})
+    integration_client.cookies = {"session_token": cookie_value}
+    response = await integration_client.get("/protected")
     assert response.status_code == 200
     assert response.json()["user_id"] == authenticated_user.id
 
     # Test invalid cookie
-    response = await integration_client.get("/protected", cookies={"session_token": "invalid"})
+    integration_client.cookies = {"session_token": "invalid"}
+    response = await integration_client.get("/protected")
     assert response.status_code == 401
 
     # Test missing cookie
@@ -96,11 +98,13 @@ async def test_get_current_user_bearer(integration_client, auth_tuna_async, auth
 async def test_get_current_user_optional(integration_client, auth_tuna_async, authenticated_user):
     # Authenticated
     session = await auth_tuna_async.sessions.create(authenticated_user.id, "127.0.0.1", "US", "Chrome")
-    response = await integration_client.get("/optional", cookies={"session_token": session.get_cookie_string()})
+    integration_client.cookies = {"session_token": session.get_cookie_string()}
+    response = await integration_client.get("/optional")
     assert response.status_code == 200
     assert response.json()["user_id"] == authenticated_user.id
 
     # Unauthenticated
+    integration_client.cookies.clear()
     response = await integration_client.get("/optional")
     assert response.status_code == 200
     assert response.json()["user_id"] is None
@@ -135,18 +139,19 @@ async def test_permission_checker(integration_client, auth_tuna_async, authentic
     cookies = {"session_token": session.get_cookie_string()}
 
     # Test OR (has 'read', needs 'read' or 'write') -> Should Pass
-    response = await integration_client.get("/perm-or", cookies=cookies)
+    integration_client.cookies = cookies
+    response = await integration_client.get("/perm-or")
     assert response.status_code == 200
 
     # Test AND (has 'read', needs 'read' and 'write') -> Should Fail
-    response = await integration_client.get("/perm-and", cookies=cookies)
+    response = await integration_client.get("/perm-and")
     assert response.status_code == 403
 
     # Add 'write' permission
     await auth_tuna_async.roles.add_permission_to_role("reader", "write")
     
     # Test AND (now has both) -> Should Pass
-    response = await integration_client.get("/perm-and", cookies=cookies)
+    response = await integration_client.get("/perm-and")
     assert response.status_code == 200
 
 @pytest.mark.asyncio
@@ -170,11 +175,12 @@ async def test_role_checker(integration_client, auth_tuna_async, authenticated_u
     cookies = {"session_token": session.get_cookie_string()}
 
     # Test OR (has 'admin', needs 'admin' or 'editor') -> Should Pass
-    response = await integration_client.get("/role-or", cookies=cookies)
+    integration_client.cookies = cookies
+    response = await integration_client.get("/role-or")
     assert response.status_code == 200
 
     # Test AND (has 'admin', needs 'admin' and 'editor') -> Should Fail
-    response = await integration_client.get("/role-and", cookies=cookies)
+    response = await integration_client.get("/role-and")
     assert response.status_code == 403
 
 @pytest.mark.asyncio
@@ -199,9 +205,10 @@ async def test_scoped_permission(integration_client, auth_tuna_async, authentica
     cookies = {"session_token": session.get_cookie_string()}
 
     # Access /scoped/123 -> Should Pass
-    response = await integration_client.get("/scoped/123", cookies=cookies)
+    integration_client.cookies = cookies
+    response = await integration_client.get("/scoped/123")
     assert response.status_code == 200
 
     # Access /scoped/456 -> Should Fail
-    response = await integration_client.get("/scoped/456", cookies=cookies)
+    response = await integration_client.get("/scoped/456")
     assert response.status_code == 403

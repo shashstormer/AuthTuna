@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException, Form, Background
 from fastapi import status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 
@@ -35,8 +35,7 @@ class SessionInfo(BaseModel):
     mtime: float
     is_current: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrgCreate(BaseModel):
@@ -48,7 +47,7 @@ async def dashboard(request: Request, user: User = Depends(RoleChecker("User")))
     """
     Renders the user dashboard page.
     """
-    return templates.TemplateResponse("user_dashboard.html", {"request": request, "user": user})
+    return templates.TemplateResponse(request=request, name="user_dashboard.html", context={"user": user})
 
 
 @router.get("/profile", name="ui_profile")
@@ -56,7 +55,7 @@ async def profile(request: Request, user: User = Depends(RoleChecker("User"))):
     """
     Renders the user profile page.
     """
-    return templates.TemplateResponse("user_profile.html", {"request": request, "user": user})
+    return templates.TemplateResponse(request=request, name="user_profile.html", context={"user": user})
 
 
 @router.get("/settings", name="ui_settings")
@@ -64,7 +63,7 @@ async def settings_page(request: Request, user: User = Depends(RoleChecker("User
     """
     Renders the user settings page.
     """
-    return templates.TemplateResponse("settings.html", {"request": request, "user": user})
+    return templates.TemplateResponse(request=request, name="settings.html", context={"user": user})
 
 
 @router.get("/organizations", response_class=HTMLResponse, summary="Organizations dashboard UI", name="orgs_dashboard")
@@ -72,8 +71,7 @@ async def orgs_dashboard(request: Request, current_user: User = Depends(RoleChec
     user_orgs = await auth_service.orgs.get_user_orgs(current_user.id)
     owned_orgs = await auth_service.orgs.get_user_owned_orgs(current_user.id)
     can_create_org = await auth_service.roles.has_permission(current_user.id, 'org:create')
-    return templates.TemplateResponse("organizations.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="organizations.html", context={
         "user": current_user,
         "orgs": user_orgs,
         "owned_orgs": owned_orgs,
@@ -141,8 +139,7 @@ async def accept_org_invite_page(request: Request, token: str):
     try:
         ip_address = request.state.user_ip_address
         org = await auth_service.orgs.accept_organization_invite(token_id=token, ip_address=ip_address)
-        return templates.TemplateResponse("invite_accepted.html", {
-            "request": request,
+        return templates.TemplateResponse(request=request, name="invite_accepted.html", context={
             "type": "organization",
             "name": org.name,
             "org_id": org.id
@@ -183,8 +180,7 @@ async def org_details_page(request: Request, org_id: str, user: User = Depends(o
         is_owner = org.owner_id == user.id
         is_admin = any(role.name == "OrgAdmin" for role in user_roles)
 
-        return templates.TemplateResponse("org_details.html", {
-            "request": request,
+        return templates.TemplateResponse(request=request, name="org_details.html", context={
             "user": user,
             "org": org,
             "org_created_at": org_created_human,
@@ -403,8 +399,7 @@ async def accept_team_invite_page(request: Request, token: str):
     try:
         ip_address = request.state.user_ip_address
         team = await auth_service.orgs.accept_team_invite(token_id=token, ip_address=ip_address)
-        return templates.TemplateResponse("invite_accepted.html", {
-            "request": request,
+        return templates.TemplateResponse(request=request, name="invite_accepted.html", context={
             "type": "team",
             "name": team.name,
             "team_id": team.id
@@ -443,8 +438,7 @@ async def team_details_page(request: Request, team_id: str, user: User = Depends
         org_user_roles = await auth_service.roles.get_user_roles(user.id, scope=f"org:{org.id}")
         is_org_admin = any(role.name in ["OrgAdmin", "OrgOwner"] for role in org_user_roles)
 
-        return templates.TemplateResponse("team_details.html", {
-            "request": request,
+        return templates.TemplateResponse(request=request, name="team_details.html", context={
             "user": user,
             "team": team,
             "org": org,
@@ -691,8 +685,7 @@ class ApiKeyInfo(BaseModel):
     expires_at: float
     last_used_at: Optional[float] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @router.get("/settings/api-keys", response_model=List[ApiKeyInfo])

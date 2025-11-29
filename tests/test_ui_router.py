@@ -22,8 +22,9 @@ async def test_ui_dashboard_authenticated(fastapi_client, auth_tuna_async, authe
     # But RoleChecker("User") requires it.
     # Let's assign it.
     await auth_tuna_async.roles.assign_to_user(authenticated_user.id, "User", assigner_id="system", scope="global")
-
-    response = await fastapi_client.get("/ui/dashboard", cookies=cookies)
+    
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.get("/ui/dashboard")
     assert response.status_code == 200
     assert "Dashboard" in response.text or "user_dashboard" in response.text # Check for template content
 
@@ -33,7 +34,8 @@ async def test_ui_profile(fastapi_client, auth_tuna_async, authenticated_user):
     cookies = {"session_token": session.get_cookie_string()}
     await auth_tuna_async.roles.assign_to_user(authenticated_user.id, "User", assigner_id="system", scope="global")
 
-    response = await fastapi_client.get("/ui/profile", cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.get("/ui/profile")
     assert response.status_code == 200
 
 @pytest.mark.asyncio
@@ -42,7 +44,8 @@ async def test_ui_settings(fastapi_client, auth_tuna_async, authenticated_user):
     cookies = {"session_token": session.get_cookie_string()}
     await auth_tuna_async.roles.assign_to_user(authenticated_user.id, "User", assigner_id="system", scope="global")
 
-    response = await fastapi_client.get("/ui/settings", cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.get("/ui/settings")
     assert response.status_code == 200
 
 @pytest.mark.asyncio
@@ -56,38 +59,39 @@ async def test_ui_organizations_flow(fastapi_client, auth_tuna_async, authentica
     await auth_tuna_async.roles.add_permission_to_role("User", "org:create")
 
     # 1. Dashboard
-    response = await fastapi_client.get("/ui/organizations", cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.get("/ui/organizations")
     assert response.status_code == 200
 
     # 2. Create Org
-    response = await fastapi_client.post("/ui/organizations/create", data={"name": "Test Org"}, cookies=cookies)
+    response = await fastapi_client.post("/ui/organizations/create", data={"name": "Test Org"})
     assert response.status_code == 200
     org_data = response.json()
     org_id = org_data["id"]
     assert org_data["name"] == "Test Org"
 
     # 3. Get Org Details
-    response = await fastapi_client.get(f"/ui/organizations/{org_id}", cookies=cookies)
+    response = await fastapi_client.get(f"/ui/organizations/{org_id}")
     assert response.status_code == 200
     assert "Test Org" in response.text
 
     # 4. Create Team
-    response = await fastapi_client.post(f"/ui/organizations/{org_id}/teams", json={"name": "Test Team"}, cookies=cookies)
+    response = await fastapi_client.post(f"/ui/organizations/{org_id}/teams", json={"name": "Test Team"})
     assert response.status_code == 200
     team_data = response.json()
     team_id = team_data["team_id"]
 
     # 5. Get Team Details
-    response = await fastapi_client.get(f"/ui/teams/{team_id}", cookies=cookies)
+    response = await fastapi_client.get(f"/ui/teams/{team_id}")
     assert response.status_code == 200
     assert "Test Team" in response.text
 
     # 6. Delete Team
-    response = await fastapi_client.delete(f"/ui/teams/{team_id}", cookies=cookies)
+    response = await fastapi_client.delete(f"/ui/teams/{team_id}")
     assert response.status_code == 200
 
     # 7. Delete Org
-    response = await fastapi_client.delete(f"/ui/organizations/{org_id}", cookies=cookies)
+    response = await fastapi_client.delete(f"/ui/organizations/{org_id}")
     assert response.status_code == 200
 
 @pytest.mark.asyncio
@@ -103,23 +107,24 @@ async def test_ui_api_keys(fastapi_client, auth_tuna_async, authenticated_user):
         "scopes": [],
         "valid_seconds": 3600
     }
-    response = await fastapi_client.post("/ui/settings/api-keys", json=key_data, cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.post("/ui/settings/api-keys", json=key_data)
     assert response.status_code == 201
     created_key = response.json()["api_key"]
     key_id = created_key["id"]
 
     # 2. List Keys
-    response = await fastapi_client.get("/ui/settings/api-keys", cookies=cookies)
+    response = await fastapi_client.get("/ui/settings/api-keys")
     assert response.status_code == 200
     keys = response.json()
     assert any(k["id"] == key_id for k in keys)
 
     # 3. Delete Key
-    response = await fastapi_client.delete(f"/ui/settings/api-keys/{key_id}", cookies=cookies)
+    response = await fastapi_client.delete(f"/ui/settings/api-keys/{key_id}")
     assert response.status_code == 200
 
     # 4. Verify Deleted
-    response = await fastapi_client.get("/ui/settings/api-keys", cookies=cookies)
+    response = await fastapi_client.get("/ui/settings/api-keys")
     keys = response.json()
     assert not any(k["id"] == key_id for k in keys)
 
@@ -132,7 +137,8 @@ async def test_ui_org_member_management(fastapi_client, auth_tuna_async, authent
     # Create Org
     perm, _ = await auth_tuna_async.permissions.get_or_create("org:create")
     await auth_tuna_async.roles.add_permission_to_role("User", "org:create")
-    response = await fastapi_client.post("/ui/organizations/create", data={"name": "Member Test Org"}, cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.post("/ui/organizations/create", data={"name": "Member Test Org"})
     org_id = response.json()["id"]
 
     # Create another user and add to org directly via DB
@@ -147,7 +153,7 @@ async def test_ui_org_member_management(fastapi_client, auth_tuna_async, authent
         await db.commit()
 
     # Remove member
-    response = await fastapi_client.delete(f"/ui/organizations/{org_id}/members/{other_user.id}", cookies=cookies)
+    response = await fastapi_client.delete(f"/ui/organizations/{org_id}/members/{other_user.id}")
     assert response.status_code == 200
     assert "removed" in response.json()["message"]
 
@@ -156,7 +162,7 @@ async def test_ui_org_member_management(fastapi_client, auth_tuna_async, authent
     assert not any(m["user_id"] == other_user.id for m in members)
 
     # Error: Remove non-existent member
-    response = await fastapi_client.delete(f"/ui/organizations/{org_id}/members/{other_user.id}", cookies=cookies)
+    response = await fastapi_client.delete(f"/ui/organizations/{org_id}/members/{other_user.id}")
     assert response.status_code == 404
 
 @pytest.mark.asyncio
@@ -180,7 +186,8 @@ async def test_ui_leave_org(fastapi_client, auth_tuna_async, authenticated_user)
         await db.commit()
 
     # Leave Org
-    response = await fastapi_client.post(f"/ui/organizations/{org.id}/leave", cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.post(f"/ui/organizations/{org.id}/leave")
     if response.status_code != 200:
         import logging
         logging.warning(f"DEBUG: Leave Org failed: {response.text}")
@@ -219,7 +226,8 @@ async def test_ui_team_management(fastapi_client, auth_tuna_async, authenticated
         await db.commit()
 
     # Remove member from team
-    response = await fastapi_client.delete(f"/ui/teams/{team.id}/members/{other_user.id}", cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.delete(f"/ui/teams/{team.id}/members/{other_user.id}")
     assert response.status_code == 200
 
     # Verify removed
@@ -237,18 +245,19 @@ async def test_ui_errors(fastapi_client, auth_tuna_async, authenticated_user):
     await auth_tuna_async.roles.assign_to_user(authenticated_user.id, "OrgOwner", assigner_id="system", scope="org:nonexistent")
     
     # Delete non-existent org
-    response = await fastapi_client.delete("/ui/organizations/nonexistent", cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.delete("/ui/organizations/nonexistent")
     assert response.status_code == 404
 
     # Assign TeamLead for 'nonexistent' scope
     await auth_tuna_async.roles.assign_to_user(authenticated_user.id, "TeamLead", assigner_id="system", scope="team:nonexistent")
 
     # Delete non-existent team
-    response = await fastapi_client.delete("/ui/teams/nonexistent", cookies=cookies)
+    response = await fastapi_client.delete("/ui/teams/nonexistent")
     assert response.status_code == 404
 
     # Leave non-existent org (requires OrgMember/Admin/Owner)
     # We already have OrgOwner for org:nonexistent
-    response = await fastapi_client.post("/ui/organizations/nonexistent/leave", cookies=cookies)
+    response = await fastapi_client.post("/ui/organizations/nonexistent/leave")
     assert response.status_code == 404
 

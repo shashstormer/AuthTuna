@@ -10,7 +10,8 @@ async def test_passkey_registration_flow(fastapi_client, auth_tuna_async, authen
     await auth_tuna_async.roles.assign_to_user(authenticated_user.id, "User", assigner_id="system", scope="global")
 
     # 2. Get Register Options
-    response = await fastapi_client.post("/passkeys/register-options", cookies=cookies)
+    fastapi_client.cookies = cookies
+    response = await fastapi_client.post("/passkeys/register-options")
     assert response.status_code == 200
     options = response.json()
     assert "challenge" in options
@@ -36,12 +37,12 @@ async def test_passkey_registration_flow(fastapi_client, auth_tuna_async, authen
                 "type": "public-key"
             }
         }
-        response = await fastapi_client.post("/passkeys/register", json=payload, cookies=cookies)
+        response = await fastapi_client.post("/passkeys/register", json=payload)
         assert response.status_code == 201
         assert response.json()["verified"] is True
 
     # 4. List Passkeys
-    response = await fastapi_client.get("/passkeys/", cookies=cookies)
+    response = await fastapi_client.get("/passkeys/")
     assert response.status_code == 200
     passkeys = response.json()
     assert len(passkeys) == 1
@@ -49,11 +50,11 @@ async def test_passkey_registration_flow(fastapi_client, auth_tuna_async, authen
 
     # 5. Delete Passkey
     cred_id_b64 = passkeys[0]["id"]
-    response = await fastapi_client.delete(f"/passkeys/{cred_id_b64}", cookies=cookies)
+    response = await fastapi_client.delete(f"/passkeys/{cred_id_b64}")
     assert response.status_code == 204
 
     # 6. Verify Deleted
-    response = await fastapi_client.get("/passkeys/", cookies=cookies)
+    response = await fastapi_client.get("/passkeys/")
     assert len(response.json()) == 0
 
 @pytest.mark.asyncio
@@ -89,8 +90,9 @@ async def test_passkey_login_flow(fastapi_client, auth_tuna_async, authenticated
         # No, login-options sets a session cookie (with challenge).
         # We need to pass that cookie back.
         cookies = response.cookies
+        fastapi_client.cookies = cookies
         
-        response = await fastapi_client.post("/passkeys/login", json=payload, cookies=cookies)
+        response = await fastapi_client.post("/passkeys/login", json=payload)
         assert response.status_code == 200
         assert "Login successful" in response.json()["message"]
         assert "session_token" in response.cookies

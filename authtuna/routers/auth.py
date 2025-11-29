@@ -286,7 +286,7 @@ async def show_signup_page(request: Request):
     """
     Render the signup page (HTML form).
     """
-    return templates.TemplateResponse("signup.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="signup.html", context={})
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -300,7 +300,7 @@ async def show_login_page(request: Request):
         "github_login_enabled": bool(settings.GITHUB_CLIENT_ID),
         "passwordless_login_enabled": settings.PASSWORDLESS_LOGIN_ENABLED,
     }
-    return templates.TemplateResponse("login.html", context)
+    return templates.TemplateResponse(request=request, name="login.html", context=context)
 
 
 @router.get("/forgot-password", response_class=HTMLResponse)
@@ -308,7 +308,7 @@ async def show_forgot_password_page(request: Request):
     """
     Render the forgot password page (HTML form).
     """
-    return templates.TemplateResponse("forgot_password.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="forgot_password.html", context={})
 
 
 @router.get("/verify", response_class=HTMLResponse)
@@ -322,13 +322,13 @@ async def verify_email(
     try:
         ip_address = request.state.user_ip_address
         await auth_service.verify_email(token, ip_address)
-        return templates.TemplateResponse("verify_email.html", {"request": request})
+        return templates.TemplateResponse(request=request, name="verify_email.html", context={})
     except (InvalidTokenError, TokenExpiredError) as e:
-        return templates.TemplateResponse("error.html", {"request": request, "message": str(e)})
+        return templates.TemplateResponse(request=request, name="error.html", context={"message": str(e)})
     except Exception as e:
         logger.error(f"Error during email verification: {e}", exc_info=True)
-        return templates.TemplateResponse("error.html",
-                                          {"request": request, "message": "An unexpected error occurred."})
+        return templates.TemplateResponse(request=request, name="error.html",
+                                          context={"message": "An unexpected error occurred."})
 
 
 @router.get("/reset-password", response_class=HTMLResponse)
@@ -344,6 +344,6 @@ async def show_reset_page(token: str, request: Request,
         token_obj = result.unique().scalar_one_or_none()
 
         if not token_obj or not token_obj.is_valid():
-            return templates.TemplateResponse("error.html",
-                                              {"request": request, "message": "Invalid or expired token."})
-        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
+            return templates.TemplateResponse(request=request, name="error.html",
+                                              context={"message": "Invalid or expired token."})
+        return templates.TemplateResponse(request=request, name="reset_password.html", context={"token": token})
