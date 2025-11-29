@@ -423,20 +423,24 @@ class RoleManager:
     async def assign_to_user(self, user_id: str, role_name: str, assigner_id: str, scope: str = 'none', db=None):
         async def _main(db):
             user_manager = UserManager(self._db_manager)
-            assigner = await user_manager.get_by_id(assigner_id, with_relations=True, db=db)
-            if not assigner:
-                raise UserNotFoundError("Assigner user not found.")
+            if assigner_id == "system":
+                assigner = None
+            else:
+                assigner = await user_manager.get_by_id(assigner_id, with_relations=True, db=db)
+                if not assigner:
+                    raise UserNotFoundError("Assigner user not found.")
 
             role_to_assign = await self.get_by_name(role_name, db=db)
             if not role_to_assign:
                 raise RoleNotFoundError(f"Role '{role_name}' not found.")
 
             # Pass scope to authorization check
-            can_manage_role = await self._is_authorized_to_manage_role(assigner, role_to_assign, scope, db)
-            if not can_manage_role:
-                raise OperationForbiddenError(
-                    "You lack the required permission, direct grant, or sufficient role level/scope to assign this role."
-                )
+            if assigner_id != "system":
+                can_manage_role = await self._is_authorized_to_manage_role(assigner, role_to_assign, scope, db)
+                if not can_manage_role:
+                    raise OperationForbiddenError(
+                        "You lack the required permission, direct grant, or sufficient role level/scope to assign this role."
+                    )
 
             target_user = await user_manager.get_by_id(user_id, db=db)
             if not target_user:
@@ -471,20 +475,24 @@ class RoleManager:
                                db: AsyncSession = None):
         async def _remove(db):
             user_manager = UserManager(self._db_manager)
-            remover = await user_manager.get_by_id(remover_id, with_relations=True, db=db)
-            if not remover:
-                raise UserNotFoundError("Remover user not found.")
+            if remover_id == "system":
+                remover = None
+            else:
+                remover = await user_manager.get_by_id(remover_id, with_relations=True, db=db)
+                if not remover:
+                    raise UserNotFoundError("Remover user not found.")
 
             role_to_remove = await self.get_by_name(role_name, db=db)
             if not role_to_remove:
                 raise RoleNotFoundError(f"Role '{role_name}' not found.")
 
             # Pass scope to authorization check
-            can_manage_role = await self._is_authorized_to_manage_role(remover, role_to_remove, scope, db)
-            if not can_manage_role:
-                raise OperationForbiddenError(
-                    "You lack the required permission, direct grant, or sufficient role level/scope to remove this role."
-                )
+            if remover_id != "system":
+                can_manage_role = await self._is_authorized_to_manage_role(remover, role_to_remove, scope, db)
+                if not can_manage_role:
+                    raise OperationForbiddenError(
+                        "You lack the required permission, direct grant, or sufficient role level/scope to remove this role."
+                    )
 
             target_user = await user_manager.get_by_id(user_id, db=db)
             if not target_user:
@@ -1433,7 +1441,7 @@ class APIKEYManager:
                 if scopes:
                     raise ValueError("Public keys cannot have scopes.")
             else:
-                for scope_entry in scopes:
+                for scope_entry in (scopes or []):
                     if isinstance(scope_entry, str) and ':' in scope_entry:
                         role_name, scope_val = scope_entry.split(':', 1)
                     else:

@@ -87,6 +87,8 @@ async def create_organization(org: OrgCreate = Form(...), user: User = Depends(P
     try:
         org = await auth_service.orgs.create_organization(org.name, owner=user, ip_address=ip)
         return org
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -127,6 +129,8 @@ async def invite_to_org(
             return {"message": f"User {invite.email} automatically added to organization", "email_sent": False}
         else:
             return {"message": "Invitation processed", "email_sent": False}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -143,6 +147,8 @@ async def accept_org_invite_page(request: Request, token: str):
             "name": org.name,
             "org_id": org.id
         })
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -188,6 +194,8 @@ async def org_details_page(request: Request, org_id: str, user: User = Depends(o
             "is_admin": is_admin,
             "can_manage": is_owner or is_admin
         })
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -220,6 +228,8 @@ async def delete_organization(
                 await db.commit()
 
         return {"message": "Organization deleted successfully"}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -248,12 +258,11 @@ async def leave_organization(
                 organization_members.c.organization_id == org_id
             )
             await db.execute(stmt)
-
             # Remove org-scoped roles
             org_scope = f"org:{org_id}"
             user_roles = await auth_service.roles.get_user_roles(user.id, scope=org_scope, db=db)
             for role in user_roles:
-                await auth_service.roles.remove_from_user(user.id, role.name, remover_id=user.id, scope=org_scope,
+                await auth_service.roles.remove_from_user(user.id, role.name, remover_id="system", scope=org_scope,
                                                           db=db)
 
             await auth_service.db_manager.log_audit_event(
@@ -263,6 +272,8 @@ async def leave_organization(
             await db.commit()
 
         return {"message": f"You have left {org.name}"}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -303,7 +314,7 @@ async def remove_org_member(
             org_scope = f"org:{org_id}"
             user_roles = await auth_service.roles.get_user_roles(member_id, scope=org_scope, db=db)
             for role in user_roles:
-                await auth_service.roles.remove_from_user(member_id, role.name, remover_id=user.id, scope=org_scope,
+                await auth_service.roles.remove_from_user(member_id, role.name, remover_id="system", scope=org_scope,
                                                           db=db)
 
             await auth_service.db_manager.log_audit_event(
@@ -313,6 +324,8 @@ async def remove_org_member(
             await db.commit()
 
         return {"message": f"Member {member.email} removed from organization"}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -340,13 +353,13 @@ async def create_team(
             ip_address=ip_address
         )
         return {"message": "Team created successfully", "team_id": new_team.id, "team_name": new_team.name}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 team_checker = RoleChecker("TeamLead", "TeamMember", scope_from_path="team_id", mode="OR")
-
-
 
 
 class TeamInvite(BaseModel):
@@ -378,6 +391,8 @@ async def invite_to_team(
             return {"message": f"User {invite.email} automatically added to team", "email_sent": False}
         else:
             return {"message": "Invitation processed", "email_sent": False}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -394,6 +409,8 @@ async def accept_team_invite_page(request: Request, token: str):
             "name": team.name,
             "team_id": team.id
         })
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -436,6 +453,8 @@ async def team_details_page(request: Request, team_id: str, user: User = Depends
             "is_org_admin": is_org_admin,
             "can_manage": is_lead or is_org_admin
         })
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -477,6 +496,8 @@ async def delete_team(
                 await db.commit()
 
         return {"message": "Team deleted successfully"}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -524,7 +545,7 @@ async def leave_team(
             # Remove team-scoped roles
             team_scope = f"team:{team_id}"
             for role in user_roles:
-                await auth_service.roles.remove_from_user(user.id, role.name, remover_id=user.id, scope=team_scope,
+                await auth_service.roles.remove_from_user(user.id, role.name, remover_id="system", scope=team_scope,
                                                           db=db)
 
             await auth_service.db_manager.log_audit_event(
@@ -534,6 +555,8 @@ async def leave_team(
             await db.commit()
 
         return {"message": f"You have left {team.name}"}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -581,6 +604,8 @@ async def remove_team_member(
             await db.commit()
 
         return {"message": f"Member {member.email} removed from team"}
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -604,6 +629,8 @@ async def update_profile(
         return {"message": "Profile updated successfully!", "user": {"username": updated_user.username}}
     except IntegrityError:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists.")
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"An error occurred: {e}")
 
@@ -723,6 +750,8 @@ async def create_api_key(
                 "expires_at": api_key.expires_at
             }
         }
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
