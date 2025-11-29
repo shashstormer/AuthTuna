@@ -345,12 +345,13 @@ async def delete_role(role_name: str, admin_user: User = Depends(get_current_use
     "/roles/grants/assign-role", status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(PermissionChecker("admin:manage:roles"))]  # ADDED: Specific permission
 )
-async def grant_role_assignment_permission(payload: GrantRoleAssignPermission):
+async def grant_role_assignment_permission(payload: GrantRoleAssignPermission, admin_user: User = Depends(get_current_user)):
     """Authorizes a role to be able to assign another role."""
     try:
         granter_role, assignable_role = await auth_service.roles.grant_relationship(
             granter_role_name=payload.assigner_role_name, grantable_name=payload.assignable_role_name,
-            grantable_manager=auth_service.roles, relationship_attr="can_assign_roles"
+            grantable_manager=auth_service.roles, relationship_attr="can_assign_roles",
+            admin_id=admin_user.id
         )
         return {"message": f"Role '{granter_role.name}' can now assign role '{assignable_role.name}'."}
     except (RoleNotFoundError, PermissionNotFoundError) as e:
@@ -361,12 +362,13 @@ async def grant_role_assignment_permission(payload: GrantRoleAssignPermission):
     "/roles/grants/grant-permission", status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(PermissionChecker("admin:manage:permissions"))]  # ADDED: Specific permission
 )
-async def grant_permission_granting_permission(payload: GrantPermissionGrantPermission):
+async def grant_permission_granting_permission(payload: GrantPermissionGrantPermission, admin_user: User = Depends(get_current_user)):
     """Authorizes a role to grant a specific permission to other roles."""
     try:
         granter_role, permission = await auth_service.roles.grant_relationship(
             granter_role_name=payload.granter_role_name, grantable_name=payload.grantable_permission_name,
-            grantable_manager=auth_service.permissions, relationship_attr="can_grant_permissions"
+            grantable_manager=auth_service.permissions, relationship_attr="can_grant_permissions",
+            admin_id=admin_user.id
         )
         return {"message": f"Role '{granter_role.name}' can now grant permission '{permission.name}'."}
     except (RoleNotFoundError, PermissionNotFoundError) as e:

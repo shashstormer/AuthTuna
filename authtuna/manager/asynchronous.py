@@ -23,6 +23,9 @@ from authtuna.core.mfa import MFAManager
 from authtuna.core.passkeys import PasskeysCore
 from authtuna.helpers import is_email_valid, is_permission_name_valid
 from authtuna.helpers.mail import email_manager
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class UserManager:
@@ -565,7 +568,7 @@ class RoleManager:
             await db.commit()
 
     async def grant_relationship(self, granter_role_name: str, grantable_name: str,
-                                 grantable_manager: Union["RoleManager", "Permission"], relationship_attr: Literal["can_assign_roles", "Permission"] = "can_assign_roles", db_override: AsyncSession = None):
+                                 grantable_manager: Union["RoleManager", "Permission"], relationship_attr: Literal["can_assign_roles", "Permission"] = "can_assign_roles", db_override: AsyncSession = None, admin_id: Optional[str] = None):
         async def _action(db: AsyncSession):
             granter_role = await self.get_by_name(granter_role_name)
             if not granter_role:
@@ -578,6 +581,16 @@ class RoleManager:
 
             relationship_list = getattr(granter_role, relationship_attr)
             if grantable_item not in relationship_list:
+                if admin_id:
+                    user_manager = UserManager(self._db_manager)
+                    admin = await user_manager.get_by_id(admin_id, with_relations=True, db=db)
+                    if admin:
+                        admin_max_level = max((r.level for r in admin.roles if r.level is not None), default=-1)
+                        if granter_role.level is not None and admin_max_level <= granter_role.level:
+                             raise OperationForbiddenError("You cannot modify a role with a level higher than or equal to your own.")
+                        if relationship_attr == "can_assign_roles":
+                             if grantable_item.level is not None and admin_max_level <= grantable_item.level:
+                                  raise OperationForbiddenError("You cannot grant assignment rights for a role with a level higher than or equal to your own.")
                 relationship_list.append(grantable_item)
                 await db.merge(granter_role)
                 await db.commit()
@@ -788,6 +801,21 @@ class SessionManager:
         else:
             async with self._db_manager.get_db() as db:
                 return await _ori(db)
+
+    async def cleanup_expired_sessions(self):
+        """
+        Deletes sessions that are expired or marked as inactive.
+        """
+        async with self._db_manager.get_db() as db:
+            stmt_inactive = delete(DBSession).where(DBSession.active == False)
+            result_inactive = await db.execute(stmt_inactive)
+            cutoff_time = time.time() - settings.SESSION_ABSOLUTE_LIFETIME_SECONDS
+            stmt_expired = delete(DBSession).where(DBSession.ctime < cutoff_time)
+            result_expired = await db.execute(stmt_expired)
+            
+            await db.commit()
+            logger.info(f"Cleaned up sessions: {result_inactive.rowcount} inactive, {result_expired.rowcount} expired.")
+            return result_inactive.rowcount + result_expired.rowcount
 
 
     async def get_all_for_user(self, user_id: str, session_id: str, only_active=True) -> List[DBSession]:

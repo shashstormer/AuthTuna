@@ -81,6 +81,26 @@ def init_app(app: FastAPI, session_middleware_kwargs=None):
     if settings.PASSKEYS_ENABLED:
         app.include_router(passkey_router)
 
+    # Start background task for session cleanup
+    import asyncio
+    from authtuna.core.database import db_manager
+    from authtuna.manager.asynchronous import AuthTunaAsync
+    
+    async def cleanup_loop():
+        auth_service = AuthTunaAsync(db_manager)
+        while True:
+            try:
+                await auth_service.sessions.cleanup_expired_sessions()
+            except Exception as e:
+                # Log error but don't crash the loop
+                # logger.error(f"Error in session cleanup task: {e}")
+                pass
+            await asyncio.sleep(3600) # Run every hour
+
+    @app.on_event("startup")
+    async def start_cleanup_task():
+        asyncio.create_task(cleanup_loop())
+
 
 __all__ = [
     "settings",

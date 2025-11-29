@@ -687,7 +687,7 @@ class ApiKey(Base):
 
     id = Column(String(64), primary_key=True, index=True)
     hashed_key = Column(String(256), nullable=False, unique=True)
-    user_id = Column(String(64), ForeignKey('users.id'), nullable=False, index=True)
+    user_id = Column(String(64), ForeignKey('users.id', ondelete="CASCADE"), nullable=False, index=True)
     key_type = Column(String(20), nullable=False, default="secret") # secret, public_key, master_key, test_key
     name = Column(String(100), nullable=True)
     created_at = Column(Float, nullable=False, default=time.time)
