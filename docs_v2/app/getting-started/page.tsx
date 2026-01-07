@@ -113,7 +113,7 @@ async def root(user=Depends(get_current_user_optional)):
           Now that you have a basic setup, you can explore more features:
         </p>
         <ul className="list-disc list-inside text-base md:text-lg text-gray-700 dark:text-gray-300 space-y-2">
-          <li><a href="/simple-example" className="text-blue-600 hover:text-blue-800 dark:text-blue-400">Simple Example</a> - A complete working example</li>
+          <li><a href="https://github.com/shashstormer/Authtuna-todo/blob/master/simple/main.py" className="text-blue-600 hover:text-blue-800 dark:text-blue-400">Simple Example</a> - A complete working example</li>
           <li><a href="/configuration-options" className="text-blue-600 hover:text-blue-800 dark:text-blue-400">Configuration Options</a> - Customize AuthTuna to your needs</li>
           <li><a href="/integrations" className="text-blue-600 hover:text-blue-800 dark:text-blue-400">Dependency Injection</a> - Learn about user dependencies</li>
         </ul>
