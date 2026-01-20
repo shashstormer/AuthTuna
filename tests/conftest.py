@@ -22,21 +22,22 @@ os.environ["GITHUB_CLIENT_ID"] = "test-github-client-id"
 os.environ["GITHUB_CLIENT_SECRET"] = "test-github-client-secret"
 os.environ["GOOGLE_CLIENT_ID"] = "test-google-client-id"
 os.environ["GOOGLE_CLIENT_SECRET"] = "test-google-client-secret"
-from authtuna.core.database import Base, db_manager
+from authtuna.core.database import Base, db_manager, engine as global_engine
 from authtuna.manager.asynchronous import AuthTunaAsync
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for each test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+
+@pytest.fixture(scope="session", autouse=True)
+async def cleanup_global_engine():
+    yield
+    await global_engine.dispose()
 
 @pytest.fixture(scope="session")
 async def engine():
     """Create an async engine for the test database."""
-    return create_async_engine(TEST_DATABASE_URL, echo=False)
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    yield engine
+    await engine.dispose()
 
 @pytest.fixture(scope="session", autouse=True)
 async def tables(engine):
