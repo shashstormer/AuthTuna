@@ -57,7 +57,7 @@ async def dbsession(engine):
         yield session
 
 @pytest.fixture
-def auth_tuna_async(dbsession):
+async def auth_tuna_async(dbsession):
     """Create an instance of the AuthTunaAsync class with a test session."""
     db_manager.AsyncSessionLocal = sessionmaker(
         dbsession.bind, class_=AsyncSession, expire_on_commit=False
