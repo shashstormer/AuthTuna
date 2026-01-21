@@ -11,7 +11,7 @@ from authtuna.core.config import settings
 from authtuna.core.database import (
     DatabaseManager, User, Role, Permission, DeletedUser,
     Session as DBSession, Token, user_roles_association, role_permissions_association, Session, AuditEvent,
-    PasskeyCredential, Organization, Team, organization_members, team_members, ApiKey, ApiKeyScope
+    PasskeyCredential, Organization, Team, organization_members, team_members, ApiKey, ApiKeyScope, SocialAccount
 )
 from authtuna.core.encryption import encryption_utils
 from authtuna.core.exceptions import (
@@ -21,8 +21,9 @@ from authtuna.core.exceptions import (
 )
 from authtuna.core.mfa import MFAManager
 from authtuna.core.passkeys import PasskeysCore
-from authtuna.helpers import is_email_valid, is_permission_name_valid
+from authtuna.helpers import is_email_valid, is_permission_name_valid, generate_random_username
 from authtuna.helpers.mail import email_manager
+from authtuna.core.hooks import HookManager, Events
 import logging
 
 logger = logging.getLogger(__name__)
@@ -1531,6 +1532,73 @@ class AuthTunaAsync:
         self.passkeys = PasskeyManager(db_manager)
         self.orgs = OrganizationManager(db_manager, self.users, self.roles, self.tokens)
         self.api = APIKEYManager(db_manager)
+        self.hooks = HookManager()
+        self._register_default_hooks()
+
+    def _register_default_hooks(self):
+        async def assign_user_role(user: User, method: str = None, **kwargs):
+             try:
+                 await self.roles.assign_to_user(user.id, "User", assigner_id="system", scope="global")
+                 logger.info(f"Assigned default 'User' role to {user.id}")
+             except Exception as e:
+                 logger.error(f"Failed to assign default role to user {user.id}: {e}")
+
+        self.hooks.register(Events.USER_CREATED, assign_user_role)
+    
+    async def register_social_user(self, email: str, provider: str, provider_user_id: str, 
+                                   token_data: dict, ip_address: str, 
+                                   username_candidate: str = None) -> Tuple[User, SocialAccount]:
+        username_candidate = username_candidate or generate_random_username()
+        async with self.db_manager.get_db() as db:
+            stmt = select(User).where(User.email == email)
+            user = (await db.execute(stmt)).unique().scalar_one_or_none()
+            is_new_user = False
+            if not user:
+                 is_new_user = True
+                 user = User(
+                     id=encryption_utils.gen_random_string(32),
+                     username=username_candidate,
+                     email=email, 
+                     email_verified=True, 
+                     last_login=time.time()
+                 )
+                 db.add(user)
+                 await db.flush()
+
+            stmt = select(SocialAccount).where(
+                SocialAccount.provider == provider,
+                SocialAccount.provider_user_id == provider_user_id
+            )
+            social = (await db.execute(stmt)).unique().scalar_one_or_none()
+            if not social:
+                social = SocialAccount(
+                     user_id=user.id, 
+                     provider=provider,
+                     provider_user_id=provider_user_id,
+                     token_type=token_data.get('token_type'),
+                     access_token=token_data.get('access_token'),
+                     refresh_token=token_data.get('refresh_token'),
+                     expires_at=token_data.get('expires_at')
+                )
+                db.add(social)
+            else:
+                social.access_token = token_data.get('access_token')
+                social.refresh_token = token_data.get('refresh_token')
+                social.expires_at = token_data.get('expires_at')
+                social.last_used_at = time.time()
+
+            await self.db_manager.log_audit_event(
+                user.id, "SOCIAL_ACCOUNT_CONNECTED", ip_address,
+                {"provider": provider}, db=db
+            )
+            await db.commit()
+            await db.refresh(user)
+        if is_new_user:
+             await self.hooks.trigger(Events.USER_CREATED, user=user, ip_address=ip_address, method="social", provider=provider)
+        
+        await self.hooks.trigger(Events.SOCIAL_ACCOUNT_CONNECTED, user=user, ip_address=ip_address, provider=provider)
+        
+        return user, social
 
     async def get_dashboard_stats(self) -> Dict[str, Any]:
         """Gathers all necessary statistics for the admin dashboard."""
@@ -1563,7 +1631,7 @@ class AuthTunaAsync:
             email=email, username=username, password=password, ip_address=ip_address,
             email_verified=not settings.EMAIL_ENABLED
         )
-        await self.roles.assign_to_user(user.id, "User", assigner_id="system", scope="global")
+        await self.hooks.trigger(Events.USER_CREATED, user=user, ip_address=ip_address, method="password")
         await self.db_manager.log_audit_event(
             user.id, "USER_SIGNUP_COMPLETED", ip_address,
             {"email_verification_required": settings.EMAIL_ENABLED},
