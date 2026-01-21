@@ -1,5 +1,4 @@
 import logging
-import time
 
 from authlib.integrations.starlette_client import OAuthError
 from fastapi import (APIRouter, Request, HTTPException, status,
@@ -10,7 +9,6 @@ from authtuna.core.config import settings
 from authtuna.core.database import db_manager
 from authtuna.core.social import get_social_provider
 from authtuna.helpers import (create_session_and_set_cookie)
-from authtuna.helpers.mail import email_manager
 from authtuna.integrations.fastapi_integration import auth_service
 
 logger = logging.getLogger(__name__)
@@ -81,18 +79,6 @@ async def social_callback(
                 ip_address=user_ip,
                 username_candidate=user_info_raw.get('name')
             )
-            
-            is_new_user = (time.time() - user.created_at) < 10
-            if not is_new_user:
-                 pass
-            
-            if is_new_user:
-                await email_manager.send_welcome_email(
-                    email=user.email, background_tasks=background_tasks,
-                    context={"username": user.username}
-                )
-            else:
-                pass
             return_url = request.cookies.get("return_url", "/ui/dashboard")
 
             if user.mfa_enabled:

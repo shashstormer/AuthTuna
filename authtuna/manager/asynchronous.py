@@ -1544,6 +1544,35 @@ class AuthTunaAsync:
                  logger.error(f"Failed to assign default role to user {user.id}: {e}")
 
         self.hooks.register(Events.USER_CREATED, assign_user_role)
+        
+        async def send_welcome_email_hook(user: User, method: str = None, **kwargs):
+             if method == 'social':
+                 try:
+                     bg_tasks = kwargs.get('background_tasks')
+                     await email_manager.send_welcome_email(
+                         email=user.email, background_tasks=bg_tasks,
+                         context={"username": user.username}
+                     )
+                     logger.info(f"Sent welcome email to {user.email}")
+                 except Exception as e:
+                     logger.error(f"Failed to send welcome email to {user.email}: {e}")
+
+        self.hooks.register(Events.USER_CREATED, send_welcome_email_hook)
+
+        async def send_social_connected_email_hook(user: User, provider: str = None, **kwargs):
+             is_new_user = (time.time() - user.created_at) < 10
+             if not is_new_user:
+                 try:
+                     bg_tasks = kwargs.get('background_tasks')
+                     await email_manager.send_new_social_account_connected_email(
+                         email=user.email, background_tasks=bg_tasks,
+                         context={"username": user.username, "provider_name": provider.capitalize() if provider else "Unknown"}
+                     )
+                     logger.info(f"Sent social connected email to {user.email}")
+                 except Exception as e:
+                     logger.error(f"Failed to send social connected email to {user.email}: {e}")
+
+        self.hooks.register(Events.SOCIAL_ACCOUNT_CONNECTED, send_social_connected_email_hook)
     
     async def register_social_user(self, email: str, provider: str, provider_user_id: str, 
                                    token_data: dict, ip_address: str, 
