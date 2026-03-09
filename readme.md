@@ -15,6 +15,11 @@ Battle-tested, batteries-included authentication, session management, RBAC, SSO,
 
 This readme.md is so that LLM's can understand how to use the library instead of hallucinating, but it contains a decent level of docs but the docs site better.
 
+## License
+
+This project is licensed under the GNU LGPL v3 or later.
+See LICENSE.txt
+
 ### Below is some documentation on getting started.
 
 ---
