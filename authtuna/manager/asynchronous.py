@@ -53,7 +53,11 @@ class UserManager:
 
     async def get_by_email(self, email: str) -> Optional[User]:
         async with self._db_manager.get_db() as db:
-            stmt = select(User).where(User.email == email)
+            if settings.PII_ENCRYPTION_ENABLED:
+                email_hash = encryption_utils.hash_pii(email)
+                stmt = select(User).where(User.email == email_hash)
+            else:
+                stmt = select(User).where(User.email == email)
             result = await db.execute(stmt)
             return result.unique().scalar_one_or_none()
 
@@ -74,14 +78,30 @@ class UserManager:
         """Creates a user, sets password, and logs audit event in a single atomic transaction."""
         await is_email_valid(email)
         async with self._db_manager.get_db() as db:
-            stmt = select(User).where((User.email == email) | (User.username == username))
+            lookup_email = encryption_utils.hash_pii(email) if settings.PII_ENCRYPTION_ENABLED else email
+            stmt = select(User).where((User.email == lookup_email) | (User.username == username))
             existing_user = (await db.execute(stmt)).unique().scalar_one_or_none()
             if existing_user:
                 raise UserAlreadyExistsError("A user with this email or username already exists.")
 
             new_user = User(
-                id=encryption_utils.gen_random_string(32), email=email, username=username, **kwargs
+                id=encryption_utils.gen_random_string(32), username=username, **kwargs
             )
+
+            if settings.PII_ENCRYPTION_ENABLED:
+                from authtuna.core.database import EncryptionKey
+                raw_key, wrapped_key = encryption_utils.generate_user_encryption_key()
+                user_key = EncryptionKey(key_ciphertext=wrapped_key)
+                db.add(user_key)
+                await db.flush()
+
+                new_user.email = encryption_utils.hash_pii(email)
+                new_user.email_encrypted = encryption_utils.encrypt_pii(email, raw_key)
+                new_user.email_key_id = user_key.id
+                new_user.encryption_key = user_key
+            else:
+                new_user.email = email
+
             db.add(new_user)
 
             if password:
@@ -104,7 +124,27 @@ class UserManager:
 
             for key, value in update_data.items():
                 if hasattr(user, key) and key in ['username', 'email']:
-                    setattr(user, key, value)
+                    if key == 'email':
+                        if settings.PII_ENCRYPTION_ENABLED:
+                            # If email encryption is enabled, update hash and ciphertext
+                            if not user.encryption_key:
+                                # This shouldn't happen for new users, but could for migrated users
+                                from authtuna.core.database import EncryptionKey
+                                raw_key, wrapped_key = encryption_utils.generate_user_encryption_key()
+                                user_key = EncryptionKey(key_ciphertext=wrapped_key)
+                                db.add(user_key)
+                                await db.flush()
+                                user.encryption_key = user_key
+                                user.email_key_id = user_key.id
+                            else:
+                                raw_key = encryption_utils.unwrap_user_key(user.encryption_key.key_ciphertext)
+                            
+                            user.email = encryption_utils.hash_pii(value)
+                            user.email_encrypted = encryption_utils.encrypt_pii(value, raw_key)
+                        else:
+                            user.email = value
+                    else:
+                        setattr(user, key, value)
 
             await self._db_manager.log_audit_event(user_id, "USER_UPDATED", ip_address,
                                                    {"fields_changed": list(update_data.keys())}, db=db)
@@ -119,7 +159,15 @@ class UserManager:
                 raise UserNotFoundError("User not found.")
 
             user_data = {c.name: getattr(user, c.name) for c in user.__table__.columns}
-            archived_user = DeletedUser(user_id=user.id, email=user.email, data=user_data)
+            archived_user = DeletedUser(user_id=user.id, email=user.email)
+            
+            if settings.PII_ENCRYPTION_ENABLED and user.encryption_key:
+                raw_key = encryption_utils.unwrap_user_key(user.encryption_key.key_ciphertext)
+                import json
+                archived_user.data_encrypted = encryption_utils.encrypt_pii(json.dumps(user_data), raw_key)
+            else:
+                archived_user.data = user_data
+
             db.add(archived_user)
 
             await db.delete(user)
@@ -160,6 +208,36 @@ class UserManager:
             await db.refresh(user)
             return user
 
+    async def erase_user(self, user_id: str, ip_address: str = 'system') -> bool:
+        """
+        Permanently erases a user's PII via crypto-shredding (GDPR Art. 17 compliance).
+        Destroys the per-user encryption key, rendering encrypted data unreadable.
+        """
+        async with self._db_manager.get_db() as db:
+            stmt = select(User).where(User.id == user_id).options(joinedload(User.encryption_key))
+            user = (await db.execute(stmt)).unique().scalar_one_or_none()
+            if not user:
+                return False
+
+            if user.encryption_key:
+                # Crypto-shredding: Overwrite key ciphertext and mark as deleted
+                user.encryption_key.key_ciphertext = "SHREDDED_" + encryption_utils.gen_random_string(32)
+                user.encryption_key.deleted_at = time.time()
+                
+            # Anonymize/Clear remaining PII
+            user.email = f"erased_{user.id}@erased.invalid"
+            user.username = f"erased_{user.id}"
+            user.email_encrypted = None
+            user.is_active = False
+            
+            await self._db_manager.log_audit_event(
+                user_id, "USER_ERASED_GDPR", ip_address, 
+                {"method": "crypto-shredding", "timestamp": time.time()}, 
+                db=db
+            )
+            await db.commit()
+            return True
+
     # function to search users with filtering by email or username or roles he has or scopes he has
     async def search_users(
             self,
@@ -180,10 +258,22 @@ class UserManager:
             filters = []
 
             if identity:
-                filters.append(or_(
-                    User.email == identity,
-                    User.username.ilike(f"%{identity}%")
-                ))
+                if settings.PII_ENCRYPTION_ENABLED:
+                    # Search by exact email hash if it looks like an email, 
+                    # otherwise only search by username.
+                    if '@' in identity:
+                        email_hash = encryption_utils.hash_pii(identity)
+                        filters.append(or_(
+                            User.email == email_hash,
+                            User.username.ilike(f"%{identity}%")
+                        ))
+                    else:
+                        filters.append(User.username.ilike(f"%{identity}%"))
+                else:
+                    filters.append(or_(
+                        User.email == identity,
+                        User.username.ilike(f"%{identity}%")
+                    ))
             if is_active is not None:
                 filters.append(User.is_active == is_active)
 
@@ -1035,7 +1125,7 @@ class OrganizationManager:
         """Fetches all members of an organization with their join time."""
         async with self._db_manager.get_db() as db:
             stmt = select(
-                User.id, User.username, User.email, organization_members.c.joined_at
+                User, organization_members.c.joined_at
             ).join_from(
                 organization_members, User, organization_members.c.user_id == User.id
             ).where(
@@ -1043,7 +1133,7 @@ class OrganizationManager:
             )
             result = await db.execute(stmt)
             return [
-                {"user_id": row.id, "username": row.username, "email": row.email, "joined_at": row.joined_at}
+                {"user_id": row.User.id, "username": row.User.username, "email": row.User.get_email(), "joined_at": row.joined_at}
                 for row in result.all()
             ]
 
@@ -1228,7 +1318,7 @@ class OrganizationManager:
         """Fetches all members of a team with their join time."""
         async with self._db_manager.get_db() as db:
             stmt = select(
-                User.id, User.username, User.email, team_members.c.joined_at
+                User, team_members.c.joined_at
             ).join_from(
                 team_members, User, team_members.c.user_id == User.id
             ).where(
@@ -1236,7 +1326,7 @@ class OrganizationManager:
             )
             result = await db.execute(stmt)
             return [
-                {"user_id": row.id, "username": row.username, "email": row.email, "joined_at": row.joined_at}
+                {"user_id": row.User.id, "username": row.User.username, "email": row.User.get_email(), "joined_at": row.joined_at}
                 for row in result.all()
             ]
 
@@ -1550,12 +1640,12 @@ class AuthTunaAsync:
                  try:
                      bg_tasks = kwargs.get('background_tasks')
                      await email_manager.send_welcome_email(
-                         email=user.email, background_tasks=bg_tasks,
+                         email=user.get_email(), background_tasks=bg_tasks,
                          context={"username": user.username}
                      )
-                     logger.info(f"Sent welcome email to {user.email}")
+                     logger.info(f"Sent welcome email to {user.id}")
                  except Exception as e:
-                     logger.error(f"Failed to send welcome email to {user.email}: {e}")
+                     logger.error(f"Failed to send welcome email to {user.id}: {e}")
 
         self.hooks.register(Events.USER_CREATED, send_welcome_email_hook)
 
@@ -1565,12 +1655,12 @@ class AuthTunaAsync:
                  try:
                      bg_tasks = kwargs.get('background_tasks')
                      await email_manager.send_new_social_account_connected_email(
-                         email=user.email, background_tasks=bg_tasks,
+                         email=user.get_email(), background_tasks=bg_tasks,
                          context={"username": user.username, "provider_name": provider.capitalize() if provider else "Unknown"}
                      )
-                     logger.info(f"Sent social connected email to {user.email}")
+                     logger.info(f"Sent social connected email to {user.id}")
                  except Exception as e:
-                     logger.error(f"Failed to send social connected email to {user.email}: {e}")
+                     logger.error(f"Failed to send social connected email to {user.id}: {e}")
 
         self.hooks.register(Events.SOCIAL_ACCOUNT_CONNECTED, send_social_connected_email_hook)
     
@@ -1579,7 +1669,11 @@ class AuthTunaAsync:
                                    username_candidate: str = None) -> Tuple[User, SocialAccount]:
         username_candidate = username_candidate or generate_random_username()
         async with self.db_manager.get_db() as db:
-            stmt = select(User).where(User.email == email)
+            if settings.PII_ENCRYPTION_ENABLED:
+                email_hash = encryption_utils.hash_pii(email)
+                stmt = select(User).where(User.email == email_hash)
+            else:
+                stmt = select(User).where(User.email == email)
             user = (await db.execute(stmt)).unique().scalar_one_or_none()
             is_new_user = False
             if not user:
@@ -1679,9 +1773,15 @@ class AuthTunaAsync:
         window_start = current_time - settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS
 
         # Check IP-based rate limit
+        if settings.PII_ENCRYPTION_ENABLED:
+            ip_hash = encryption_utils.hash_pii(ip_address)
+            ip_condition = AuditEvent.ip_address_hash == ip_hash
+        else:
+            ip_condition = AuditEvent.ip_address == ip_address
+
         ip_attempts_stmt = select(func.count()).select_from(AuditEvent).where(
             AuditEvent.event_type == "LOGIN_FAILED",
-            AuditEvent.ip_address == ip_address,
+            ip_condition,
             AuditEvent.timestamp > window_start
         )
         ip_attempts = await db.scalar(ip_attempts_stmt)
@@ -1852,9 +1952,15 @@ class AuthTunaAsync:
             current_time = time.time()
             window_start = current_time - settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS
 
+            if settings.PII_ENCRYPTION_ENABLED:
+                ip_hash = encryption_utils.hash_pii(ip_address)
+                ip_condition = AuditEvent.ip_address_hash == ip_hash
+            else:
+                ip_condition = AuditEvent.ip_address == ip_address
+
             ip_attempts_stmt = select(func.count()).select_from(AuditEvent).where(
                 AuditEvent.event_type == "EMAIL_VERIFICATION_FAILED",
-                AuditEvent.ip_address == ip_address,
+                ip_condition,
                 AuditEvent.timestamp > window_start
             )
             ip_attempts = await db.scalar(ip_attempts_stmt)
@@ -1964,7 +2070,7 @@ class AuthTunaAsync:
             user.id, ip_address, device_data["region"], device_data["device"]
         )
         if settings.EMAIL_ENABLED:
-            await email_manager.send_new_login_email(user.email, background_tasks, {
+            await email_manager.send_new_login_email(user.get_email(), background_tasks, {
                 "username": user.username,
                 "region": device_data["region"],
                 "ip_address": ip_address,

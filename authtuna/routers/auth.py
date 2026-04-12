@@ -95,13 +95,13 @@ async def signup_user(
         )
 
         if token:  # Email verification is enabled
-            await email_manager.send_verification_email(user.email, token.id, background_tasks)
-            await email_manager.send_welcome_email(user.email, background_tasks, {"username": user.username})
+            await email_manager.send_verification_email(user.get_email(), token.id, background_tasks)
+            await email_manager.send_welcome_email(user.get_email(), background_tasks, {"username": user.username})
             response.status_code = status.HTTP_202_ACCEPTED
             return {"message": "User created. A verification email has been sent."}
         else:  # Email verification is disabled
             await create_session_and_set_cookie(user, request, response, db)
-            await email_manager.send_welcome_email(user.email, background_tasks, {"username": user.username})
+            await email_manager.send_welcome_email(user.get_email(), background_tasks, {"username": user.username})
             return {"message": "User created and logged in successfully."}
 
     except UserAlreadyExistsError as e:
@@ -146,7 +146,7 @@ async def login_user(
         )
 
         if settings.EMAIL_ENABLED:
-            await email_manager.send_new_login_email(user.email, background_tasks, {
+            await email_manager.send_new_login_email(user.get_email(), background_tasks, {
                 "username": user.username,
                 "region": request.state.device_data["region"],
                 "ip_address": ip_address,
@@ -218,7 +218,7 @@ async def reset_password(
     try:
         ip_address = request.state.user_ip_address
         user = await auth_service.reset_password(password_data.token, password_data.new_password, ip_address)
-        await email_manager.send_password_change_email(user.email, background_tasks)
+        await email_manager.send_password_change_email(user.get_email(), background_tasks)
         return {"message": "Password has been reset successfully."}
     except (InvalidTokenError, TokenExpiredError) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -249,7 +249,7 @@ async def change_password(
             current_session_id=session_id
         )
         # Email notification for security
-        await email_manager.send_password_change_email(user.email, background_tasks)
+        await email_manager.send_password_change_email(user.get_email(), background_tasks)
         return {"message": "Password updated successfully. All other sessions have been logged out."}
     except InvalidCredentialsError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
@@ -271,7 +271,7 @@ async def get_current_user_info(
     return UserInfoResponse(
         user_id=user.id,
         username=user.username,
-        email=user.email,
+        email=user.get_email(),
         is_active=user.is_active,
         email_verified=user.email_verified,
         mfa_enabled=user.mfa_enabled,

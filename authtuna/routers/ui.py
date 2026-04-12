@@ -315,11 +315,11 @@ async def remove_org_member(
 
             await auth_service.db_manager.log_audit_event(
                 user.id, "ORG_MEMBER_REMOVED", request.state.user_ip_address,
-                {"org_id": org_id, "removed_user_id": member_id, "removed_user_email": member.email}, db=db
+                {"org_id": org_id, "removed_user_id": member_id}, db=db
             )
             await db.commit()
 
-        return {"message": f"Member {member.email} removed from organization"}
+        return {"message": f"Member {member.get_email()} removed from organization"}
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -593,11 +593,11 @@ async def remove_team_member(
 
             await auth_service.db_manager.log_audit_event(
                 user.id, "TEAM_MEMBER_REMOVED", request.state.user_ip_address,
-                {"team_id": team_id, "removed_user_id": member_id, "removed_user_email": member.email}, db=db
+                {"team_id": team_id, "removed_user_id": member_id}, db=db
             )
             await db.commit()
 
-        return {"message": f"Member {member.email} removed from team"}
+        return {"message": f"Member {member.get_email()} removed from team"}
     except HTTPException as e:
         raise e
     except Exception as e:

@@ -10,7 +10,10 @@ async def test_signup_email_disabled_creates_session(fastapi_client: AsyncClient
     # email disabled path => no verification token, create session and welcome email
     with patch('authtuna.routers.auth.auth_service') as mock_auth, \
          patch('authtuna.routers.auth.create_session_and_set_cookie', new=AsyncMock()):
-        mock_user = type('U', (), {'id': 'u', 'email': 'e@example.com', 'username': 'u'})()
+        mock_user = type('U', (), {
+            'id': 'u', 'email': 'e@example.com', 'username': 'u',
+            'get_email': lambda self: self.email
+        })()
         mock_auth.signup = AsyncMock(return_value=(mock_user, None))
         with patch('authtuna.routers.auth.email_manager') as mock_email_mgr:
             mock_email_mgr.send_welcome_email = AsyncMock()
@@ -93,7 +96,10 @@ async def test_show_login_page(fastapi_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_login_success(fastapi_client: AsyncClient):
     with patch('authtuna.routers.auth.auth_service') as mock_auth:
-        mock_user = type('U', (), {'id': 'u', 'email': 'e@example.com', 'username': 'u'})()
+        mock_user = type('U', (), {
+            'id': 'u', 'email': 'e@example.com', 'username': 'u',
+            'get_email': lambda self: self.email
+        })()
         mock_session = type('S', (), {'get_cookie_string': lambda self: 'cookie'})()
         mock_auth.login = AsyncMock(return_value=(mock_user, mock_session))
         with patch('authtuna.routers.auth.create_session_and_set_cookie', new=AsyncMock()):
@@ -171,7 +177,11 @@ async def test_forgot_password_generic_error(fastapi_client: AsyncClient):
 async def test_reset_password_success(fastapi_client: AsyncClient):
     with patch('authtuna.routers.auth.auth_service') as mock_auth, \
          patch('authtuna.routers.auth.email_manager') as mock_email_mgr:
-        mock_auth.reset_password = AsyncMock(return_value=type('U', (), {'email': 'e@example.com'})())
+        mock_user = type('U', (), {
+            'email': 'e@example.com',
+            'get_email': lambda self: self.email
+        })()
+        mock_auth.reset_password = AsyncMock(return_value=mock_user)
         mock_email_mgr.send_password_change_email = AsyncMock()
         with patch('authtuna.core.config.settings.EMAIL_ENABLED', True):
             resp = await fastapi_client.post('/auth/reset-password', json={'token': 't', 'new_password': 'pw'})

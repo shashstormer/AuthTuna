@@ -74,7 +74,7 @@ async def passwordless_login(
         await create_session_and_set_cookie(user, request, response, db)
 
         if settings.EMAIL_ENABLED:
-            await email_manager.send_new_login_email(user.email, background_tasks, {
+            await email_manager.send_new_login_email(user.get_email(), background_tasks, {
                 "username": user.username,
                 "region": region,
                 "ip_address": ip_address,

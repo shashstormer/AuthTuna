@@ -114,7 +114,15 @@ async def search_users_endpoint(
     users = await auth_service.users.search_users(
         identity=identity, role=role, scope=scope, is_active=is_active, skip=skip, limit=limit
     )
-    return users
+    return [
+        UserSearchResult(
+            id=u.id,
+            username=u.username,
+            email=u.get_email(),
+            is_active=u.is_active,
+            mfa_enabled=u.mfa_enabled
+        ) for u in users
+    ]
 
 @router.get(
     "/users/{user_id}", response_class=HTMLResponse, summary="Serve the User Detail Page"
@@ -163,7 +171,7 @@ async def get_user_details_data(user_id: str):
     can_assign = await auth_service.roles.get_self_assignable_roles(user.id)
     return {
         "id": user.id,
-        "email": user.email,
+        "email": user.get_email(),
         "is_active": user.is_active,
         "mfa_enabled": user.mfa_enabled,
         "username": user.username,
@@ -242,6 +250,18 @@ async def unsuspend_user(user_id: str, payload: UserSuspend, admin_user: User = 
         return user
     except UserNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post(
+    "/users/{user_id}/erase", summary="Erase User PII (GDPR Crypto-shredding)",
+    dependencies=[Depends(PermissionChecker("admin:manage:users"))]
+)
+async def erase_user(user_id: str, admin_user: User = Depends(get_current_user)):
+    """Permanently erases a user's PII via crypto-shredding."""
+    success = await auth_service.users.erase_user(user_id, ip_address=admin_user.id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    return {"message": "User PII has been erased successfully."}
 
 
 @router.get(
