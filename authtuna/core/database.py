@@ -704,12 +704,6 @@ class DatabaseManager:
                     try:
                         raw_key = encryption_utils.unwrap_user_key(key_obj.key_ciphertext)
                         event_obj.ip_address_encrypted = encryption_utils.encrypt_pii(event_obj.ip_address, raw_key)
-                        # Mask the IP address for the plain field
-                        if '.' in event_obj.ip_address:
-                            parts = event_obj.ip_address.split('.')
-                            event_obj.ip_address = f"{parts[0]}.{parts[1]}.X.X"
-                        else:
-                            event_obj.ip_address = "MASKED"
                     except Exception as e:
                         logging.debug(f"Failed to encrypt audit IP: {e}")
 

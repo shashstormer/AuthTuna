@@ -78,8 +78,8 @@ async def test_audit_log_ip_encryption(gdpr_enabled, auth_tuna_async, dbsession)
     stmt = select(AuditEvent).where(AuditEvent.user_id == user.id, AuditEvent.event_type == "USER_CREATED")
     event = (await dbsession.execute(stmt)).scalar_one()
     
-    # Plain IP should be masked
-    assert event.ip_address == "192.168.X.X"
+    # Plain IP should NOT be masked anymore
+    assert event.ip_address == ip
     assert event.ip_address_encrypted is not None
     
     # Decrypt and verify
