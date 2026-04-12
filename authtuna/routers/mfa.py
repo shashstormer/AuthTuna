@@ -72,7 +72,7 @@ async def verify_mfa_setup(
     """
     try:
         recovery_codes = await auth_service.mfa.verify_and_enable_totp(user, payload.code)
-        await email_manager.send_mfa_added_email(user.email, background_tasks)
+        await email_manager.send_mfa_added_email(user.get_email(), background_tasks)
         return {"recovery_codes": recovery_codes}
     except (InvalidTokenError, OperationForbiddenError) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -134,7 +134,7 @@ async def disable_mfa(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="MFA is not enabled for this user.")
 
     await auth_service.mfa.disable_mfa(user)
-    await email_manager.send_mfa_removed_email(user.email, background_tasks)
+    await email_manager.send_mfa_removed_email(user.get_email(), background_tasks)
     return {"message": "MFA has been successfully disabled."}
 
 

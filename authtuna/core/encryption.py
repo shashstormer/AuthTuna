@@ -9,7 +9,9 @@ from typing import Optional, Sequence
 import bcrypt
 import cryptography
 from cryptography.fernet import Fernet, MultiFernet
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from jose import jwt, JWTError
+import hmac
 from authtuna.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -162,6 +164,41 @@ class EncryptionUtils:
         """
         padding = '=' * (4 - (len(data) % 4)) if len(data) % 4 != 0 else ''
         return base64.urlsafe_b64decode(data + padding)
+
+    def generate_user_encryption_key(self) -> tuple[bytes, str]:
+        """Generates a raw 32-byte AES key and its Fernet-wrapped ciphertext."""
+        raw_key = AESGCM.generate_key(bit_length=256)
+        wrapped_key = self.encrypt_data(raw_key)
+        return raw_key, wrapped_key
+
+    def unwrap_user_key(self, wrapped_key_str: str) -> bytes:
+        """Unwraps a Fernet-protected user key back to raw bytes."""
+        if not self.fernet_initialized:
+            raise ValueError("Fernet is not initialized.")
+        return self.multi_fernet.decrypt(wrapped_key_str.encode('utf-8'))
+
+    def encrypt_pii(self, data: str, raw_key: bytes) -> bytes:
+        """Encrypts PII using AES-256-GCM."""
+        aesgcm = AESGCM(raw_key)
+        nonce = secrets.token_bytes(12)
+        ciphertext = aesgcm.encrypt(nonce, data.encode('utf-8'), None)
+        return nonce + ciphertext
+
+    def decrypt_pii(self, encrypted_data: bytes, raw_key: bytes) -> str:
+        """Decrypts PII using AES-256-GCM."""
+        aesgcm = AESGCM(raw_key)
+        nonce = encrypted_data[:12]
+        ciphertext = encrypted_data[12:]
+        return aesgcm.decrypt(nonce, ciphertext, None).decode('utf-8')
+
+    def hash_pii(self, data: str) -> Optional[str]:
+        """Deterministic HMAC-SHA256 hash for PII lookups.
+        Normalizes (lowercase + strip) the input before hashing."""
+        if not settings.PII_HMAC_KEY:
+            return None
+        normalized = data.strip().lower()
+        key = settings.PII_HMAC_KEY.get_secret_value().encode('utf-8')
+        return hmac.new(key, normalized.encode('utf-8'), hashlib.sha256).hexdigest()
 
 
 encryption_utils = EncryptionUtils()

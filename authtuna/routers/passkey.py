@@ -116,7 +116,7 @@ async def login_with_passkey(payload: PasskeyAuthenticationRequest, request: Req
 
         await create_session_and_set_cookie(user, request, response, auth_service.db_manager.get_db())
         if settings.EMAIL_ENABLED:
-            await email_manager.send_new_login_email(user.email, background_tasks, {
+            await email_manager.send_new_login_email(user.get_email(), background_tasks, {
                 "username": user.username,
                 "region": request.state.device_data["region"],
                 "ip_address": await get_remote_address(request),

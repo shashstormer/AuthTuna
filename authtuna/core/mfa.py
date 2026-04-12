@@ -36,7 +36,7 @@ class MFAManager:
 
         secret = pyotp.random_base32()
         totp = pyotp.TOTP(secret)
-        provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name=issuer_name)
+        provisioning_uri = totp.provisioning_uri(name=user.get_email(), issuer_name=issuer_name)
 
         async with self._db_manager.get_db() as db:
             # Remove any previous, unverified TOTP setup attempts

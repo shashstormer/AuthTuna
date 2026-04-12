@@ -192,6 +192,16 @@ class ApiKeyScope(Base):
         ),
     )
 
+class EncryptionKey(Base):
+    """Per-user encryption key for crypto-shredding (GDPR email/PII erasure).
+    The key_ciphertext is a Fernet-wrapped AES-256 key.
+    Setting deleted_at and overwriting key_ciphertext performs crypto-shredding."""
+    __tablename__ = 'encryption_keys'
+    id = Column(String(64), primary_key=True, default=lambda: encryption_utils.gen_random_string(32))
+    key_ciphertext = Column(Text, nullable=False)
+    created_at = Column(Float, nullable=False, default=time.time)
+    deleted_at = Column(Float, nullable=True)
+
 # --- ORM Models ---
 
 class User(Base):
@@ -206,6 +216,8 @@ class User(Base):
                       unique=True, nullable=False, index=True)
     email = Column(CaseInsensitiveText(120, collation='NOCASE' if engine.dialect.name == 'sqlite' else None),
                    unique=True, nullable=False, index=True)
+    email_encrypted = Column(LargeBinary, nullable=True)
+    email_key_id = Column(String(64), ForeignKey('encryption_keys.id'), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     password_hash = Column(String(256), nullable=True)
     email_verified = Column(Boolean, default=False, nullable=False)
@@ -217,7 +229,7 @@ class User(Base):
     api_keys = relationship("ApiKey", back_populates="user", cascade="all, delete-orphan")
 
     roles = relationship(
-        "Role", secondary=user_roles_association, back_populates="users", lazy="joined",
+        "Role", secondary=user_roles_association, back_populates="users", lazy="selectin",
         primaryjoin=lambda: User.id == user_roles_association.c.user_id,
         secondaryjoin=lambda: Role.id == user_roles_association.c.role_id,
         cascade="all, delete",
@@ -225,10 +237,12 @@ class User(Base):
     role_associations = relationship(
         "UserRoleAssociation",
         back_populates="user",
-        lazy="joined",
+        lazy="selectin",
         cascade="all, delete-orphan",
         viewonly=True
     )
+
+    encryption_key = relationship("EncryptionKey", lazy="joined")
 
     passkey_credentials = relationship("PasskeyCredential", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
@@ -240,6 +254,20 @@ class User(Base):
     organizations_owned = relationship("Organization", back_populates="owner", foreign_keys="Organization.owner_id", cascade="all, delete-orphan")
     organizations = relationship("Organization", secondary=organization_members, back_populates="members", cascade="all, delete")
     teams = relationship("Team", secondary=team_members, back_populates="members", cascade="all, delete")
+
+    def get_email(self):
+        """Returns the plaintext email. When PII_ENCRYPTION_ENABLED is True,
+        decrypts lazily from the eagerly loaded encryption_key relationship."""
+        if hasattr(self, '_plaintext_email') and self._plaintext_email is not None:
+            return self._plaintext_email
+        if self.email_encrypted and self.encryption_key and not self.encryption_key.deleted_at:
+            try:
+                raw_key = encryption_utils.unwrap_user_key(self.encryption_key.key_ciphertext)
+                self._plaintext_email = encryption_utils.decrypt_pii(self.email_encrypted, raw_key)
+                return self._plaintext_email
+            except Exception:
+                return None
+        return self.email
 
     async def set_password(self, password: str, ip: str, db_manager_custom=None, db: AsyncSession = None):
         """
@@ -499,6 +527,7 @@ class SocialAccount(Base, OAuth2ClientMixin):
     token_type = Column(String(40), nullable=False, default="bearer")
     access_token = Column(String(1200), nullable=False)
     refresh_token = Column(String(1200))
+    extra_data_encrypted = Column(LargeBinary, nullable=True)
     expires_at = Column(Integer, nullable=True)
     user = relationship('User', back_populates='social_accounts')
 
@@ -547,6 +576,7 @@ class DeletedUser(Base):
     user_id = Column(String(64), primary_key=True)
     email = Column(String(255), nullable=False)
     data = Column(JsonType, nullable=True)
+    data_encrypted = Column(LargeBinary, nullable=True)
     initiated_at = Column(Float, nullable=False, default=time.time)
     cleanup_counter = Column(Integer, default=0, nullable=False)
 
@@ -558,6 +588,8 @@ class AuditEvent(Base):
     event_type = Column(String(100), nullable=False, index=True)
     timestamp = Column(Float, nullable=False, default=time.time)
     ip_address = Column(String(45), nullable=True)
+    ip_address_encrypted = Column(LargeBinary, nullable=True)
+    ip_address_hash = Column(String(64), nullable=True, index=True)
     details = Column(JsonType, nullable=True)
     user = relationship('User', back_populates='audit_events')
 
@@ -659,19 +691,36 @@ class DatabaseManager:
             ip_address=ip_address,
             details=details or {}
         )
+
+        if ip_address and settings.PII_ENCRYPTION_ENABLED:
+            audit_event.ip_address_hash = encryption_utils.hash_pii(ip_address)
+
+        async def _apply_ip_encryption(session: AsyncSession, event_obj: AuditEvent):
+            if settings.PII_ENCRYPTION_ENABLED and settings.ENCRYPT_AUDIT_IP and event_obj.ip_address and event_obj.user_id and event_obj.user_id != "system":
+                # We need to fetch the user's encryption key
+                stmt = select(EncryptionKey).join(User, User.email_key_id == EncryptionKey.id).where(User.id == event_obj.user_id)
+                key_obj = (await session.execute(stmt)).scalar_one_or_none()
+                if key_obj and not key_obj.deleted_at:
+                    try:
+                        raw_key = encryption_utils.unwrap_user_key(key_obj.key_ciphertext)
+                        event_obj.ip_address_encrypted = encryption_utils.encrypt_pii(event_obj.ip_address, raw_key)
+                    except Exception as e:
+                        logging.debug(f"Failed to encrypt audit IP: {e}")
+
         if db:
-            # If a session object is passed, add the event to that session.
-            # The caller is responsible for committing the transaction.
+            await _apply_ip_encryption(db, audit_event)
             db.add(audit_event)
             return audit_event
 
         try:
             async with self.get_db() as session:
+                await _apply_ip_encryption(session, audit_event)
                 session.add(audit_event)
                 await session.commit()
                 return audit_event
         except TypeError:
             async with self.get_context_manager_db() as session:
+                await _apply_ip_encryption(session, audit_event)
                 session.add(audit_event)
                 await session.commit()
                 return audit_event
