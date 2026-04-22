@@ -90,6 +90,7 @@ class Settings(BaseSettings):
     """
     # Application settings
     APP_NAME: str = "AuthTuna"
+    PRODUCTION: bool = False  # Set to True in production to enable strict security checks
     ALGORITHM: str = "HS256"  # JWT Encryption algorithm
     API_BASE_URL: str
     TRY_FULL_INITIALIZE_WHEN_SYSTEM_USER_EXISTS_AGAIN: bool = False
@@ -217,6 +218,38 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=None if dont_use_env else os.getenv("ENV_FILE_NAME", ".env"), env_file_encoding='utf-8',
                                       extra='ignore')
 
+    def check_production_security(self):
+        """
+        Validates that security-sensitive settings have been changed from their
+        development defaults when PRODUCTION mode is enabled.
+        """
+        if not self.PRODUCTION:
+            return
+
+        defaults = {
+            "JWT_SECRET_KEY": "dev-secret-key-change-in-production",
+            "ENCRYPTION_PRIMARY_KEY": "dev-encryption-key-change-in-production",
+            "RPC_TOKEN": "changeme-secure-token",
+        }
+
+        for key, default_val in defaults.items():
+            current_val = getattr(self, key)
+            if isinstance(current_val, SecretStr):
+                current_val = current_val.get_secret_value()
+            
+            if current_val == default_val:
+                error_msg = f"SECURITY CRITICAL: '{key}' is using a development default in PRODUCTION mode! You MUST change this in your environment variables."
+                logger.critical(error_msg)
+                raise RuntimeError(error_msg)
+
+        if self.PII_ENCRYPTION_ENABLED and not self.PII_HMAC_KEY:
+            error_msg = "SECURITY CRITICAL: PII_ENCRYPTION_ENABLED is True but PII_HMAC_KEY is not set in PRODUCTION mode."
+            logger.critical(error_msg)
+            raise RuntimeError(error_msg)
+
+        if self.DEFAULT_DATABASE_URI.startswith("sqlite") and self.PRODUCTION:
+             logger.warning("PRODUCTION ADVISORY: You are using SQLite in PRODUCTION mode. It is recommended to use PostgreSQL for concurrency and durability.")
+
 
 def init_settings(**kwargs: Any) -> "Settings":
     """
@@ -233,6 +266,7 @@ def init_settings(**kwargs: Any) -> "Settings":
         logger.warning("Settings have already been initialized. Re-initializing.")
     dont_use_env = kwargs.get("dont_use_env", True)
     _settings_instance = Settings(**kwargs)
+    _settings_instance.check_production_security()
     return _settings_instance
 
 

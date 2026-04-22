@@ -20,6 +20,7 @@ Everything in AuthTuna is optional. You can disable entire subsystems to keep yo
 
 | Variable | Required | Description |
 |----------|----------|-------------|
+| `PRODUCTION` | No | Set to `True` in production. Enables strict checks to ensure dev defaults (like `JWT_SECRET_KEY`) are changed. |
 | `API_BASE_URL` | Yes | Public URL of your API (e.g., `https://api.myapp.com`). |
 | `FERNET_KEYS` | Yes | List of base64 keys for session encryption. |
 | `DEFAULT_DATABASE_URI` | Yes | SQLAlchemy async URI (e.g., `postgresql+asyncpg://...`). |
