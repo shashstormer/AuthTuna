@@ -48,11 +48,11 @@ master_key = await auth_service.api.create_key(
 )
 ```
 
-## Security Flow
-1.  Middleware detects `Authorization: Bearer <token>`.
-2.  `validate_key` splits the token into ID and Secret.
-3.  Secret is verified against the hash in the DB.
-4.  The associated `user_id` and `scopes` are injected into the request state.
+## Security Constraints
+API keys in AuthTuna are strictly locked down to prevent privilege escalation:
+- **Composite Foreign Key**: The `api_key_scopes` table uses a composite FK on `(user_id, role_id, scope)` referencing `user_roles`. This ensures that an API key can **only** be granted a scope that the owning user already possesses.
+- **Inheritance Only**: If a user's role is revoked, any API key relying on that (role, scope) pair immediately loses those permissions.
+- **Verification**: `validate_key` uses a timing-safe hash comparison for the secret.
 
 ## Best Practices
 - **Rotation**: Encourage users to rotate keys regularly using `expires_at`.

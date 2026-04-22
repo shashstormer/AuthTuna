@@ -47,6 +47,12 @@ await auth_service.roles.revoke_user_role_by_scope(
 )
 ```
 
+## Scope Escalation Prevention
+The `RoleManager` enforces strict scope boundaries during assignment:
+- **Encompassing Logic**: An assigner can only grant roles within scopes they hierarchicaly "encompass".
+- **Prevention**: If an admin has a role in `/org/sales`, they **cannot** grant roles in `/org/marketing` or `/org`.
+- **System Exception**: Only a `system` context (or a global admin) can bypass these encompassing checks.
+
 ## Best Practices
 - **System Roles**: Use `system=True` for roles that should never be deleted.
 - **Gap Levels**: Leave gaps between levels (e.g., 10, 20, 30) to allow for future intermediate roles.

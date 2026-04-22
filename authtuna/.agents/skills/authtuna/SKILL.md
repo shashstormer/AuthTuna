@@ -14,6 +14,14 @@ AuthTuna is a high-security, distributed-ready identity and access management (I
 
 When building applications using `authtuna`, strictly follow the patterns and architectural guidelines outlined in this document.
 
+## System Philosophy & Security
+
+AuthTuna is built on a "Zero-Trust" and "Privacy-First" foundation:
+1.  **Replay Protection**: Uses **Random String Rotation** in sessions. Every request generates a new token; using an old one immediately invalidates the entire session.
+2.  **Granular Rate Limiting**: The `AuthTunaAsync` facade tracks failed attempts by both **User ID** and **IP Address** to mitigate brute-force and credential stuffing.
+3.  **Envelope Encryption**: PII (emails) are stored using **Fernet-wrapped AES-256 keys**. Each user has a unique wrapper; destroying it (Crypto-Shredding) makes data permanently unrecoverable.
+4.  **Scope Integrity**: Stricly prevents "Scope Escalation" by verifying that a manager's authority encompasses the target scope hierarchicaly.
+
 ## System Architecture
 
 1.  **The Facade (`AuthTunaAsync`)**: All core logic is orchestrated by a central facade (usually named `auth_service`). It acts as the gateway to all subsystems.
@@ -24,7 +32,7 @@ When building applications using `authtuna`, strictly follow the patterns and ar
     *   `MFAManager`: TOTP and recovery code security.
     *   `PasskeyManager`: WebAuthn/Passkey lifecycle.
     *   `APIKEYManager`: Scoped machine-to-machine authentication.
-    *   `AuditManager`: Security log and forensic trail management.
+    *   `AuditManager`: Forensic trail querying (AuditEvent model).
 3.  **Privacy Layer**: Implements envelope encryption and crypto-shredding at the data layer.
 
 ## Step-by-Step Instructions
@@ -85,5 +93,5 @@ Automatically handle GDPR requests using cryptographic erasure.
 - **IP Awareness**: Most manager methods require an `ip_address`. Always pass the client IP for accurate audit logging.
 - **Feature Status**: 
     - **Fully Supported**: RBAC, Orgs, MFA, Social SSO, API Keys, GDPR Erasure.
-    - **Experimental**: Passkeys (WebAuthn).
-    - **Not Supported**: RPC, Refresh Tokens.
+    - **Supported But Disabled by default as additional configuration needed**: Passkeys (WebAuthn) - *Disabled by default in settings*.
+    - **Not Supported**: RPC (Parts removed), Refresh Tokens (Planned/Placeholder).

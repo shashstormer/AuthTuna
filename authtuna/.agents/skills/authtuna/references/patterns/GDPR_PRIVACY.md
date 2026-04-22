@@ -29,11 +29,12 @@ await auth_service.users.erase_user(
 )
 ```
 
-**What happens internally?**
-1.  The user's `EncryptionKey` record is fetched.
-2.  The `key_ciphertext` is overwritten with random garbage (e.g., `SHREDDED_...`).
-3.  The user's email is anonymized (`erased_user_id@erased.invalid`).
-4.  All active sessions and MFA methods are purged.
+**What happens internally (Technical Deep Dive)?**
+AuthTuna uses an **Envelope Encryption** model:
+1.  **Data Key**: Each user has a unique AES-256 key used to encrypt/decrypt their PII (emails).
+2.  **Wrapping**: This AES key is itself encrypted using a system-wide master key (Fernet) and stored in the `EncryptionKey` table.
+3.  **Laziness**: The `User.get_email()` method lazily unwraps and decrypts the PII only when accessed.
+4.  **Erasure**: `erase_user()` performs a "Crypto-Shredding" operation by deleting the wrapping key. Even with the master key, the data is unrecoverable because the intermediate AES key is destroyed.
 
 ### 3. Auditing
 Audit logs can also be encrypted. If `ENCRYPT_AUDIT_IP` is True, the IP addresses in the audit trail are encrypted using the user's key. When the user is "erased", their audit trail IPs also become unreadable.
